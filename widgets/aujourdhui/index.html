@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aujourd'hui - Pilotage Wubo</title>
+<link rel="stylesheet" href="../../lib/styles.css">
+<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+<script src="../../lib/dom.js"></script>
+<style>
+  .bloc-card { min-height: 180px; }
+  .bloc-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+  .bloc-title { font-weight: 700; font-size: 16px; }
+  .bloc-time { color: var(--wubo-gray); font-size: 12px; }
+  .bloc-actions { display: flex; gap: 4px; margin-top: 10px; flex-wrap: wrap; }
+  .bloc-actions .btn { padding: 4px 10px; font-size: 12px; }
+  .bloc-note { margin-top: 8px; font-size: 12px; color: var(--wubo-gray); font-style: italic; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>Aujourd'hui</h1>
+    <div id="today-date" style="color: var(--wubo-gray); font-size: 13px;"></div>
+  </div>
+</div>
+
+<div id="drift-alerts"></div>
+
+<div class="grid cols-3" id="blocs-container"></div>
+
+<script>
+const TRANCHES = ['Matin', 'Aprem', 'Soir'];
+const TRANCHE_TIMES = { 'Matin': '8h - 12h', 'Aprem': '13h - 17h', 'Soir': '18h - 22h' };
+const TRANCHE_COLOR = { 'Matin': 'yellow', 'Aprem': '', 'Soir': 'pink' };
+const STATUT_TAG = { 'Planifie': 'purple', 'En cours': 'yellow', 'Fait': 'success', 'Zappe': 'danger' };
+
+function formatDate(d) {
+  return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+function currentTranche() {
+  const h = new Date().getHours();
+  if (h >= 8 && h < 13) return 'Matin';
+  if (h >= 13 && h < 18) return 'Aprem';
+  if (h >= 18 && h < 22) return 'Soir';
+  return null;
+}
+
+async function onActionClick(blocId, action) {
+  const fields = { statut: action };
+  if (action === 'Fait') {
+    const note = prompt('Note de fin de bloc (ce que tu as fait, ce qui coince) :');
+    if (note !== null) fields.note_fin_bloc = note;
+  }
+  try {
+    await grist.docApi.applyUserActions([['UpdateRecord', 'Blocs_temps', blocId, fields]]);
+    renderBlocs();
+  } catch (e) {
+    alert('Erreur : ' + e.message);
+  }
+}
+
+function buildBlocCard(tranche, bloc, tachesById) {
+  const card = $el('div', { class: `card bloc-card ${TRANCHE_COLOR[tranche]}` });
+
+  const header = $el('div', { class: 'bloc-header' },
+    $el('div', {},
+      $el('div', { class: 'bloc-title' }, tranche),
+      $el('div', { class: 'bloc-time' }, TRANCHE_TIMES[tranche])
+    )
+  );
+
+  if (!bloc) {
+    card.appendChild(header);
+    card.appendChild($el('div', { class: 'empty' }, 'Aucun bloc planifie'));
+    return card;
+  }
+
+  const tag = STATUT_TAG[bloc.statut] || 'purple';
+  header.appendChild($el('span', { class: `tag ${tag}` }, bloc.statut || 'Planifie'));
+  card.appendChild(header);
+
+  const tIds = refListIds(bloc.taches_liees);
+  if (tIds.length === 0) {
+    card.appendChild($el('div', { class: 'empty' }, 'Aucune tache liee'));
+  } else {
+    tIds.forEach(tid => {
+      const t = tachesById[tid];
+      if (!t) return;
+      const doneClass = t.statut === 'Fait' ? 'task-item done' : 'task-item';
+      card.appendChild($el('div', { class: doneClass },
+        $el('span', {}, t.titre || ''),
+        $el('span', { class: 'tag' }, t.statut || '')
+      ));
+    });
+  }
+
+  const actions = $el('div', { class: 'bloc-actions' },
+    $el('button', { class: 'btn primary', onclick: () => onActionClick(bloc.id, 'En cours') }, 'Demarrer'),
+    $el('button', { class: 'btn success', onclick: () => onActionClick(bloc.id, 'Fait') }, 'Terminer'),
+    $el('button', { class: 'btn danger', onclick: () => onActionClick(bloc.id, 'Zappe') }, 'Zapper')
+  );
+  card.appendChild(actions);
+
+  if (bloc.note_fin_bloc) {
+    card.appendChild($el('div', { class: 'bloc-note' }, bloc.note_fin_bloc));
+  }
+
+  return card;
+}
+
+async function renderBlocs() {
+  document.getElementById('today-date').textContent = formatDate(new Date());
+  const container = document.getElementById('blocs-container');
+  clearNode(container);
+
+  let blocs = [];
+  let tachesById = {};
+  try {
+    const [blocsTable, tachesTable] = await Promise.all([
+      grist.docApi.fetchTable('Blocs_temps'),
+      grist.docApi.fetchTable('Taches')
+    ]);
+    const today = todayISO();
+    blocs = gristTableToRows(blocsTable).filter(b => gristDateToISO(b.date) === today);
+    gristTableToRows(tachesTable).forEach(t => { tachesById[t.id] = t; });
+  } catch (e) {
+    container.appendChild($el('div', { class: 'empty' }, 'Erreur : ' + e.message));
+    return;
+  }
+
+  TRANCHES.forEach(tranche => {
+    const bloc = blocs.find(b => b.tranche === tranche);
+    container.appendChild(buildBlocCard(tranche, bloc, tachesById));
+  });
+
+  // Drift check
+  const driftNode = document.getElementById('drift-alerts');
+  clearNode(driftNode);
+  const cur = currentTranche();
+  if (cur) {
+    const bloc = blocs.find(b => b.tranche === cur);
+    if (bloc && bloc.statut === 'Planifie') {
+      driftNode.appendChild($el('div', { class: 'drift-alert' },
+        `On est dans le bloc ${cur} mais il est encore "Planifie". Tu as demarre ou pas ?`
+      ));
+    }
+  }
+}
+
+grist.ready({ requiredAccess: 'full' });
+grist.onRecords(() => renderBlocs());
+renderBlocs();
+</script>
+
+</body>
+</html>

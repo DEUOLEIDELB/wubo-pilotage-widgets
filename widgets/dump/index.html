@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dump notes - Pilotage Wubo</title>
+<link rel="stylesheet" href="../../lib/styles.css">
+<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+<script src="../../lib/dom.js"></script>
+<style>
+  .dump-form { display: flex; flex-direction: column; gap: 10px; }
+  .dump-form select { width: auto; }
+  .dump-form textarea { min-height: 120px; font-size: 15px; }
+  .dump-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .dump-list { margin-top: 24px; }
+  .dump-entry { padding: 10px; border-left: 3px solid var(--wubo-purple); background: white; margin-bottom: 8px; border-radius: 0 8px 8px 0; }
+  .dump-entry.traite { border-left-color: var(--wubo-success); opacity: 0.6; }
+  .dump-meta { display: flex; justify-content: space-between; font-size: 11px; color: var(--wubo-gray); margin-bottom: 4px; }
+  .dump-content { font-size: 13px; white-space: pre-wrap; }
+  .dump-converti { font-size: 11px; margin-top: 4px; color: var(--wubo-purple); }
+</style>
+</head>
+<body>
+
+<h1>Dump tes pensees</h1>
+<div style="color: var(--wubo-gray); margin-bottom: 16px; font-size: 13px;">
+  Ecris sans filtre. Post-RDV, idees, problemes, decisions. Claude traitera et rangera dans les bonnes tables.
+</div>
+
+<div class="card yellow">
+  <form id="dump-form" class="dump-form">
+    <div class="dump-controls">
+      <label>Auteur :</label>
+      <select id="auteur" required>
+        <option value="Taki" selected>Taki</option>
+        <option value="Numa">Numa</option>
+        <option value="Lyes">Lyes</option>
+      </select>
+      <label>Contexte :</label>
+      <select id="contexte" required>
+        <option value="Libre" selected>Libre</option>
+        <option value="Post-RDV">Post-RDV</option>
+        <option value="Idee">Idee</option>
+        <option value="Probleme">Probleme</option>
+        <option value="Decision">Decision</option>
+        <option value="Autre">Autre</option>
+      </select>
+    </div>
+    <textarea id="contenu" placeholder="Ecris ici. Aucun format, aucune structure. Juste tes pensees." required></textarea>
+    <button type="submit" class="btn primary">Envoyer au dump</button>
+    <div id="feedback" style="font-size: 13px;"></div>
+  </form>
+</div>
+
+<div class="dump-list">
+  <h2>Dump recents</h2>
+  <div id="dump-entries"></div>
+</div>
+
+<script>
+function formatTimestamp(val) {
+  if (!val) return '';
+  const d = typeof val === 'number' ? new Date(val * 1000) : new Date(val);
+  return d.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+function buildEntry(r) {
+  const entry = $el('div', { class: r.traite ? 'dump-entry traite' : 'dump-entry' });
+  entry.appendChild($el('div', { class: 'dump-meta' },
+    $el('span', {}, `${r.auteur || ''} | ${r.contexte || ''}`),
+    $el('span', {}, `${formatTimestamp(r.timestamp)}${r.traite ? ' | traite' : ''}`)
+  ));
+  entry.appendChild($el('div', { class: 'dump-content' }, r.contenu || ''));
+  if (r.converti_en) {
+    entry.appendChild($el('div', { class: 'dump-converti' },
+      $el('strong', {}, 'Converti en : '),
+      r.converti_en
+    ));
+  }
+  return entry;
+}
+
+async function loadRecent() {
+  const container = document.getElementById('dump-entries');
+  clearNode(container);
+  try {
+    const table = await grist.docApi.fetchTable('Dump_notes');
+    const rows = gristTableToRows(table);
+    rows.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    const recent = rows.slice(0, 10);
+    if (recent.length === 0) {
+      container.appendChild($el('div', { class: 'empty' }, 'Aucun dump pour l\'instant'));
+      return;
+    }
+    recent.forEach(r => container.appendChild(buildEntry(r)));
+  } catch (e) {
+    container.appendChild($el('div', { class: 'empty' }, 'Erreur : ' + e.message));
+  }
+}
+
+document.getElementById('dump-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const auteur = document.getElementById('auteur').value;
+  const contexte = document.getElementById('contexte').value;
+  const contenu = document.getElementById('contenu').value.trim();
+  if (!contenu) return;
+
+  const feedback = document.getElementById('feedback');
+  feedback.textContent = 'Envoi...';
+  feedback.style.color = 'var(--wubo-gray)';
+
+  try {
+    await grist.docApi.applyUserActions([['AddRecord', 'Dump_notes', null, {
+      timestamp: Math.floor(Date.now() / 1000),
+      auteur: auteur,
+      contenu: contenu,
+      contexte: contexte,
+      traite: false,
+      converti_en: ''
+    }]]);
+    document.getElementById('contenu').value = '';
+    feedback.textContent = 'Envoye ! Claude le traitera.';
+    feedback.style.color = 'var(--wubo-success)';
+    loadRecent();
+    setTimeout(() => { feedback.textContent = ''; }, 3000);
+  } catch (err) {
+    feedback.textContent = 'Erreur : ' + err.message;
+    feedback.style.color = 'var(--wubo-danger)';
+  }
+});
+
+grist.ready({ requiredAccess: 'full' });
+grist.onRecords(() => loadRecent());
+loadRecent();
+</script>
+
+</body>
+</html>

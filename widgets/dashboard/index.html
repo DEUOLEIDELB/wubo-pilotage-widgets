@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard - Pilotage Wubo</title>
+<link rel="stylesheet" href="../../lib/styles.css">
+<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+<script src="../../lib/dom.js"></script>
+<style>
+  .objectif-card { margin-bottom: 12px; }
+  .objectif-title { font-weight: 700; font-size: 16px; margin-bottom: 4px; }
+  .objectif-meta { color: var(--wubo-gray); font-size: 12px; margin-bottom: 8px; }
+  .objectif-desc { font-size: 13px; color: var(--wubo-gray); margin-bottom: 6px; }
+  .progress-value { font-size: 12px; text-align: right; font-weight: 600; }
+  .kpi-block { background: var(--wubo-cream); padding: 8px; border-radius: 6px; margin-top: 6px; font-size: 12px; }
+  .kpi-block.actuel { background: #FFF9D6; }
+  .kpi-block strong { display: block; color: var(--wubo-purple); margin-bottom: 2px; }
+  .stats-bar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  .stat { background: white; padding: 10px 14px; border-radius: 8px; border: 2px solid var(--wubo-black); box-shadow: 3px 3px 0 var(--wubo-yellow); flex: 1; min-width: 140px; }
+  .stat-label { font-size: 11px; color: var(--wubo-gray); }
+  .stat-value { font-size: 22px; font-weight: 800; color: var(--wubo-black); }
+  .sujets-section { margin-top: 24px; }
+  .sujet-item { padding: 8px 10px; border: 1px solid var(--wubo-light-gray); border-radius: 6px; margin-bottom: 6px; background: white; font-size: 13px; }
+  .sujet-item.stagnation-haute { border-left: 4px solid var(--wubo-danger); }
+  .sujet-item.stagnation-moyenne { border-left: 4px solid var(--wubo-warning); }
+  .sujet-header { display: flex; justify-content: space-between; align-items: center; }
+  .sujet-meta { font-size: 12px; color: var(--wubo-gray); margin-top: 4px; }
+  .sujet-etape { font-size: 12px; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Dashboard Pilotage</h1>
+  <div id="last-update" style="font-size: 11px; color: var(--wubo-gray);"></div>
+</div>
+
+<div class="stats-bar" id="stats"></div>
+
+<h2>Objectifs trimestre</h2>
+<div id="objectifs-container"></div>
+
+<div class="sujets-section">
+  <h2>Sujets a pousser (anti-evitement)</h2>
+  <div id="sujets-container"></div>
+</div>
+
+<script>
+function formatDeadline(val) {
+  if (!val) return '';
+  const d = typeof val === 'number' ? new Date(val * 1000) : new Date(val);
+  return d.toLocaleDateString('fr-FR');
+}
+
+function buildStat(label, value) {
+  return $el('div', { class: 'stat' },
+    $el('div', { class: 'stat-label' }, label),
+    $el('div', { class: 'stat-value' }, String(value))
+  );
+}
+
+function buildProgressBar(pct) {
+  const bar = $el('div', { class: 'progress-bar' });
+  const fill = $el('div', { class: 'fill' });
+  fill.style.width = `${pct}%`;
+  bar.appendChild(fill);
+  return bar;
+}
+
+function buildObjectif(o) {
+  const prog = Math.round(o.progression || 0);
+  const priorite = o.priorite ? `Priorite ${o.priorite}` : '';
+  const deadline = formatDeadline(o.deadline);
+
+  const card = $el('div', { class: 'card objectif-card' });
+  card.appendChild($el('div', { class: 'objectif-title' }, o.titre || ''));
+  card.appendChild($el('div', { class: 'objectif-meta' },
+    `${o.trimestre || ''} | ${priorite} | Deadline ${deadline} | ${o.proprietaire || ''}`));
+  if (o.description) card.appendChild($el('div', { class: 'objectif-desc' }, o.description));
+  card.appendChild(buildProgressBar(prog));
+  card.appendChild($el('div', { class: 'progress-value' }, `${prog}%`));
+  card.appendChild($el('div', { class: 'kpi-block' },
+    $el('strong', {}, 'KPI vise :'),
+    o.kpi_vise || '-'
+  ));
+  card.appendChild($el('div', { class: 'kpi-block actuel' },
+    $el('strong', {}, 'KPI actuel :'),
+    o.kpi_actuel || '-'
+  ));
+  return card;
+}
+
+function buildSujet(s) {
+  const jours = s.jours_stagnation || 0;
+  let classe = 'sujet-item';
+  let tagClass = '';
+  if (jours > 14) { classe += ' stagnation-haute'; tagClass = 'danger'; }
+  else if (jours > 7) { classe += ' stagnation-moyenne'; tagClass = 'warning'; }
+
+  const item = $el('div', { class: classe });
+  item.appendChild($el('div', { class: 'sujet-header' },
+    $el('strong', {}, s.titre || ''),
+    $el('span', { class: `tag ${tagClass}` }, `Stagnation ${jours === 999 ? 'jamais' : jours + 'j'}`)
+  ));
+  item.appendChild($el('div', { class: 'sujet-meta' }, `${s.type || ''} | ${s.proprietaire || ''}`));
+  if (s.prochaine_etape) {
+    item.appendChild($el('div', { class: 'sujet-etape' },
+      $el('strong', {}, 'Prochaine etape : '),
+      s.prochaine_etape
+    ));
+  }
+  return item;
+}
+
+async function render() {
+  try {
+    const [objTable, projTable, tachesTable, sujetsTable] = await Promise.all([
+      grist.docApi.fetchTable('Objectifs'),
+      grist.docApi.fetchTable('Projets'),
+      grist.docApi.fetchTable('Taches'),
+      grist.docApi.fetchTable('Sujets_a_pousser')
+    ]);
+    const objectifs = gristTableToRows(objTable).filter(o => o.statut === 'Actif');
+    const taches = gristTableToRows(tachesTable);
+    const sujets = gristTableToRows(sujetsTable).filter(s => s.statut === 'Actif');
+
+    // Stats
+    const total = taches.length;
+    const fait = taches.filter(t => t.statut === 'Fait').length;
+    const enCours = taches.filter(t => t.statut === 'En cours').length;
+    const bloque = taches.filter(t => t.statut === 'Bloque').length;
+    const pct = total > 0 ? Math.round((fait / total) * 100) : 0;
+
+    const statsNode = document.getElementById('stats');
+    $replace(statsNode,
+      buildStat('Taches faites', `${fait} / ${total}`),
+      buildStat('En cours', enCours),
+      buildStat('Bloquees', bloque),
+      buildStat('Avancement', `${pct}%`)
+    );
+
+    // Objectifs
+    const objContainer = document.getElementById('objectifs-container');
+    clearNode(objContainer);
+    if (objectifs.length === 0) {
+      objContainer.appendChild($el('div', { class: 'empty' }, 'Aucun objectif actif'));
+    } else {
+      objectifs.forEach(o => objContainer.appendChild(buildObjectif(o)));
+    }
+
+    // Sujets a pousser
+    const sujetsContainer = document.getElementById('sujets-container');
+    clearNode(sujetsContainer);
+    if (sujets.length === 0) {
+      sujetsContainer.appendChild($el('div', { class: 'empty' }, 'Aucun sujet en attente'));
+    } else {
+      sujets.sort((a, b) => (b.jours_stagnation || 0) - (a.jours_stagnation || 0));
+      sujets.forEach(s => sujetsContainer.appendChild(buildSujet(s)));
+    }
+
+    document.getElementById('last-update').textContent = 'MAJ : ' + new Date().toLocaleTimeString('fr-FR');
+  } catch (e) {
+    const objContainer = document.getElementById('objectifs-container');
+    clearNode(objContainer);
+    objContainer.appendChild($el('div', { class: 'empty' }, 'Erreur : ' + e.message));
+  }
+}
+
+grist.ready({ requiredAccess: 'full' });
+grist.onRecords(() => render());
+render();
+</script>
+
+</body>
+</html>

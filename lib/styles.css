@@ -1,0 +1,179 @@
+/* Wubo Pilotage Widgets - DA commune */
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap');
+
+:root {
+  --wubo-cream: #FAF5F2;
+  --wubo-yellow: #FFDD0B;
+  --wubo-purple: #5914D0;
+  --wubo-pink: #D40272;
+  --wubo-black: #1A1A1A;
+  --wubo-gray: #6B6B6B;
+  --wubo-light-gray: #E5E5E5;
+  --wubo-success: #2BB673;
+  --wubo-warning: #F39C12;
+  --wubo-danger: #E74C3C;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Outfit', -apple-system, sans-serif;
+  background: var(--wubo-cream);
+  color: var(--wubo-black);
+  padding: 16px;
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+h1, h2, h3 {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  color: var(--wubo-black);
+}
+
+h1 { font-size: 24px; margin-bottom: 12px; }
+h2 { font-size: 18px; margin-bottom: 8px; }
+h3 { font-size: 15px; margin-bottom: 6px; }
+
+.card {
+  background: white;
+  border: 2px solid var(--wubo-black);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 4px 4px 0 var(--wubo-purple);
+  transition: transform 0.1s ease;
+}
+
+.card:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0 var(--wubo-purple);
+}
+
+.card.yellow { box-shadow: 4px 4px 0 var(--wubo-yellow); }
+.card.pink { box-shadow: 4px 4px 0 var(--wubo-pink); }
+
+.btn {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  background: var(--wubo-black);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: transform 0.1s ease;
+}
+
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+
+.btn.primary { background: var(--wubo-purple); }
+.btn.accent { background: var(--wubo-yellow); color: var(--wubo-black); }
+.btn.danger { background: var(--wubo-danger); }
+.btn.success { background: var(--wubo-success); }
+
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--wubo-light-gray);
+  color: var(--wubo-black);
+}
+
+.tag.yellow { background: var(--wubo-yellow); }
+.tag.purple { background: var(--wubo-purple); color: white; }
+.tag.pink { background: var(--wubo-pink); color: white; }
+.tag.success { background: var(--wubo-success); color: white; }
+.tag.warning { background: var(--wubo-warning); color: white; }
+.tag.danger { background: var(--wubo-danger); color: white; }
+
+.progress-bar {
+  background: var(--wubo-light-gray);
+  border-radius: 8px;
+  height: 10px;
+  overflow: hidden;
+  margin: 6px 0;
+  border: 1px solid var(--wubo-black);
+}
+
+.progress-bar .fill {
+  height: 100%;
+  background: var(--wubo-purple);
+  transition: width 0.3s ease;
+}
+
+textarea, input, select {
+  font-family: 'Outfit', sans-serif;
+  border: 2px solid var(--wubo-black);
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 14px;
+  background: white;
+  width: 100%;
+}
+
+textarea { min-height: 80px; resize: vertical; }
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.grid {
+  display: grid;
+  gap: 12px;
+}
+
+.grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+.grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+
+@media (max-width: 768px) {
+  .grid.cols-3, .grid.cols-2 { grid-template-columns: 1fr; }
+}
+
+.task-item {
+  padding: 8px 10px;
+  border: 1px solid var(--wubo-light-gray);
+  border-radius: 6px;
+  margin-bottom: 6px;
+  background: white;
+  font-size: 13px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.task-item.done {
+  background: var(--wubo-light-gray);
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.empty {
+  color: var(--wubo-gray);
+  font-style: italic;
+  text-align: center;
+  padding: 20px;
+}
+
+.drift-alert {
+  background: var(--wubo-warning);
+  color: white;
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
