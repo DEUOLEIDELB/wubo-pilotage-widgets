@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Setup">
+<meta name="theme-color" content="#F4F4F1">
+<link rel="apple-touch-icon" href="../icon.svg">
+<link rel="icon" type="image/svg+xml" href="../icon.svg">
+<title>Setup - Pilotage Wubo</title>
+<link rel="stylesheet" href="../lib/styles.css">
+<style>
+  main {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 16px 14px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  h1 { font-size: 18px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 11px; color: var(--text-dim); }
+  .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .actions button { flex: 1; min-width: 100px; }
+  pre {
+    background: var(--done-bg);
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    font-family: ui-monospace, monospace;
+  }
+  .status-ok { color: var(--success); font-weight: 700; }
+  .status-err { color: var(--danger); font-weight: 700; }
+  .instructions { font-size: 13px; line-height: 1.5; color: var(--text-dim); }
+  .instructions ol { padding-left: 20px; }
+  .instructions code { background: var(--done-bg); padding: 2px 5px; border-radius: 3px; font-size: 12px; }
+  .instructions strong { color: var(--text); }
+  .diag { font-size: 12px; margin-top: 8px; padding: 8px; border-left: 3px solid var(--current); background: var(--current-soft); }
+</style>
+</head>
+<body>
+
+<main>
+  <header>
+    <h1>Setup cle API Grist</h1>
+    <p style="font-size:12px;color:var(--text-dim);margin-top:4px">Configurer et diagnostiquer la connexion Grist pour les widgets standalone (iPhone)</p>
+  </header>
+
+  <div class="card">
+    <h2 style="font-size:13px;margin-bottom:8px">Ou trouver ma cle API Grist</h2>
+    <div class="instructions">
+      <ol>
+        <li>Va sur <strong>https://grist.playwubo.com</strong></li>
+        <li>Connecte-toi si ce n'est pas fait</li>
+        <li>Clique ton <strong>avatar en haut a droite</strong></li>
+        <li>Clique <strong>Profile Settings</strong></li>
+        <li>Descends jusqu'a la section <strong>API</strong></li>
+        <li>Si aucune cle : clique <code>Create</code></li>
+        <li>Clique sur la cle affichee pour la copier. Elle ressemble a <code>abc123def456...</code> (plus de 24 caracteres alphanumeriques)</li>
+      </ol>
+      <p style="margin-top:8px"><strong>Ne confonds pas avec</strong> : User ID, Doc ID, ou ton email. C'est la LONGUE chaine aleatoire.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="field">
+      <label for="api-key">Cle API</label>
+      <input id="api-key" type="text" placeholder="Colle la cle ici" autocomplete="off">
+    </div>
+    <div id="current-key-info" style="font-size:11px;color:var(--text-dim);margin-top:4px"></div>
+    <div class="actions" style="margin-top:10px">
+      <button class="accent" onclick="testKey()">Tester la cle</button>
+      <button class="primary" onclick="saveKey()">Enregistrer</button>
+      <button class="ghost" onclick="clearKey()">Effacer</button>
+    </div>
+  </div>
+
+  <div class="card" id="result-card" style="display:none">
+    <h2 style="font-size:13px;margin-bottom:8px">Resultat du test</h2>
+    <div id="result-status"></div>
+    <pre id="result-body"></pre>
+    <div id="result-diag" class="diag"></div>
+  </div>
+
+  <div style="display:flex;gap:6px;font-size:12px;margin-top:6px">
+    <a href="../widgets/aujourdhui/" style="flex:1;text-align:center;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;text-decoration:none;color:var(--text)">Aller au widget Jour</a>
+    <a href="../" style="flex:1;text-align:center;padding:10px;background:var(--surface);border:1px solid var(--border);border-radius:6px;text-decoration:none;color:var(--text)">Accueil</a>
+  </div>
+</main>
+
+<script src="../lib/dom.js"></script>
+<script>
+const DOC_ID = 'cmTvfM75iZzS8eRsPAJdpy';
+const BASE = 'https://grist.playwubo.com';
+const KEY_STORAGE = 'wubo_grist_api_key';
+const { $el, $clear } = Dom;
+
+function showCurrentKey() {
+  const k = localStorage.getItem(KEY_STORAGE);
+  const info = document.getElementById('current-key-info');
+  if (k) {
+    info.textContent = `Cle actuellement stockee : ${k.substring(0, 4)}...${k.substring(k.length - 4)} (${k.length} caracteres)`;
+  } else {
+    info.textContent = 'Aucune cle stockee';
+  }
+}
+
+function clearKey() {
+  localStorage.removeItem(KEY_STORAGE);
+  document.getElementById('api-key').value = '';
+  document.getElementById('result-card').style.display = 'none';
+  showCurrentKey();
+}
+
+function saveKey() {
+  const k = document.getElementById('api-key').value.trim();
+  if (!k) { alert('Colle une cle'); return; }
+  if (k.length < 24) {
+    if (!confirm(`Format suspect (${k.length} caracteres au lieu de >=24). Vraiment enregistrer ?`)) return;
+  }
+  localStorage.setItem(KEY_STORAGE, k);
+  showCurrentKey();
+  alert('Cle enregistree. Tu peux maintenant ouvrir les widgets.');
+}
+
+function setStatus(type, text) {
+  const n = document.getElementById('result-status');
+  $clear(n);
+  n.appendChild($el('span', { class: type === 'ok' ? 'status-ok' : 'status-err' }, text));
+}
+function setDiag(text) {
+  document.getElementById('result-diag').textContent = text;
+}
+
+async function testKey() {
+  const keyInput = document.getElementById('api-key').value.trim();
+  const storedKey = localStorage.getItem(KEY_STORAGE);
+  const key = keyInput || storedKey;
+  if (!key) { alert('Entre une cle ou charge-la depuis le storage'); return; }
+
+  const resultCard = document.getElementById('result-card');
+  const bodyNode = document.getElementById('result-body');
+  resultCard.style.display = 'block';
+  setStatus('', 'Test en cours...');
+  bodyNode.textContent = '';
+  setDiag('');
+
+  const url = `${BASE}/api/docs/${DOC_ID}/tables/Taches/records?auth=${encodeURIComponent(key)}`;
+  const urlRedacted = url.replace(key, key.substring(0, 4) + '...' + key.substring(key.length - 4));
+
+  const lines = [];
+  lines.push(`URL testee : ${urlRedacted}`);
+  lines.push(`Cle : ${key.substring(0, 4)}...${key.substring(key.length - 4)} (${key.length} caracteres)`);
+  lines.push(`User-Agent : ${navigator.userAgent}`);
+  lines.push('');
+
+  const t0 = Date.now();
+  let res, status, statusText, bodyText, fetchErr;
+  try {
+    res = await fetch(url);
+    status = res.status;
+    statusText = res.statusText;
+    bodyText = await res.text();
+  } catch (e) {
+    fetchErr = e;
+  }
+  const dt = Date.now() - t0;
+
+  lines.push(`Duree : ${dt}ms`);
+
+  if (fetchErr) {
+    setStatus('err', '✕ Fetch impossible (niveau reseau)');
+    lines.push(`Erreur fetch : ${fetchErr.message}`);
+    lines.push('');
+    lines.push('Cause probable : la reponse n\'a pas les bons headers CORS.');
+    lines.push('Typique sur Safari iPhone : "Load failed" = CORS bloque la reponse.');
+    lines.push('');
+    lines.push('VERIFICATIONS :');
+    lines.push('1. Vraiment connecte a Internet ? Test : ouvre https://grist.playwubo.com dans ce meme Safari.');
+    lines.push('2. La cle API est-elle bien 24+ caracteres alphanumeriques ?');
+    lines.push('3. La cle a-t-elle ete copiee sans espace, tab, ou retour chariot ?');
+    bodyNode.textContent = lines.join('\n');
+    setDiag('Diagnostic : Fetch echoue avant meme de recevoir la reponse HTTP. Soit reseau coupe, soit la reponse serveur n\'a pas de header Access-Control-Allow-Origin.');
+    return;
+  }
+
+  lines.push(`Status HTTP : ${status} ${statusText}`);
+  lines.push(`Response body : ${bodyText || '(vide)'}`);
+  lines.push('');
+
+  if (status === 200) {
+    setStatus('ok', '✓ Cle valide ! Connexion Grist OK.');
+    try {
+      const data = JSON.parse(bodyText);
+      lines.push(`Tables recuperees : ${data.records ? data.records.length + ' taches' : 'format inattendu'}`);
+    } catch (_) {}
+    setDiag('Tout est bon. Clique "Enregistrer" pour sauvegarder la cle et utiliser les widgets.');
+  } else if (status === 401) {
+    setStatus('err', '✕ Cle rejetee (401 Unauthorized)');
+    setDiag('Probleme : Le serveur Grist dit que cette cle est invalide. Verifie que tu as copie la cle API (pas le User ID ni le Doc ID). Regenere-la depuis Profile Settings au besoin.');
+  } else if (status === 403) {
+    setStatus('err', '✕ Acces refuse (403 Forbidden)');
+    setDiag('Probleme : La cle est reconnue mais ne donne pas acces au document. Verifie que tu es bien proprietaire du doc Pilotage Wubo.');
+  } else {
+    setStatus('err', `✕ Erreur serveur ${status}`);
+    setDiag(`Probleme inattendu : ${status} ${statusText}. Envoie cette sortie a Claude pour diagnostic.`);
+  }
+
+  bodyNode.textContent = lines.join('\n');
+}
+
+showCurrentKey();
+const existing = localStorage.getItem(KEY_STORAGE);
+if (existing) {
+  document.getElementById('api-key').value = existing;
+  setTimeout(() => testKey(), 300);
+}
+</script>
+
+</body>
+</html>
