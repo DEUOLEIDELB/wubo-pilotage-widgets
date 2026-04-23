@@ -212,7 +212,7 @@
   <div id="error"></div>
 
   <section>
-    <h2>Etat global</h2>
+    <h2>État global</h2>
     <div class="stats" id="stats"></div>
   </section>
 
@@ -221,6 +221,15 @@
 
   <section>
     <div id="objectifs"></div>
+  </section>
+
+  <section class="pill-legend" style="margin-top:8px;padding:6px 8px;font-size:10px;color:var(--text-dim);border:1px dashed var(--border);border-radius:4px;line-height:1.6">
+    <span style="color:var(--text-faint)">○</span> Pas commencée &middot;
+    <span style="color:var(--accent-strong)">◐</span> En cours &middot;
+    <span style="color:var(--success)">✓</span> Fait &middot;
+    <span style="color:#E87722">⚠</span> Bloquée &middot;
+    <span style="color:var(--danger)">✕</span> Abandonnée &middot;
+    <span style="color:var(--text-dim);opacity:0.6">⧖</span> Archivée
   </section>
 </main>
 
@@ -234,17 +243,20 @@
   <div class="modal-content" onclick="event.stopPropagation()">
     <div class="modal-head">
       <h3>Dump rapide</h3>
-      <button class="ghost small" onclick="closeDump()">Annuler</button>
+      <button class="ghost small" onclick="closeDump()">✕</button>
     </div>
     <select id="dump-contexte">
       <option value="Libre">Libre</option>
       <option value="Post-RDV">Post-RDV</option>
-      <option value="Idee">Idee</option>
-      <option value="Probleme">Probleme</option>
-      <option value="Decision">Decision</option>
+      <option value="Idee">Idée</option>
+      <option value="Probleme">Problème</option>
+      <option value="Decision">Décision</option>
     </select>
-    <textarea id="dump-content" placeholder="Ecris sans filtre. Claude rangera."></textarea>
-    <button class="primary" onclick="submitDump()">Envoyer au dump</button>
+    <textarea id="dump-content" placeholder="Écris sans filtre. Claude rangera."></textarea>
+    <div class="sticky-save">
+      <button class="ghost small" onclick="closeDump()">Annuler</button>
+      <button class="primary" onclick="submitDump()">Envoyer au dump</button>
+    </div>
   </div>
 </div>
 
@@ -252,29 +264,29 @@
 <div id="task-modal" class="modal hidden" onclick="backdropClose(event, 'task-modal')">
   <div class="modal-content" onclick="event.stopPropagation()">
     <div class="modal-head">
-      <h3 id="task-modal-title">Modifier la tache</h3>
-      <button class="ghost small" onclick="closeTaskEdit()">Annuler</button>
+      <h3 id="task-modal-title">Modifier la tâche</h3>
+      <button class="ghost small" onclick="closeTaskEdit()">✕</button>
     </div>
     <div id="task-meta" style="font-size:11px;color:var(--text-dim)"></div>
     <div class="field"><label>Titre</label><input id="task-titre"></div>
-    <div class="field"><label>Description / bullets (fragmentation)</label><textarea id="task-desc" placeholder="- detail 1&#10;- detail 2"></textarea></div>
+    <div class="field"><label>Description / bullets (fragmentation)</label><textarea id="task-desc" placeholder="- détail 1&#10;- détail 2"></textarea></div>
     <div class="field"><label>Livrable</label><input id="task-livrable"></div>
     <div class="field"><label>Statut</label>
-      <select id="task-statut">
+      <select id="task-statut" onchange="updateArchiveBtnVisibility()">
         <option>Pas commence</option><option>En cours</option><option>Fait</option><option>Bloque</option><option>Abandonne</option>
       </select>
     </div>
     <div class="field" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
       <div><label>Heures</label><input id="task-heures" type="number" step="0.5" min="0"></div>
-      <div><label>Echeance</label><input id="task-date" type="date"></div>
+      <div><label>Échéance</label><input id="task-date" type="date"></div>
     </div>
     <div class="field" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
       <div><label>Cash (0-5)</label><input id="task-cash" type="number" min="0" max="5" step="1"></div>
       <div><label>Urgence (0-5)</label><input id="task-urgency" type="number" min="0" max="5" step="1"></div>
-      <div><label>Strategique</label><input id="task-strat" type="number" min="0" max="5" step="1"></div>
+      <div><label>Stratégique</label><input id="task-strat" type="number" min="0" max="5" step="1"></div>
     </div>
     <div id="task-reporter" class="field" style="display:none">
-      <label>Reporter l'echeance</label>
+      <label>Reporter l'échéance</label>
       <div style="display:flex;gap:4px;flex-wrap:wrap">
         <button type="button" class="ghost small" onclick="reportTaskDays(1)">+1j</button>
         <button type="button" class="ghost small" onclick="reportTaskDays(3)">+3j</button>
@@ -283,11 +295,15 @@
       <div id="push-count-info" style="font-size:10px;color:var(--warning);margin-top:3px"></div>
     </div>
     <div id="subtasks-section" style="display:none">
-      <label>Sous-taches</label>
+      <label id="subtasks-label">Sous-tâches</label>
       <div id="subtasks-list" class="task-list-mini"></div>
-      <button type="button" class="ghost small" onclick="addSubtaskPrompt()" style="margin-top:4px">+ Sous-tache</button>
+      <button type="button" class="ghost small" onclick="onAddSubtaskClick()" style="margin-top:4px">+ Ajouter une sous-tâche</button>
     </div>
-    <button class="primary" onclick="saveTaskEdit()">Enregistrer</button>
+    <div class="sticky-save">
+      <button class="ghost small" onclick="closeTaskEdit()">Annuler</button>
+      <button id="task-archive-btn" class="ghost small" style="display:none" onclick="archiveCurrentTask()">Archiver</button>
+      <button class="primary" onclick="saveTaskEdit()">Enregistrer</button>
+    </div>
   </div>
 </div>
 
@@ -296,6 +312,8 @@ const { $el, $clear } = Dom;
 let objectifs = [], projets = [], taches = [], sujets = [];
 let currentTaskEditId = null, currentTaskProjetId = null, currentTaskParent = null;
 let currentTaskOriginalDate = null, currentPushCount = 0;
+let sujetsExpanded = false;
+let pendingSubtasks = []; // [{ titre: '' }] pour creation en meme temps que la tache parent
 const tachesById = {};
 
 function showError(msg) {
@@ -311,6 +329,7 @@ function showError(msg) {
 function statutClass(s) {
   if (!s) return 'todo';
   const k = s.toLowerCase();
+  if (k.includes('archive')) return 'archived';
   if (k.includes('fait')) return 'done';
   if (k.includes('en cours')) return 'wip';
   if (k.includes('bloque')) return 'blocked';
@@ -350,17 +369,22 @@ function renderSujetsTop(sujets) {
   if (sujets.length === 0) return;
   // Trier par jours_stagnation desc
   const sorted = [...sujets].sort((a, b) => (b.jours_stagnation || 0) - (a.jours_stagnation || 0));
-  const top3 = sorted.slice(0, 3);
+  const visible = sujetsExpanded ? sorted : sorted.slice(0, 3);
 
   const card = $el('div', { class: 'sujets-top' });
   card.appendChild($el('div', { class: 'sujets-top-title' },
-    `⚠ Sujets a pousser (${sujets.length})`,
+    `⚠ Sujets à pousser (${sujets.length})`,
     $el('span', { style: { fontSize: '10px', fontWeight: '500', color: 'var(--text-dim)' } }, 'Stagnation')
   ));
-  top3.forEach(s => card.appendChild(renderSujetRibbon(s)));
+  visible.forEach(s => card.appendChild(renderSujetRibbon(s)));
   if (sorted.length > 3) {
-    card.appendChild($el('div', { style: { fontSize: '10px', color: 'var(--text-dim)', textAlign: 'center', marginTop: '2px' } },
-      `+ ${sorted.length - 3} autres (voir Grist pour le detail complet)`));
+    const btnLabel = sujetsExpanded ? 'Réduire' : `Voir tous (${sorted.length} au total)`;
+    const toggleBtn = $el('button', {
+      class: 'ghost small',
+      style: { marginTop: '4px', fontSize: '11px', alignSelf: 'center' },
+      onclick: () => { sujetsExpanded = !sujetsExpanded; renderSujetsTop(sujets); }
+    }, btnLabel);
+    card.appendChild(toggleBtn);
   }
   section.appendChild(card);
 }
@@ -399,16 +423,22 @@ function renderGantt(taches, minTs, maxTs) {
 }
 
 function renderProjet(p) {
-  // Tâches du projet (exclut les sous-tâches qui ont un parent)
-  const tachesRoot = taches.filter(t => t.projet === p.id && !t.parent_tache);
+  // Tâches du projet (exclut les sous-tâches qui ont un parent et les archivées)
+  const tachesAll = taches.filter(t => t.projet === p.id && !t.parent_tache);
+  const archivedCount = tachesAll.filter(t => t.statut === 'Archive').length;
+  const tachesRoot = tachesAll.filter(t => t.statut !== 'Archive');
   const total = tachesRoot.length;
   const done = tachesRoot.filter(t => t.statut === 'Fait').length;
   const totalH = tachesRoot.reduce((s, t) => s + (t.estim_heures || 0), 0);
 
   const wrap = $el('div', { class: 'projet' });
+  const metaParts = [`${done}/${total} faites`];
+  if (archivedCount > 0) metaParts.push(`${archivedCount} archivées`);
+  metaParts.push(`${totalH}h`);
+  metaParts.push(`éch ${fmtDate(p.date_cible)}`);
   wrap.appendChild($el('div', { class: 'projet-head' },
     $el('span', { class: 'projet-title' }, p.titre || ''),
-    $el('span', { class: 'projet-meta' }, `${done}/${total} · ${totalH}h · ech ${fmtDate(p.date_cible)}`)
+    $el('span', { class: 'projet-meta' }, metaParts.join(' · '))
   ));
 
   if (tachesRoot.length > 0) {
@@ -423,16 +453,16 @@ function renderProjet(p) {
       .sort((a, b) => (a.ordre || 99) - (b.ordre || 99))
       .forEach(t => {
         tachesNode.appendChild(renderTache(t, false));
-        // Sous-tâches
-        const subs = taches.filter(s => s.parent_tache === t.id);
+        // Sous-tâches (exclut archivées)
+        const subs = taches.filter(s => s.parent_tache === t.id && s.statut !== 'Archive');
         subs.forEach(s => tachesNode.appendChild(renderTache(s, true)));
       });
     wrap.appendChild(tachesNode);
   } else {
-    wrap.appendChild($el('div', { class: 'empty', style: { fontSize: '11px' } }, 'Aucune tache'));
+    wrap.appendChild($el('div', { class: 'empty', style: { fontSize: '11px' } }, 'Aucune tâche'));
   }
 
-  wrap.appendChild($el('button', { class: 'add-tache-projet', onclick: (e) => { e.stopPropagation(); openTaskNew(p.id); } }, '+ Ajouter une tache'));
+  wrap.appendChild($el('button', { class: 'add-tache-projet', onclick: (e) => { e.stopPropagation(); openTaskNew(p.id); } }, '+ Ajouter une tâche'));
   return wrap;
 }
 
@@ -443,7 +473,7 @@ function renderObjectif(o) {
   el.appendChild($el('div', { class: 'obj-head' },
     $el('div', {},
       $el('div', { class: 'obj-title' }, o.titre || ''),
-      $el('div', { class: 'obj-meta' }, `${o.trimestre || ''} · P${o.priorite || '-'} · ech ${fmtDate(o.deadline)} · ${o.proprietaire || ''}`)
+      $el('div', { class: 'obj-meta' }, `${o.trimestre || ''} · P${o.priorite || '-'} · éch ${fmtDate(o.deadline)} · ${o.proprietaire || ''}`)
     ),
     $el('span', { class: 'tag ' + (prog >= 75 ? 'done' : prog >= 25 ? 'wip' : '') }, `${prog}%`)
   ));
@@ -459,7 +489,7 @@ function renderObjectif(o) {
     ));
   }
   projetsOfObj.forEach(p => el.appendChild(renderProjet(p)));
-  if (projetsOfObj.length === 0) el.appendChild($el('div', { class: 'empty', style: { fontSize: '11px' } }, 'Aucun projet rattache'));
+  if (projetsOfObj.length === 0) el.appendChild($el('div', { class: 'empty', style: { fontSize: '11px' } }, 'Aucun projet rattaché'));
   return el;
 }
 
@@ -483,19 +513,20 @@ async function render() {
     return;
   }
 
-  const total = taches.length;
-  const fait = taches.filter(x => x.statut === 'Fait').length;
-  const enCours = taches.filter(x => x.statut === 'En cours').length;
-  const bloque = taches.filter(x => x.statut === 'Bloque').length;
+  const tachesActives = taches.filter(x => x.statut !== 'Archive');
+  const total = tachesActives.length;
+  const fait = tachesActives.filter(x => x.statut === 'Fait').length;
+  const enCours = tachesActives.filter(x => x.statut === 'En cours').length;
+  const bloque = tachesActives.filter(x => x.statut === 'Bloque').length;
 
   const statsNode = document.getElementById('stats');
   $clear(statsNode);
   statsNode.appendChild(stat('Faites', `${fait}/${total}`));
   statsNode.appendChild(stat('En cours', enCours));
-  statsNode.appendChild(stat('Bloquees', bloque));
+  statsNode.appendChild(stat('Bloquées', bloque));
   statsNode.appendChild(stat('Avancement', `${total ? Math.round(fait/total*100) : 0}%`));
 
-  document.getElementById('sub').textContent = `${objectifs.length} obj · ${projets.length} projets · ${total} taches`;
+  document.getElementById('sub').textContent = `${objectifs.length} obj · ${projets.length} projets · ${total} tâches`;
 
   renderSujetsTop(sujets);
 
@@ -511,7 +542,8 @@ function openTaskNew(projetId, parentTaskId) {
   currentTaskParent = parentTaskId || null;
   currentTaskOriginalDate = null;
   currentPushCount = 0;
-  document.getElementById('task-modal-title').textContent = parentTaskId ? 'Nouvelle sous-tache' : 'Nouvelle tache';
+  pendingSubtasks = [];
+  document.getElementById('task-modal-title').textContent = parentTaskId ? 'Nouvelle sous-tâche' : 'Nouvelle tâche';
   document.getElementById('task-titre').value = '';
   document.getElementById('task-desc').value = '';
   document.getElementById('task-livrable').value = '';
@@ -521,9 +553,17 @@ function openTaskNew(projetId, parentTaskId) {
   document.getElementById('task-urgency').value = 2;
   document.getElementById('task-strat').value = 2;
   document.getElementById('task-date').value = unixToInputDate(WuboGrist.daysFromToday(7));
-  document.getElementById('task-meta').textContent = parentTaskId ? 'Sous-tache' : 'Nouvelle tache dans projet';
+  document.getElementById('task-meta').textContent = parentTaskId ? 'Sous-tâche' : 'Nouvelle tâche dans projet';
   document.getElementById('task-reporter').style.display = 'none';
-  document.getElementById('subtasks-section').style.display = 'none';
+  // Si on crée une tâche parent (pas une sous-tâche), proposer d'ajouter des sous-tâches en même temps
+  if (parentTaskId) {
+    document.getElementById('subtasks-section').style.display = 'none';
+  } else {
+    document.getElementById('subtasks-section').style.display = '';
+    document.getElementById('subtasks-label').textContent = 'Sous-tâches (optionnel)';
+    renderPendingSubtasksList();
+  }
+  document.getElementById('task-archive-btn').style.display = 'none';
   openModal('task-modal');
 }
 
@@ -535,7 +575,7 @@ function openTaskEdit(taskId) {
   currentTaskParent = null;
   currentTaskOriginalDate = t.date_cible || null;
   currentPushCount = t.push_count || 0;
-  document.getElementById('task-modal-title').textContent = 'Modifier la tache';
+  document.getElementById('task-modal-title').textContent = 'Modifier la tâche';
   document.getElementById('task-titre').value = t.titre || '';
   document.getElementById('task-desc').value = t.description || '';
   document.getElementById('task-livrable').value = t.livrable || '';
@@ -547,13 +587,15 @@ function openTaskEdit(taskId) {
   document.getElementById('task-date').value = unixToInputDate(t.date_cible);
   const meta = [];
   if (t.score) meta.push(`score ${t.score}`);
-  if (currentPushCount > 0) meta.push(`reportee ${currentPushCount}x`);
+  if (currentPushCount > 0) meta.push(`reportée ${currentPushCount}x`);
   document.getElementById('task-meta').textContent = meta.join(' · ');
   document.getElementById('task-reporter').style.display = 'flex';
-  document.getElementById('push-count-info').textContent = currentPushCount > 0 ? `Deja reportee ${currentPushCount}x (bonus score +${Math.min(currentPushCount*3, 10)})` : '';
-  const subs = Object.values(tachesById).filter(x => x.parent_tache === taskId);
+  document.getElementById('push-count-info').textContent = currentPushCount > 0 ? `Déjà reportée ${currentPushCount}x (bonus score +${Math.min(currentPushCount*3, 10)})` : '';
+  const subs = Object.values(tachesById).filter(x => x.parent_tache === taskId && x.statut !== 'Archive');
+  document.getElementById('subtasks-label').textContent = 'Sous-tâches';
   renderSubtasksList(subs);
   document.getElementById('subtasks-section').style.display = '';
+  updateArchiveBtnVisibility();
   openModal('task-modal');
 }
 
@@ -561,7 +603,7 @@ function renderSubtasksList(subs) {
   const node = document.getElementById('subtasks-list');
   $clear(node);
   if (subs.length === 0) {
-    node.appendChild($el('div', { class: 'empty', style: { fontSize: '11px' } }, 'Aucune sous-tache'));
+    node.appendChild($el('div', { class: 'empty', style: { fontSize: '11px' } }, 'Aucune sous-tâche'));
     return;
   }
   subs.forEach(s => {
@@ -572,13 +614,67 @@ function renderSubtasksList(subs) {
   });
 }
 
-function addSubtaskPrompt() {
+// Rendu de la liste des sous-tâches pending (à créer en même temps que la tâche parent)
+function renderPendingSubtasksList() {
+  const node = document.getElementById('subtasks-list');
+  $clear(node);
+  if (pendingSubtasks.length === 0) {
+    node.appendChild($el('div', { class: 'empty', style: { fontSize: '11px' } }, 'Aucune sous-tâche pour l\'instant'));
+    return;
+  }
+  pendingSubtasks.forEach((sub, idx) => {
+    const row = $el('div', { class: 'subtask-row', style: { cursor: 'default' } });
+    const input = $el('input', {
+      type: 'text',
+      value: sub.titre || '',
+      placeholder: 'Titre de la sous-tâche',
+      style: { flex: '1', fontSize: '12px', padding: '3px 6px' },
+      oninput: (e) => { pendingSubtasks[idx].titre = e.target.value; }
+    });
+    const delBtn = $el('button', {
+      type: 'button',
+      class: 'ghost small',
+      style: { padding: '2px 8px' },
+      onclick: () => { pendingSubtasks.splice(idx, 1); renderPendingSubtasksList(); }
+    }, '✕');
+    row.appendChild(input);
+    row.appendChild(delBtn);
+    node.appendChild(row);
+  });
+}
+
+// Dispatcher : en mode edit existant -> prompt pour ouvrir nouvelle sous-tache ;
+// en mode creation nouvelle tache -> ajoute ligne vide dans pendingSubtasks.
+function onAddSubtaskClick() {
+  if (currentTaskEditId) {
+    // mode édition : on crée une sous-tâche liée à la tâche en cours
+    const parent = currentTaskEditId;
+    const t = tachesById[parent];
+    const projetId = t ? t.projet : null;
+    closeTaskEdit();
+    setTimeout(() => openTaskNew(projetId, parent), 150);
+  } else {
+    // mode création : ajoute une ligne vide
+    pendingSubtasks.push({ titre: '' });
+    renderPendingSubtasksList();
+  }
+}
+
+function updateArchiveBtnVisibility() {
+  const btn = document.getElementById('task-archive-btn');
+  if (!btn) return;
+  const statut = document.getElementById('task-statut').value;
+  btn.style.display = (currentTaskEditId && statut === 'Fait') ? '' : 'none';
+}
+
+async function archiveCurrentTask() {
   if (!currentTaskEditId) return;
-  const parent = currentTaskEditId;
-  const t = tachesById[parent];
-  const projetId = t ? t.projet : null;
-  closeTaskEdit();
-  setTimeout(() => openTaskNew(projetId, parent), 150);
+  if (!confirm('Archiver cette tâche ? Elle disparaîtra des listes du dashboard.')) return;
+  try {
+    await WuboGrist.archiveTask(currentTaskEditId);
+    closeTaskEdit();
+    render();
+  } catch (e) { alert('Erreur : ' + e.message); }
 }
 
 function reportTaskDays(n) {
@@ -591,6 +687,7 @@ function closeTaskEdit() {
   currentTaskEditId = null;
   currentTaskProjetId = null;
   currentTaskParent = null;
+  pendingSubtasks = [];
   closeModal('task-modal');
 }
 
@@ -624,6 +721,35 @@ async function saveTaskEdit() {
       if (currentTaskProjetId) fields.projet = currentTaskProjetId;
       if (currentTaskParent) fields.parent_tache = currentTaskParent;
       await WuboGrist.addRecord('Taches', fields);
+
+      // Création des sous-tâches pending (uniquement pour une nouvelle tâche parent)
+      if (!currentTaskParent && pendingSubtasks.length > 0) {
+        const parentProjetId = currentTaskProjetId;
+        // On récupère l'id de la tâche parent qu'on vient de créer (via fetch rapide)
+        // addRecord ne renvoie pas d'id ici, donc on rafraîchit et on prend la plus récente matching titre+projet
+        const refreshed = await WuboGrist.fetchRows('Taches');
+        const candidates = refreshed.filter(t => t.titre === titre && t.projet === parentProjetId && !t.parent_tache);
+        const newParent = candidates.sort((a, b) => (b.date_creation || 0) - (a.date_creation || 0))[0];
+        const newParentId = newParent ? newParent.id : null;
+        if (newParentId) {
+          for (const sub of pendingSubtasks) {
+            const subTitre = (sub.titre || '').trim();
+            if (!subTitre) continue;
+            await WuboGrist.addRecord('Taches', {
+              titre: subTitre,
+              statut: 'Pas commence',
+              cash_impact: 1,
+              urgency: 1,
+              strategic_value: 1,
+              push_count: 0,
+              proprietaire: 'Taki',
+              date_creation: WuboGrist.daysFromToday(0),
+              projet: parentProjetId,
+              parent_tache: newParentId
+            });
+          }
+        }
+      }
     }
     closeTaskEdit();
     render();
