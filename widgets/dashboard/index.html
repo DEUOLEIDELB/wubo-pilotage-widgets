@@ -33,39 +33,110 @@
   .stat .label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); }
   .stat .value { font-size: 18px; font-weight: 700; color: var(--text); line-height: 1.1; margin-top: 2px; }
 
-  /* Sujets a pousser en PREMIER, en ribbon haut */
-  .sujets-top {
-    background: #FFF9D6;
-    border: 1px solid var(--accent-strong);
-    border-radius: 6px;
-    padding: 8px 10px;
+  /* Sujets a pousser : refonte carte individuelle mobile-first */
+  .sujets-wrap {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 8px;
   }
-  .sujets-top-title {
+  .sujets-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     font-size: 10px;
     font-weight: 700;
     color: var(--warning);
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    margin-bottom: 2px;
   }
-  .sujet-ribbon {
+  .sujet-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--border-strong);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .sujet-card.stagn-haute { border-left-color: var(--danger); }
+  .sujet-card.stagn-moyenne { border-left-color: var(--warning); }
+  .sujet-card.stagn-faible { border-left-color: var(--border-strong); }
+  .sujet-banner {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
+    padding: 6px 10px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--border);
+  }
+  .sujet-card.stagn-haute .sujet-banner { background: #FEE9E7; color: var(--danger); }
+  .sujet-card.stagn-moyenne .sujet-banner { background: #FFF0E1; color: var(--warning); }
+  .sujet-card.stagn-faible .sujet-banner { background: #F4F4F1; color: var(--text-dim); }
+  .sujet-banner .push-btn {
+    background: rgba(255,255,255,0.85);
+    border: 1px solid currentColor;
+    color: inherit;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .sujet-banner .push-btn:active { opacity: 0.7; }
+  .sujet-body {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .sujet-titre {
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--text);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .sujet-etape {
     font-size: 12px;
-    padding: 4px 0;
+    font-style: italic;
+    color: var(--text-dim);
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
-  .sujet-ribbon + .sujet-ribbon { border-top: 1px dashed rgba(0,0,0,0.1); padding-top: 6px; }
-  .sujet-ribbon .sr-titre { font-weight: 600; flex: 1; }
-  .sujet-ribbon .sr-stagnation { font-size: 10px; color: var(--danger); font-weight: 700; }
-  .sujet-ribbon.moyen .sr-stagnation { color: var(--warning); }
-  .sujet-ribbon .sr-step { font-size: 10px; color: var(--text-dim); width: 100%; margin-top: 2px; }
+  .sujet-expand-btn {
+    align-self: center;
+    font-size: 11px;
+    margin-top: 2px;
+  }
+
+  /* Modal de choix "Pousser" */
+  .push-choice-list { display: flex; flex-direction: column; gap: 6px; }
+  .push-choice-btn {
+    padding: 10px 12px;
+    text-align: left;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .push-choice-btn:active { background: var(--bg); }
+  .push-choice-btn .pc-titre { font-weight: 700; color: var(--text); }
+  .push-choice-btn .pc-sub { font-size: 11px; color: var(--text-dim); }
 
   .objectif {
     background: var(--surface);
@@ -77,11 +148,37 @@
     gap: 6px;
   }
   .obj-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
-  .obj-title { font-size: 13px; font-weight: 700; line-height: 1.2; }
-  .obj-meta { font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px; }
+  .obj-title {
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.25;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .obj-meta { font-size: 11px; color: var(--text-faint); margin-top: 3px; }
+  .obj-badges { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 3px; }
+  .badge-ext {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: #FEE9E7;
+    color: var(--danger);
+    border: 1px solid var(--danger);
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
   .obj-prog { display: flex; gap: 6px; align-items: center; }
-  .obj-prog .progress-bar { flex: 1; height: 4px; }
-  .obj-prog .val { font-size: 11px; font-weight: 700; min-width: 34px; text-align: right; }
+  .obj-prog .progress-bar { flex: 1; height: 7px; border-radius: 4px; overflow: hidden; background: var(--border); }
+  .obj-prog .progress-bar .fill { height: 100%; transition: width 0.3s ease; }
+  .obj-prog .progress-bar.low .fill { background: var(--accent-strong); }
+  .obj-prog .progress-bar.high .fill { background: var(--success); }
+  .obj-prog .val { font-size: 12px; font-weight: 700; min-width: 38px; text-align: right; }
   .obj-kpi { font-size: 11px; color: var(--text-dim); }
   .obj-kpi strong { color: var(--current); }
 
@@ -133,6 +230,25 @@
   .tache .date { font-size: 10px; color: var(--text-faint); white-space: nowrap; }
   .tache .date.late { color: var(--danger); font-weight: 700; }
   .push-indicator { font-size: 9px; color: var(--warning); font-weight: 700; margin-left: 3px; }
+  .ext-indicator {
+    display: inline-block;
+    font-size: 9px;
+    color: var(--danger);
+    font-weight: 700;
+    margin-left: 3px;
+    background: #FEE9E7;
+    border: 1px solid var(--danger);
+    padding: 0 3px;
+    border-radius: 2px;
+  }
+
+  /* Highlight cellule recemment modifiee */
+  @keyframes justUpdatedFlash {
+    0% { background-color: #FFF9D6; box-shadow: 0 0 0 2px var(--accent-strong); }
+    60% { background-color: #FFF9D6; box-shadow: 0 0 0 2px var(--accent-strong); }
+    100% { background-color: var(--surface); box-shadow: none; }
+  }
+  .tache.just-updated { animation: justUpdatedFlash 2s ease-out; }
 
   .add-tache-projet {
     margin-top: 4px;
@@ -261,6 +377,19 @@
   </div>
 </div>
 
+<!-- Push choice modal (pour "Pousser" un sujet stagnant) -->
+<div id="push-modal" class="modal hidden" onclick="backdropClose(event, 'push-modal')">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <h3 id="push-modal-title">Pousser ce sujet</h3>
+      <button class="ghost small" onclick="closePushModal()">✕</button>
+    </div>
+    <div id="push-modal-titre" style="font-size:13px;font-weight:700;color:var(--text)"></div>
+    <div id="push-modal-etape" style="font-size:12px;color:var(--text-dim);font-style:italic"></div>
+    <div class="push-choice-list" id="push-choice-list"></div>
+  </div>
+</div>
+
 <!-- Task edit/create modal -->
 <div id="task-modal" class="modal hidden" onclick="backdropClose(event, 'task-modal')">
   <div class="modal-content" onclick="event.stopPropagation()">
@@ -285,6 +414,12 @@
       <div><label>Cash (0-5)</label><input id="task-cash" type="number" min="0" max="5" step="1"></div>
       <div><label>Urgence (0-5)</label><input id="task-urgency" type="number" min="0" max="5" step="1"></div>
       <div><label>Stratégique</label><input id="task-strat" type="number" min="0" max="5" step="1"></div>
+    </div>
+    <div class="field">
+      <label style="display:flex;gap:6px;align-items:center;font-size:12px;cursor:pointer">
+        <input type="checkbox" id="task-ext-deadline" style="width:auto;margin:0">
+        <span>Vraie deadline externe (AAP, event, atelier école)</span>
+      </label>
     </div>
     <div id="task-reporter" class="field" style="display:none">
       <label>Reporter l'échéance</label>
@@ -316,6 +451,8 @@ let currentTaskOriginalDate = null, currentPushCount = 0;
 let sujetsExpanded = false;
 let pendingSubtasks = []; // [{ titre: '' }] pour creation en meme temps que la tache parent
 const tachesById = {};
+// Set des IDs de tâches récemment modifiées (flash visuel)
+const justUpdatedTaskIds = new Set();
 
 function showError(msg) {
   const e = document.getElementById('error');
@@ -352,16 +489,38 @@ function stat(label, value) {
   );
 }
 
-function renderSujetRibbon(s) {
+function stagnationLevel(j) {
+  if (j >= 999 || j > 14) return 'haute';
+  if (j > 7) return 'moyenne';
+  return 'faible';
+}
+function stagnationLabel(j, level) {
+  const txt = j === 999 ? 'Jamais touché' : `Stagnant ${j}j`;
+  if (level === 'haute') return '🔴 ' + txt.toUpperCase();
+  if (level === 'moyenne') return '🟠 ' + txt.toUpperCase();
+  return '⚪ ' + txt.toUpperCase();
+}
+
+function renderSujetCard(s) {
   const j = s.jours_stagnation || 0;
-  let cls = 'sujet-ribbon';
-  if (j > 14) cls += ' haute';
-  else if (j > 7) cls += ' moyen';
-  const el = $el('div', { class: cls });
-  el.appendChild($el('span', { class: 'sr-titre' }, s.titre || ''));
-  el.appendChild($el('span', { class: 'sr-stagnation' }, `${j === 999 ? 'jamais' : j + 'j'}`));
-  if (s.prochaine_etape) el.appendChild($el('span', { class: 'sr-step' }, '→ ' + s.prochaine_etape));
-  return el;
+  const level = stagnationLevel(j);
+  const card = $el('div', { class: 'sujet-card stagn-' + level });
+
+  const banner = $el('div', { class: 'sujet-banner' });
+  banner.appendChild($el('span', {}, stagnationLabel(j, level)));
+  banner.appendChild($el('button', {
+    class: 'push-btn',
+    onclick: (e) => { e.stopPropagation(); openPushModal(s); }
+  }, 'Pousser →'));
+  card.appendChild(banner);
+
+  const body = $el('div', { class: 'sujet-body' });
+  body.appendChild($el('div', { class: 'sujet-titre', title: s.titre || '' }, s.titre || ''));
+  if (s.prochaine_etape) {
+    body.appendChild($el('div', { class: 'sujet-etape' }, '→ ' + s.prochaine_etape));
+  }
+  card.appendChild(body);
+  return card;
 }
 
 function renderSujetsTop(sujets) {
@@ -372,39 +531,147 @@ function renderSujetsTop(sujets) {
   const sorted = [...sujets].sort((a, b) => (b.jours_stagnation || 0) - (a.jours_stagnation || 0));
   const visible = sujetsExpanded ? sorted : sorted.slice(0, 3);
 
-  const card = $el('div', { class: 'sujets-top' });
-  card.appendChild($el('div', { class: 'sujets-top-title' },
-    `⚠ Sujets à pousser (${sujets.length})`,
-    $el('span', { style: { fontSize: '10px', fontWeight: '500', color: 'var(--text-dim)' } }, 'Stagnation')
+  const wrap = $el('div', { class: 'sujets-wrap' });
+  wrap.appendChild($el('div', { class: 'sujets-header' },
+    $el('span', {}, `⚠ Sujets à pousser (${sujets.length})`),
+    $el('span', { style: { fontWeight: '500', color: 'var(--text-dim)', textTransform: 'none', letterSpacing: '0' } }, 'Stagnation décroissante')
   ));
-  visible.forEach(s => card.appendChild(renderSujetRibbon(s)));
+  visible.forEach(s => wrap.appendChild(renderSujetCard(s)));
   if (sorted.length > 3) {
-    const btnLabel = sujetsExpanded ? 'Réduire' : `Voir tous (${sorted.length} au total)`;
+    const hiddenCount = sorted.length - 3;
+    const btnLabel = sujetsExpanded ? 'Réduire' : `Voir les ${hiddenCount} autres`;
     const toggleBtn = $el('button', {
-      class: 'ghost small',
-      style: { marginTop: '4px', fontSize: '11px', alignSelf: 'center' },
+      class: 'ghost small sujet-expand-btn',
       onclick: () => { sujetsExpanded = !sujetsExpanded; renderSujetsTop(sujets); }
     }, btnLabel);
-    card.appendChild(toggleBtn);
+    wrap.appendChild(toggleBtn);
   }
-  section.appendChild(card);
+  section.appendChild(wrap);
+}
+
+// --- Push modal : choix d'action sur un sujet stagnant ---
+let currentPushSujet = null;
+function openPushModal(sujet) {
+  currentPushSujet = sujet;
+  document.getElementById('push-modal-titre').textContent = sujet.titre || '';
+  document.getElementById('push-modal-etape').textContent = sujet.prochaine_etape ? '→ ' + sujet.prochaine_etape : '';
+  const list = document.getElementById('push-choice-list');
+  $clear(list);
+
+  const btnContact = $el('button', { class: 'push-choice-btn', onclick: () => pushActionContact() });
+  btnContact.appendChild($el('span', { class: 'pc-titre' }, '📞 Contacter maintenant'));
+  btnContact.appendChild($el('span', { class: 'pc-sub' }, 'Marque comme touché aujourd\'hui, puis agis'));
+  list.appendChild(btnContact);
+
+  const btnConvert = $el('button', { class: 'push-choice-btn', onclick: () => pushActionConvert() });
+  btnConvert.appendChild($el('span', { class: 'pc-titre' }, '✓ Convertir en tâche'));
+  btnConvert.appendChild($el('span', { class: 'pc-sub' }, 'Crée une tâche liée à ce sujet'));
+  list.appendChild(btnConvert);
+
+  const btnReport = $el('button', { class: 'push-choice-btn', onclick: () => pushActionReport(3) });
+  btnReport.appendChild($el('span', { class: 'pc-titre' }, '⏱ Reporter de 3 jours'));
+  btnReport.appendChild($el('span', { class: 'pc-sub' }, 'Décale la stagnation de 3 jours'));
+  list.appendChild(btnReport);
+
+  openModal('push-modal');
+}
+function closePushModal() {
+  currentPushSujet = null;
+  closeModal('push-modal');
+}
+
+async function pushActionContact() {
+  if (!currentPushSujet) return;
+  const sujetId = currentPushSujet.id;
+  try {
+    await WuboGrist.updateRecord('Sujets_a_pousser', sujetId, {
+      derniere_action: WuboGrist.daysFromToday(0)
+    });
+    closePushModal();
+    WuboGrist.toast('Contact enregistré : à toi d\'agir', 'success');
+    await render();
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
+  }
+}
+
+async function pushActionConvert() {
+  if (!currentPushSujet) return;
+  const sujet = currentPushSujet;
+  const titre = (sujet.prochaine_etape && sujet.prochaine_etape.trim()) || sujet.titre || 'Sujet à pousser';
+  try {
+    const fields = {
+      titre: titre.trim(),
+      description: `Issu du sujet : ${sujet.titre || ''}`,
+      statut: 'Pas commence',
+      cash_impact: 1,
+      urgency: 3,
+      strategic_value: 2,
+      push_count: 0,
+      proprietaire: 'Taki',
+      date_creation: WuboGrist.daysFromToday(0),
+      date_cible: WuboGrist.daysFromToday(3)
+    };
+    const created = await WuboGrist.addRecord('Taches', fields);
+    // Marquer le sujet comme touché aujourd'hui (converti)
+    await WuboGrist.updateRecord('Sujets_a_pousser', sujet.id, {
+      derniere_action: WuboGrist.daysFromToday(0)
+    });
+    closePushModal();
+    WuboGrist.toast('Sujet converti en tâche', 'success');
+    if (created && created.id) justUpdatedTaskIds.add(created.id);
+    await render();
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
+  }
+}
+
+async function pushActionReport(days) {
+  if (!currentPushSujet) return;
+  try {
+    // Décaler la stagnation : on avance derniere_action de `days` jours
+    // (le formula jours_stagnation = today - derniere_action, donc une date future => stagnation négative)
+    await WuboGrist.updateRecord('Sujets_a_pousser', currentPushSujet.id, {
+      derniere_action: WuboGrist.daysFromToday(days)
+    });
+    closePushModal();
+    WuboGrist.toast(`Reporté de ${days} jours`, 'info');
+    await render();
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
+  }
 }
 
 function renderTache(t, isSubtask) {
   const statutPill = statutClass(t.statut);
   const late = t.date_cible && t.date_cible < todayUnix() && t.statut !== 'Fait' && t.statut !== 'Abandonne';
+  const classes = ['tache'];
+  if (t.statut === 'Fait') classes.push('done');
+  if (isSubtask) classes.push('subtask');
+  if (justUpdatedTaskIds.has(t.id)) classes.push('just-updated');
   const el = $el('div', {
-    class: 'tache ' + (t.statut === 'Fait' ? 'done ' : '') + (isSubtask ? 'subtask' : ''),
+    class: classes.join(' '),
     onclick: () => openTaskEdit(t.id)
   },
     $el('span', { class: 'status-pill ' + statutPill }),
     $el('span', { class: 'ord' }, t.ordre ? String(t.ordre) : (isSubtask ? '└' : '-')),
-    $el('span', { class: 'titre', title: t.titre }, t.titre || ''),
+    $el('span', { class: 'titre', title: t.titre },
+      t.titre || '',
+      t.est_deadline_externe ? $el('span', { class: 'ext-indicator', title: 'Deadline externe' }, '⏰ ext') : null
+    ),
     $el('span', { class: 'date' + (late ? ' late' : '') },
       fmtDate(t.date_cible) + (t.estim_heures ? ` · ${t.estim_heures}h` : ''),
       t.push_count ? $el('span', { class: 'push-indicator' }, ` ↻${t.push_count}`) : null
     )
   );
+  // Nettoyer le flag apres 2s (affichage)
+  if (justUpdatedTaskIds.has(t.id)) {
+    const id = t.id;
+    setTimeout(() => {
+      justUpdatedTaskIds.delete(id);
+      el.classList.remove('just-updated');
+    }, 2100);
+  }
   return el;
 }
 
@@ -471,21 +738,38 @@ function renderObjectif(o) {
   const projetsOfObj = projets.filter(p => p.objectif === o.id);
   const prog = Math.round(o.progression || 0);
   const el = $el('div', { class: 'objectif' });
-  el.appendChild($el('div', { class: 'obj-head' },
-    $el('div', {},
-      $el('div', { class: 'obj-title' }, o.titre || ''),
-      $el('div', { class: 'obj-meta' }, `${o.trimestre || ''} · P${o.priorite || '-'} · éch ${fmtDate(o.deadline)} · ${o.proprietaire || ''}`)
-    ),
-    $el('span', { class: 'tag ' + (prog >= 75 ? 'done' : prog >= 25 ? 'wip' : '') }, `${prog}%`)
-  ));
+
+  const metaBits = [];
+  if (o.trimestre) metaBits.push(o.trimestre);
+  if (o.priorite) metaBits.push('P' + o.priorite);
+  if (o.deadline) metaBits.push('éch ' + fmtDate(o.deadline));
+  if (o.proprietaire) metaBits.push(o.proprietaire);
+
+  const head = $el('div', { class: 'obj-head' });
+  const headLeft = $el('div', { style: { flex: '1', minWidth: '0' } });
+  headLeft.appendChild($el('div', { class: 'obj-title', title: o.titre || '' }, o.titre || ''));
+  headLeft.appendChild($el('div', { class: 'obj-meta' }, metaBits.join(' · ')));
+  if (o.est_deadline_externe) {
+    const badges = $el('div', { class: 'obj-badges' });
+    badges.appendChild($el('span', { class: 'badge-ext' }, '⏰ Deadline externe'));
+    headLeft.appendChild(badges);
+  }
+  head.appendChild(headLeft);
+  head.appendChild($el('span', { class: 'tag ' + (prog >= 75 ? 'done' : prog >= 25 ? 'wip' : '') }, `${prog}%`));
+  el.appendChild(head);
+
   if (o.description) el.appendChild($el('div', { style: { fontSize: '11px', color: 'var(--text-dim)' } }, o.description));
+
   el.appendChild($el('div', { class: 'obj-prog' },
-    $el('div', { class: 'progress-bar' }, $el('div', { class: 'fill', style: { width: prog + '%' } })),
+    $el('div', { class: 'progress-bar ' + (prog >= 50 ? 'high' : 'low') },
+      $el('div', { class: 'fill', style: { width: prog + '%' } })
+    ),
     $el('span', { class: 'val' }, `${prog}%`)
   ));
+
   if (o.kpi_vise || o.kpi_actuel) {
     el.appendChild($el('div', { class: 'obj-kpi' },
-      'KPI vise : ', o.kpi_vise || '-', ' · actuel : ',
+      'KPI visé : ', o.kpi_vise || '-', ' · actuel : ',
       $el('strong', {}, o.kpi_actuel || '-')
     ));
   }
@@ -554,6 +838,7 @@ function openTaskNew(projetId, parentTaskId) {
   document.getElementById('task-urgency').value = 2;
   document.getElementById('task-strat').value = 2;
   document.getElementById('task-date').value = unixToInputDate(WuboGrist.daysFromToday(7));
+  document.getElementById('task-ext-deadline').checked = false;
   document.getElementById('task-meta').textContent = parentTaskId ? 'Sous-tâche' : 'Nouvelle tâche dans projet';
   document.getElementById('task-reporter').style.display = 'none';
   // Si on crée une tâche parent (pas une sous-tâche), proposer d'ajouter des sous-tâches en même temps
@@ -568,14 +853,14 @@ function openTaskNew(projetId, parentTaskId) {
   openModal('task-modal');
 }
 
-function openTaskEdit(taskId) {
-  const t = tachesById[taskId];
-  if (!t) return;
-  currentTaskEditId = taskId;
+// Charge les champs de la modal à partir d'une tâche (utilisé par openTaskEdit et replaceTaskEdit)
+function fillTaskEditFields(t) {
+  currentTaskEditId = t.id;
   currentTaskProjetId = null;
   currentTaskParent = null;
   currentTaskOriginalDate = t.date_cible || null;
   currentPushCount = t.push_count || 0;
+  pendingSubtasks = [];
   document.getElementById('task-modal-title').textContent = 'Modifier la tâche';
   document.getElementById('task-titre').value = t.titre || '';
   document.getElementById('task-desc').value = t.description || '';
@@ -586,18 +871,35 @@ function openTaskEdit(taskId) {
   document.getElementById('task-urgency').value = t.urgency || 0;
   document.getElementById('task-strat').value = t.strategic_value || 0;
   document.getElementById('task-date').value = unixToInputDate(t.date_cible);
+  document.getElementById('task-ext-deadline').checked = !!t.est_deadline_externe;
   const meta = [];
   if (t.score) meta.push(`score ${t.score}`);
   if (currentPushCount > 0) meta.push(`reportée ${currentPushCount}x`);
   document.getElementById('task-meta').textContent = meta.join(' · ');
   document.getElementById('task-reporter').style.display = 'flex';
   document.getElementById('push-count-info').textContent = currentPushCount > 0 ? `Déjà reportée ${currentPushCount}x (bonus score +${Math.min(currentPushCount*3, 10)})` : '';
-  const subs = Object.values(tachesById).filter(x => x.parent_tache === taskId && x.statut !== 'Archive');
+  const subs = Object.values(tachesById).filter(x => x.parent_tache === t.id && x.statut !== 'Archive');
   document.getElementById('subtasks-label').textContent = 'Sous-tâches';
   renderSubtasksList(subs);
   document.getElementById('subtasks-section').style.display = '';
   updateArchiveBtnVisibility();
+}
+
+function openTaskEdit(taskId) {
+  const t = tachesById[taskId];
+  if (!t) return;
+  fillTaskEditFields(t);
   openModal('task-modal');
+}
+
+// Remplace in-place le contenu de la modal task-edit sans fermer/rouvrir (évite flash blanc)
+function replaceTaskEdit(newTaskId) {
+  const t = tachesById[newTaskId];
+  if (!t) return;
+  // Scroll top du modal pour bien repartir sur le titre
+  const modalContent = document.querySelector('#task-modal .modal-content');
+  if (modalContent) modalContent.scrollTop = 0;
+  fillTaskEditFields(t);
 }
 
 function renderSubtasksList(subs) {
@@ -608,9 +910,9 @@ function renderSubtasksList(subs) {
     return;
   }
   subs.forEach(s => {
-    node.appendChild($el('div', { class: 'subtask-row', onclick: () => { closeTaskEdit(); setTimeout(() => openTaskEdit(s.id), 150); } },
+    node.appendChild($el('div', { class: 'subtask-row', onclick: () => replaceTaskEdit(s.id) },
       $el('span', { class: 'status-pill ' + statutClass(s.statut) }),
-      $el('span', { style: { flex: '1' } }, s.titre)
+      $el('span', { style: { flex: '1' } }, s.titre || '')
     ));
   });
 }
@@ -672,10 +974,14 @@ async function archiveCurrentTask() {
   if (!currentTaskEditId) return;
   if (!confirm('Archiver cette tâche ? Elle disparaîtra des listes du dashboard.')) return;
   try {
-    await WuboGrist.archiveTask(currentTaskEditId);
+    const id = currentTaskEditId;
+    await WuboGrist.archiveTask(id);
     closeTaskEdit();
-    render();
-  } catch (e) { alert('Erreur : ' + e.message); }
+    await render();
+    WuboGrist.toast('Tâche archivée', 'info');
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
+  }
 }
 
 function reportTaskDays(n) {
@@ -694,7 +1000,7 @@ function closeTaskEdit() {
 
 async function saveTaskEdit() {
   const titre = document.getElementById('task-titre').value.trim();
-  if (!titre) { alert('Titre obligatoire'); return; }
+  if (!titre) { WuboGrist.toast('Titre obligatoire', 'warn'); return; }
   const heures = parseFloat(document.getElementById('task-heures').value) || 0;
   const dateStr = document.getElementById('task-date').value;
   const dateUnix = inputDateToUnix(dateStr);
@@ -706,7 +1012,8 @@ async function saveTaskEdit() {
     estim_heures: heures,
     cash_impact: parseInt(document.getElementById('task-cash').value) || 0,
     urgency: parseInt(document.getElementById('task-urgency').value) || 0,
-    strategic_value: parseInt(document.getElementById('task-strat').value) || 0
+    strategic_value: parseInt(document.getElementById('task-strat').value) || 0,
+    est_deadline_externe: document.getElementById('task-ext-deadline').checked
   };
   if (dateUnix) fields.date_cible = dateUnix;
   try {
@@ -714,58 +1021,69 @@ async function saveTaskEdit() {
       if (currentTaskOriginalDate && dateUnix && dateUnix > currentTaskOriginalDate) {
         fields.push_count = currentPushCount;
       }
-      await WuboGrist.updateRecord('Taches', currentTaskEditId, fields);
+      const updatedId = currentTaskEditId;
+      await WuboGrist.updateRecord('Taches', updatedId, fields);
+      justUpdatedTaskIds.add(updatedId);
+      closeTaskEdit();
+      await render();
+      WuboGrist.toast('Tâche enregistrée', 'success');
     } else {
       fields.date_creation = WuboGrist.daysFromToday(0);
       fields.push_count = 0;
       fields.proprietaire = 'Taki';
       if (currentTaskProjetId) fields.projet = currentTaskProjetId;
       if (currentTaskParent) fields.parent_tache = currentTaskParent;
-      await WuboGrist.addRecord('Taches', fields);
+
+      // Fix Bug B : addRecord retourne {id} directement, on l'utilise pour lier les sous-tâches
+      const created = await WuboGrist.addRecord('Taches', fields);
+      const newParentId = created && created.id;
+      if (!newParentId) throw new Error('Impossible de récupérer l\'ID de la tâche créée');
+      justUpdatedTaskIds.add(newParentId);
 
       // Création des sous-tâches pending (uniquement pour une nouvelle tâche parent)
-      if (!currentTaskParent && pendingSubtasks.length > 0) {
-        const parentProjetId = currentTaskProjetId;
-        // On récupère l'id de la tâche parent qu'on vient de créer (via fetch rapide)
-        // addRecord ne renvoie pas d'id ici, donc on rafraîchit et on prend la plus récente matching titre+projet
-        const refreshed = await WuboGrist.fetchRows('Taches');
-        const candidates = refreshed.filter(t => t.titre === titre && t.projet === parentProjetId && !t.parent_tache);
-        const newParent = candidates.sort((a, b) => (b.date_creation || 0) - (a.date_creation || 0))[0];
-        const newParentId = newParent ? newParent.id : null;
-        if (newParentId) {
-          for (const sub of pendingSubtasks) {
-            const subTitre = (sub.titre || '').trim();
-            if (!subTitre) continue;
-            await WuboGrist.addRecord('Taches', {
-              titre: subTitre,
-              statut: 'Pas commence',
-              cash_impact: 1,
-              urgency: 1,
-              strategic_value: 1,
-              push_count: 0,
-              proprietaire: 'Taki',
-              date_creation: WuboGrist.daysFromToday(0),
-              projet: parentProjetId,
-              parent_tache: newParentId
-            });
-          }
-        }
+      const subsToCreate = (!currentTaskParent && pendingSubtasks.length > 0)
+        ? pendingSubtasks.filter(s => s.titre && s.titre.trim())
+        : [];
+      for (const sub of subsToCreate) {
+        const subRes = await WuboGrist.addRecord('Taches', {
+          titre: sub.titre.trim(),
+          parent_tache: newParentId,
+          projet: currentTaskProjetId || null,
+          statut: 'Pas commence',
+          date_creation: WuboGrist.daysFromToday(0),
+          proprietaire: 'Taki',
+          cash_impact: 1,
+          urgency: 1,
+          strategic_value: 1,
+          push_count: 0
+        });
+        if (subRes && subRes.id) justUpdatedTaskIds.add(subRes.id);
+      }
+      closeTaskEdit();
+      await render();
+      if (subsToCreate.length > 0) {
+        WuboGrist.toast(`Tâche créée avec ${subsToCreate.length} sous-tâche(s)`, 'success');
+      } else {
+        WuboGrist.toast('Tâche créée', 'success');
       }
     }
-    closeTaskEdit();
-    render();
-  } catch (e) { alert('Erreur : ' + e.message); }
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
+  }
 }
 
 async function submitDump() {
   const ctx = document.getElementById('dump-contexte').value;
   const content = document.getElementById('dump-content').value.trim();
-  if (!content) return;
+  if (!content) { WuboGrist.toast('Note vide', 'warn'); return; }
   try {
     await WuboGrist.addRecord('Dump_notes', { timestamp: WuboGrist.nowUnix(), auteur: 'Taki', contenu: content, contexte: ctx, traite: false, converti_en: '' });
     document.getElementById('dump-content').value = '';
     closeDump();
-  } catch (e) { alert('Erreur : ' + e.message); }
+    WuboGrist.toast('Dump envoyé', 'success');
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
+  }
 }
 
 function openDump() { openModal('dump-modal'); }
@@ -783,7 +1101,7 @@ async function refresh() {
   setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1000);
 }
 
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeTaskEdit(); closeDump(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeTaskEdit(); closeDump(); closePushModal(); } });
 
 (async () => {
   await WuboGrist.initGrist();
