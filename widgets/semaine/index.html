@@ -27,17 +27,34 @@
   .sprint-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-end;
+    align-items: center;
+    gap: 8px;
     padding: 2px 4px 6px;
     border-bottom: 1px solid var(--border);
   }
+  .sprint-header .title-block { flex: 1; min-width: 0; }
   .sprint-header h1 { font-size: 16px; line-height: 1.1; }
   .sprint-header .sub { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+  .sprint-nav { display: flex; gap: 4px; flex-shrink: 0; }
+  .sprint-nav button.nav-chev {
+    width: 34px; height: 34px; padding: 0;
+    font-size: 16px; line-height: 1;
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--border-strong); border-radius: 6px;
+  }
+  .sprint-nav button.nav-chev:active { opacity: 0.6; }
+  .sprint-nav button.nav-today {
+    padding: 0 10px; height: 34px;
+    font-size: 12px;
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--border-strong); border-radius: 6px;
+  }
 
   .grid-week {
     display: grid;
     grid-template-columns: 32px repeat(var(--days, 4), 1fr);
     gap: 3px;
+    touch-action: pan-y;
   }
   .col-head {
     font-size: 10px;
@@ -71,13 +88,13 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 5px;
-    padding: 4px 14px 4px 4px;
-    min-height: 58px;
+    padding: 4px 12px 4px 4px;
+    min-height: 64px;
     font-size: 9px;
     line-height: 1.2;
     display: flex;
     flex-direction: column;
-    gap: 1px;
+    gap: 2px;
     overflow: hidden;
     position: relative;
     cursor: pointer;
@@ -96,10 +113,41 @@
   .status-dot.wip { background: var(--accent-strong); }
   .status-dot.planned { background: var(--border-strong); }
 
-  .cell ul { list-style: none; padding: 0; margin: 0; font-size: 9px; line-height: 1.2; }
-  .cell li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); max-width: 100%; }
-  .cell.done li, .cell.skip li { color: var(--text-faint); text-decoration: line-through; }
-  .cell .note-dot { position: absolute; bottom: 3px; right: 4px; font-size: 8px; color: var(--warning); }
+  .cell .task-main {
+    font-size: 9px;
+    line-height: 1.2;
+    color: var(--text);
+    white-space: normal;
+    word-break: break-word;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    max-height: 36px;
+  }
+  .cell .task-extra {
+    font-size: 8px;
+    color: var(--text-faint);
+    margin-top: 1px;
+  }
+  .cell.done .task-main, .cell.skip .task-main { color: var(--text-faint); text-decoration: line-through; }
+  .cell .libre { font-size: 8px; color: var(--text-faint); font-style: italic; }
+  .cell .note-dot { position: absolute; bottom: 3px; right: 4px; font-size: 9px; color: var(--warning); line-height: 1; }
+
+  .empty-window {
+    grid-column: 2 / -1;
+    padding: 14px 10px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-dim);
+    border: 1px dashed var(--border-strong);
+    border-radius: 6px;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
 
   .bottom {
     position: fixed;
@@ -117,9 +165,20 @@
   }
   .bottom button { flex: 1; padding: 13px; font-size: 14px; }
 
-  .legend { display: flex; gap: 8px; font-size: 10px; color: var(--text-dim); padding: 4px 4px 0; flex-wrap: wrap; }
+  .legend {
+    display: flex;
+    gap: 8px;
+    font-size: 10px;
+    color: var(--text-dim);
+    padding: 4px 4px 0;
+    flex-wrap: wrap;
+    align-items: center;
+  }
   .legend .lg { display: flex; align-items: center; gap: 3px; }
   .legend .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .legend .dash { display: inline-block; width: 10px; height: 0; border-top: 1px dashed var(--border-strong); }
+  .legend .note-ico { color: var(--warning); font-size: 10px; line-height: 1; }
+  .legend .libre-ico { font-style: italic; font-size: 9px; color: var(--text-faint); }
 
   #error { background: var(--danger); color: white; padding: 10px; border-radius: 6px; font-size: 12px; display: none; }
   #error button { margin-top: 6px; background: white; color: var(--danger); border: 1px solid white; }
@@ -138,12 +197,17 @@
   .modal-content .field { display: flex; flex-direction: column; gap: 4px; }
   .modal-content .field label { font-size: 10px; }
   .task-list-mini { display: flex; flex-direction: column; gap: 4px; }
-  .task-list-mini .task-row { padding: 6px 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 12px; cursor: pointer; }
-  .task-list-mini .task-row:active { opacity: 0.7; }
+  .task-list-mini .task-row, .task-list-mini .subtask {
+    padding: 6px 8px; border: 1px solid var(--border); border-radius: 4px;
+    font-size: 12px; cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .task-list-mini .task-row:active, .task-list-mini .subtask:active { opacity: 0.7; }
 
   @media (min-width: 600px) {
     .bottom { max-width: 720px; left: 50%; transform: translateX(-50%); border-radius: 12px 12px 0 0; }
-    .cell { font-size: 10px; min-height: 70px; }
+    .cell { font-size: 10px; min-height: 72px; }
+    .cell .task-main { font-size: 10px; max-height: 40px; }
   }
 </style>
 </head>
@@ -158,9 +222,14 @@
   </nav>
 
   <div class="sprint-header">
-    <div>
+    <div class="title-block">
       <h1 id="title">Sprint</h1>
       <div class="sub" id="sub"></div>
+    </div>
+    <div class="sprint-nav">
+      <button type="button" class="nav-chev" onclick="shiftWindow(-1)" aria-label="Période précédente" title="Période précédente">‹</button>
+      <button type="button" class="nav-today" onclick="resetWindow()" title="Revenir à aujourd'hui">Aujourd'hui</button>
+      <button type="button" class="nav-chev" onclick="shiftWindow(1)" aria-label="Période suivante" title="Période suivante">›</button>
     </div>
   </div>
 
@@ -172,8 +241,11 @@
     <span class="lg"><span class="dot" style="background:#188038"></span>Fait</span>
     <span class="lg"><span class="dot" style="background:#5914D0"></span>Courant</span>
     <span class="lg"><span class="dot" style="background:#F0CC00"></span>En cours</span>
-    <span class="lg"><span class="dot" style="background:#C8C8C3"></span>Planifie</span>
-    <span class="lg"><span class="dot" style="background:#9A9A95"></span>Zappe</span>
+    <span class="lg"><span class="dot" style="background:#C8C8C3"></span>Planifié</span>
+    <span class="lg"><span class="dot" style="background:#9A9A95"></span>Zappé</span>
+    <span class="lg"><span class="note-ico">●</span>Note</span>
+    <span class="lg"><span class="libre-ico">Libre</span> sans tâche</span>
+    <span class="lg"><span class="dash"></span>pas de bloc</span>
   </div>
 </main>
 
@@ -193,22 +265,25 @@
     <div class="field">
       <label>Statut</label>
       <select id="bloc-statut">
-        <option value="Planifie">Planifie</option>
+        <option value="Planifie">Planifié</option>
         <option value="En cours">En cours</option>
         <option value="Fait">Fait</option>
-        <option value="Zappe">Zappe</option>
+        <option value="Zappe">Zappé</option>
       </select>
     </div>
     <div class="field">
-      <label>Note / note de fin de bloc</label>
+      <label>Note de fin de bloc</label>
       <textarea id="bloc-note" placeholder="Ce que tu as fait, ce qui coince..."></textarea>
     </div>
     <div class="field">
-      <label>Taches liees</label>
+      <label>Tâches liées</label>
       <div id="bloc-tasks" class="task-list-mini"></div>
-      <button type="button" class="ghost small" onclick="openAddTaskToBloc()" style="margin-top:4px">+ Ajouter une tache au bloc</button>
+      <button type="button" class="ghost small" onclick="openAddTaskToBloc()" style="margin-top:4px">+ Ajouter une tâche au bloc</button>
     </div>
-    <button class="primary" onclick="saveBloc()">Enregistrer</button>
+    <div class="sticky-save">
+      <button class="ghost small" onclick="closeBloc()">Annuler</button>
+      <button class="primary" onclick="saveBloc()">Enregistrer</button>
+    </div>
   </div>
 </div>
 
@@ -222,12 +297,15 @@
     <select id="dump-contexte">
       <option value="Libre">Libre</option>
       <option value="Post-RDV">Post-RDV</option>
-      <option value="Idee">Idee</option>
-      <option value="Probleme">Probleme</option>
-      <option value="Decision">Decision</option>
+      <option value="Idee">Idée</option>
+      <option value="Probleme">Problème</option>
+      <option value="Decision">Décision</option>
     </select>
-    <textarea id="dump-content" placeholder="Ecris sans filtre."></textarea>
-    <button class="primary" onclick="submitDump()">Envoyer au dump</button>
+    <textarea id="dump-content" placeholder="Écris sans filtre."></textarea>
+    <div class="sticky-save">
+      <button class="ghost small" onclick="closeDump()">Annuler</button>
+      <button class="primary" onclick="submitDump()">Envoyer au dump</button>
+    </div>
   </div>
 </div>
 
@@ -235,32 +313,44 @@
 <div id="task-modal" class="modal hidden" onclick="backdropClose(event, 'task-modal')">
   <div class="modal-content" onclick="event.stopPropagation()">
     <div class="modal-head">
-      <h3 id="task-modal-title">Modifier la tache</h3>
+      <h3 id="task-modal-title">Modifier la tâche</h3>
       <button class="ghost small" onclick="closeTaskEdit()">Annuler</button>
     </div>
     <div id="task-meta" style="font-size:11px;color:var(--text-dim)"></div>
     <div class="field"><label>Titre</label><input id="task-titre"></div>
-    <div class="field"><label>Description / bullets</label><textarea id="task-desc" placeholder="- detail 1&#10;- detail 2"></textarea></div>
+    <div class="field"><label>Description / bullets</label><textarea id="task-desc" placeholder="- détail 1&#10;- détail 2"></textarea></div>
     <div class="field"><label>Livrable</label><input id="task-livrable"></div>
     <div class="field"><label>Statut</label>
       <select id="task-statut">
-        <option>Pas commence</option><option>En cours</option><option>Fait</option><option>Bloque</option><option>Abandonne</option>
+        <option value="Pas commence">Pas commencé</option>
+        <option value="En cours">En cours</option>
+        <option value="Fait">Fait</option>
+        <option value="Bloque">Bloqué</option>
+        <option value="Abandonne">Abandonné</option>
       </select>
     </div>
     <div class="field" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
       <div><label>Heures</label><input id="task-heures" type="number" step="0.5" min="0"></div>
-      <div><label>Echeance</label><input id="task-date" type="date"></div>
+      <div><label>Échéance</label><input id="task-date" type="date"></div>
     </div>
     <div id="task-reporter" class="field" style="display:none">
       <label>Reporter</label>
       <div style="display:flex;gap:4px;flex-wrap:wrap">
-        <button type="button" class="ghost small" onclick="reportTaskDays(1)">+1j</button>
-        <button type="button" class="ghost small" onclick="reportTaskDays(3)">+3j</button>
-        <button type="button" class="ghost small" onclick="reportTaskDays(7)">+1sem</button>
+        <button type="button" class="ghost small" onclick="reportTaskDays(1)">+1 jour</button>
+        <button type="button" class="ghost small" onclick="reportTaskDays(3)">+3 jours</button>
+        <button type="button" class="ghost small" onclick="reportTaskDays(7)">+1 semaine</button>
       </div>
       <div id="push-count-info" style="font-size:10px;color:var(--warning);margin-top:3px"></div>
     </div>
-    <button class="primary" onclick="saveTaskEdit()">Enregistrer</button>
+    <div id="subtasks-section" style="display:none">
+      <label>Sous-tâches</label>
+      <div id="subtasks-list" class="task-list-mini"></div>
+      <button type="button" class="ghost small" onclick="addSubtaskPrompt()" style="margin-top:4px">+ Sous-tâche</button>
+    </div>
+    <div class="sticky-save">
+      <button class="ghost small" onclick="closeTaskEdit()">Annuler</button>
+      <button class="primary" onclick="saveTaskEdit()">Enregistrer</button>
+    </div>
   </div>
 </div>
 
@@ -268,16 +358,25 @@
 const { $el, $clear } = Dom;
 const TRANCHES = ['Matin', 'Aprem', 'Soir'];
 const DAY_NAMES = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
-const MONTHS = ['janv', 'fev', 'mars', 'avr', 'mai', 'juin', 'juil', 'aout', 'sep', 'oct', 'nov', 'dec'];
+const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
 let allBlocs = [], tachesById = {}, currentBlocId = null;
-let currentTaskEditId = null, currentTaskNewBlocId = null, currentTaskOriginalDate = null, currentPushCount = 0;
+let currentTaskEditId = null, currentTaskNewBlocId = null, currentTaskParent = null;
+let currentTaskOriginalDate = null, currentPushCount = 0;
+
+// Fenêtre glissante
+let dayOffset = 0;      // offset en jours depuis today
+let windowSize = 4;     // taille de la fenêtre (4 mobile, 7 desktop large)
+
+function computeWindowSize() {
+  return window.innerWidth >= 900 ? 7 : 4;
+}
 
 function statutClass(s) {
   if (!s) return 'todo';
   const k = s.toLowerCase();
   if (k.includes('fait')) return 'done';
   if (k.includes('en cours')) return 'wip';
-  if (k.includes('bloque')) return 'blocked';
+  if (k.includes('bloqu')) return 'blocked';
   if (k.includes('abandon')) return 'abandoned';
   return 'todo';
 }
@@ -300,7 +399,33 @@ function closeModal(id) {
   WuboGrist.unlockBody();
 }
 
-function groupDays(blocs) {
+function isoFromDate(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function addDaysISO(iso, n) {
+  const [y, m, d] = iso.split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  dt.setDate(dt.getDate() + n);
+  return isoFromDate(dt);
+}
+
+function weekNumberISO(d) {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+}
+
+function windowDaysISO() {
+  const todayISO = WuboGrist.todayISO();
+  const start = addDaysISO(todayISO, dayOffset);
+  const days = [];
+  for (let i = 0; i < windowSize; i++) days.push(addDaysISO(start, i));
+  return days;
+}
+
+function blocsByDayISO(blocs) {
   const byDay = {};
   blocs.forEach(b => {
     const iso = WuboGrist.gristDateToISO(b.date);
@@ -308,7 +433,7 @@ function groupDays(blocs) {
     if (!byDay[iso]) byDay[iso] = {};
     byDay[iso][b.tranche] = b;
   });
-  return Object.keys(byDay).sort().map(iso => ({ iso, blocs: byDay[iso] }));
+  return byDay;
 }
 
 function showError(msg) {
@@ -316,35 +441,34 @@ function showError(msg) {
   $clear(e);
   e.appendChild($el('div', {}, msg));
   if (!WuboGrist.inGristIframe()) {
-    e.appendChild($el('button', { class: 'small', onclick: () => { WuboGrist.resetApiKey(); location.reload(); } }, 'Changer de cle API'));
+    e.appendChild($el('button', { class: 'small', onclick: () => { WuboGrist.resetApiKey(); location.reload(); } }, 'Changer de clé API'));
   }
   e.style.display = 'block';
 }
 
 function cellClass(bloc) {
   if (!bloc) return 'cell empty';
-  switch (bloc.statut) {
-    case 'Fait': return 'cell done';
-    case 'En cours': return 'cell wip';
-    case 'Zappe': return 'cell skip';
-    default: return 'cell';
-  }
+  const s = (bloc.statut || '').toLowerCase();
+  if (s.includes('fait')) return 'cell done';
+  if (s.includes('en cours')) return 'cell wip';
+  if (s.includes('zapp')) return 'cell skip';
+  return 'cell';
 }
 function dotClass(bloc, isCurrent) {
   if (isCurrent) return 'status-dot current';
   if (!bloc) return '';
-  switch (bloc.statut) {
-    case 'Fait': return 'status-dot done';
-    case 'En cours': return 'status-dot wip';
-    case 'Zappe': return 'status-dot skip';
-    default: return 'status-dot planned';
-  }
+  const s = (bloc.statut || '').toLowerCase();
+  if (s.includes('fait')) return 'status-dot done';
+  if (s.includes('en cours')) return 'status-dot wip';
+  if (s.includes('zapp')) return 'status-dot skip';
+  return 'status-dot planned';
 }
 
 function renderCell(bloc, isToday, tranche) {
   const h = new Date().getHours();
   const curT = h >= 8 && h < 13 ? 'Matin' : h >= 13 && h < 18 ? 'Aprem' : h >= 18 && h < 22 ? 'Soir' : null;
-  const isCurrent = isToday && curT === tranche && bloc && bloc.statut !== 'Fait' && bloc.statut !== 'Zappe';
+  const blocStatut = (bloc && bloc.statut || '').toLowerCase();
+  const isCurrent = isToday && curT === tranche && bloc && !blocStatut.includes('fait') && !blocStatut.includes('zapp');
   let cls = cellClass(bloc);
   if (isCurrent) cls = 'cell current';
 
@@ -352,33 +476,83 @@ function renderCell(bloc, isToday, tranche) {
   if (bloc) cell.onclick = () => openBloc(bloc.id);
   cell.appendChild($el('span', { class: dotClass(bloc, isCurrent) }));
 
-  if (!bloc) { cell.appendChild($el('div', { style: { fontSize: '8px', color: 'var(--text-faint)' } }, '-')); return cell; }
+  if (!bloc) {
+    cell.appendChild($el('div', { style: { fontSize: '8px', color: 'var(--text-faint)' } }, '·'));
+    return cell;
+  }
 
   const tIds = WuboGrist.refListIds(bloc.taches_liees);
   const titles = tIds.map(id => (tachesById[id] && tachesById[id].titre) || '').filter(Boolean);
   if (titles.length === 0) {
-    cell.appendChild($el('div', { style: { fontSize: '8px', color: 'var(--text-faint)', fontStyle: 'italic' } }, 'Libre'));
+    cell.appendChild($el('div', { class: 'libre' }, 'Libre'));
   } else {
-    const ul = $el('ul', {});
-    ul.appendChild($el('li', { title: titles.join(' · ') }, titles[0]));
-    if (titles.length > 1) ul.appendChild($el('li', { style: { color: 'var(--text-faint)', fontSize: '8px' } }, `+${titles.length - 1}`));
-    cell.appendChild(ul);
+    cell.appendChild($el('div', { class: 'task-main', title: titles.join(' · ') }, titles[0]));
+    if (titles.length > 1) {
+      cell.appendChild($el('div', { class: 'task-extra' }, `+${titles.length - 1}`));
+    }
   }
 
   if (bloc.note_fin_bloc) cell.appendChild($el('span', { class: 'note-dot', title: bloc.note_fin_bloc }, '●'));
   return cell;
 }
 
+function formatRange(firstISO, lastISO) {
+  const [y1, m1, d1] = firstISO.split('-').map(Number);
+  const [y2, m2, d2] = lastISO.split('-').map(Number);
+  const first = new Date(y1, m1-1, d1);
+  const last = new Date(y2, m2-1, d2);
+  const sameMonth = first.getMonth() === last.getMonth() && first.getFullYear() === last.getFullYear();
+  if (sameMonth) return `${first.getDate()} au ${last.getDate()} ${MONTHS[last.getMonth()]}`;
+  return `${first.getDate()} ${MONTHS[first.getMonth()]} au ${last.getDate()} ${MONTHS[last.getMonth()]}`;
+}
+
+function computeTitle(daysISO) {
+  const todayISO = WuboGrist.todayISO();
+  const firstISO = daysISO[0];
+  const lastISO = daysISO[daysISO.length - 1];
+  // Semaine ISO du jour du milieu pour être représentative
+  const midIdx = Math.floor(daysISO.length / 2);
+  const [ym, mm, dm] = daysISO[midIdx].split('-').map(Number);
+  const mid = new Date(ym, mm-1, dm);
+  const wk = weekNumberISO(mid);
+
+  let label;
+  if (daysISO.includes(todayISO)) {
+    label = `Sprint S${wk} (en cours)`;
+  } else if (lastISO < todayISO) {
+    label = `Semaine S${wk} (passée)`;
+  } else {
+    label = `Sprint S${wk} (à venir)`;
+  }
+  return { label, range: formatRange(firstISO, lastISO) };
+}
+
+function renderEmptyWindow(grid, daysISO) {
+  // Laisser la colonne vide pour row-head, et placer un message sur toute la largeur
+  grid.appendChild($el('div', {}));
+  daysISO.forEach(iso => {
+    const [y, m, d] = iso.split('-').map(Number);
+    const dd = new Date(y, m-1, d);
+    const todayISO = WuboGrist.todayISO();
+    grid.appendChild($el('div', { class: 'col-head' + (iso === todayISO ? ' today' : '') },
+      DAY_NAMES[dd.getDay()], $el('span', { class: 'd-num' }, String(dd.getDate()))));
+  });
+  const empty = $el('div', { class: 'empty-window' },
+    $el('div', {}, 'Aucun bloc planifié pour cette période.'),
+    $el('button', { class: 'ghost small', onclick: () => resetWindow() }, 'Revenir à aujourd\'hui')
+  );
+  grid.appendChild(empty);
+}
+
 async function render() {
   document.getElementById('error').style.display = 'none';
-  const nowForTitle = new Date();
-  const wkFallback = (() => {
-    const d = new Date(Date.UTC(nowForTitle.getFullYear(), nowForTitle.getMonth(), nowForTitle.getDate()));
-    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-    const start = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    return Math.ceil((((d - start) / 86400000) + 1) / 7);
-  })();
-  document.getElementById('title').textContent = `Sprint S${wkFallback}`;
+  windowSize = computeWindowSize();
+
+  // Titre initial (avant fetch), basé sur la fenêtre
+  const daysISO = windowDaysISO();
+  const { label, range } = computeTitle(daysISO);
+  document.getElementById('title').textContent = label;
+  document.getElementById('sub').textContent = range;
 
   allBlocs = []; tachesById = {};
   try {
@@ -391,31 +565,88 @@ async function render() {
     return;
   }
 
-  const days = groupDays(allBlocs);
-  if (days.length === 0) { showError('Aucun bloc planifie. Ajoute des blocs dans Grist.'); return; }
-
   const todayISO = WuboGrist.todayISO();
   const grid = document.getElementById('grid');
   $clear(grid);
-  grid.style.setProperty('--days', days.length);
+  grid.style.setProperty('--days', daysISO.length);
 
-  const firstDay = new Date(days[0].iso + 'T00:00:00');
-  const lastDay = new Date(days[days.length - 1].iso + 'T00:00:00');
-  const fmt = d => `${d.getDate()} ${MONTHS[d.getMonth()]}`;
-  const totalFait = allBlocs.filter(b => b.statut === 'Fait').length;
-  document.getElementById('sub').textContent = `${fmt(firstDay)} au ${fmt(lastDay)} · ${totalFait}/${allBlocs.length} blocs faits`;
+  const byDay = blocsByDayISO(allBlocs);
 
+  // Compter les blocs dans la fenêtre
+  let countInWindow = 0;
+  daysISO.forEach(iso => { if (byDay[iso]) countInWindow += Object.keys(byDay[iso]).length; });
+
+  if (countInWindow === 0) {
+    renderEmptyWindow(grid, daysISO);
+    // Met à jour le sous-titre avec info
+    document.getElementById('sub').textContent = `${range} · aucun bloc`;
+    return;
+  }
+
+  // Stats sur la fenêtre
+  let fait = 0, total = 0;
+  daysISO.forEach(iso => {
+    if (!byDay[iso]) return;
+    Object.values(byDay[iso]).forEach(bloc => {
+      total++;
+      if ((bloc.statut || '').toLowerCase().includes('fait')) fait++;
+    });
+  });
+  document.getElementById('sub').textContent = `${range} · ${fait}/${total} blocs faits`;
+
+  // Header row
   grid.appendChild($el('div', {}));
-  days.forEach(d => {
-    const dd = new Date(d.iso + 'T00:00:00');
-    grid.appendChild($el('div', { class: 'col-head' + (d.iso === todayISO ? ' today' : '') },
+  daysISO.forEach(iso => {
+    const [y, m, d] = iso.split('-').map(Number);
+    const dd = new Date(y, m-1, d);
+    grid.appendChild($el('div', { class: 'col-head' + (iso === todayISO ? ' today' : '') },
       DAY_NAMES[dd.getDay()], $el('span', { class: 'd-num' }, String(dd.getDate()))));
   });
 
   TRANCHES.forEach(tranche => {
     grid.appendChild($el('div', { class: 'row-head' }, tranche));
-    days.forEach(d => grid.appendChild(renderCell(d.blocs[tranche], d.iso === todayISO, tranche)));
+    daysISO.forEach(iso => {
+      const blocsOfDay = byDay[iso] || {};
+      grid.appendChild(renderCell(blocsOfDay[tranche], iso === todayISO, tranche));
+    });
   });
+}
+
+function shiftWindow(direction) {
+  // direction = -1 (précédent) ou +1 (suivant). Pas de windowSize jours.
+  dayOffset += direction * windowSize;
+  render();
+}
+
+function resetWindow() {
+  dayOffset = 0;
+  render();
+}
+
+// Swipe sur la grille (mobile)
+let touchStartX = 0, touchStartY = 0, touchActive = false;
+function setupSwipe() {
+  const grid = document.getElementById('grid');
+  if (!grid) return;
+  grid.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) { touchActive = false; return; }
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    touchActive = true;
+  }, { passive: true });
+  grid.addEventListener('touchend', (e) => {
+    if (!touchActive) return;
+    touchActive = false;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touchStartX;
+    const dy = t.clientY - touchStartY;
+    // seuil horizontal ~50px et |dx| > 2 * |dy| pour distinguer du scroll vertical
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 2) {
+      if (dx < 0) shiftWindow(1);  // swipe gauche = période suivante
+      else shiftWindow(-1);        // swipe droite = période précédente
+    }
+  }, { passive: true });
+  grid.addEventListener('touchcancel', () => { touchActive = false; });
 }
 
 function openBloc(blocId) {
@@ -423,27 +654,34 @@ function openBloc(blocId) {
   if (!bloc) return;
   currentBlocId = blocId;
   const d = new Date(bloc.date * 1000);
-  const dayName = DAY_NAMES[d.getDay()];
-  document.getElementById('bloc-modal-title').textContent = `${dayName} ${d.getDate()} ${MONTHS[d.getMonth()]} · ${bloc.tranche}`;
+  const dayName = DAY_NAMES[d.getUTCDay()];
+  document.getElementById('bloc-modal-title').textContent = `${dayName} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} · ${bloc.tranche}`;
   const meta = [];
   if (bloc.proprietaire) meta.push(bloc.proprietaire);
-  if (bloc.duree_reelle_h) meta.push(`${bloc.duree_reelle_h}h reelles`);
+  if (bloc.duree_reelle_h) meta.push(`${bloc.duree_reelle_h}h réelles`);
   document.getElementById('bloc-modal-meta').textContent = meta.join(' · ') || '';
-  document.getElementById('bloc-statut').value = bloc.statut || 'Planifie';
+  // Normalisation statut pour le select (valeurs Grist sans accents)
+  const statutSelect = document.getElementById('bloc-statut');
+  const curStatut = (bloc.statut || 'Planifie').toLowerCase();
+  let selectVal = 'Planifie';
+  if (curStatut.includes('fait')) selectVal = 'Fait';
+  else if (curStatut.includes('en cours')) selectVal = 'En cours';
+  else if (curStatut.includes('zapp')) selectVal = 'Zappe';
+  statutSelect.value = selectVal;
   document.getElementById('bloc-note').value = bloc.note_fin_bloc || '';
 
   const tasksNode = document.getElementById('bloc-tasks');
   $clear(tasksNode);
   const tIds = WuboGrist.refListIds(bloc.taches_liees);
   if (tIds.length === 0) {
-    tasksNode.appendChild($el('div', { class: 'empty', style: { fontSize: '11px' } }, 'Aucune tache liee'));
+    tasksNode.appendChild($el('div', { class: 'empty', style: { fontSize: '11px' } }, 'Aucune tâche liée'));
   } else {
     tIds.forEach(tid => {
       const t = tachesById[tid];
       if (!t) return;
       tasksNode.appendChild($el('div', { class: 'task-row', onclick: () => openTaskEdit(tid) },
-        $el('span', { class: 'status-pill ' + statutClass(t.statut), style: { marginRight: '6px' } }),
-        t.titre || '-'));
+        $el('span', { class: 'status-pill ' + statutClass(t.statut) }),
+        $el('span', { style: { flex: '1' } }, t.titre || '-')));
     });
   }
   openModal('bloc-modal');
@@ -454,23 +692,25 @@ function openAddTaskToBloc() {
   if (!currentBlocId) return;
   const blocId = currentBlocId;
   closeBloc();
-  setTimeout(() => openTaskNew(blocId), 150);
+  setTimeout(() => openTaskNew(blocId, null), 150);
 }
 
-function openTaskNew(blocId) {
+function openTaskNew(blocId, parentTaskId) {
   currentTaskEditId = null;
-  currentTaskNewBlocId = blocId;
+  currentTaskNewBlocId = blocId || null;
+  currentTaskParent = parentTaskId || null;
   currentTaskOriginalDate = null;
   currentPushCount = 0;
-  document.getElementById('task-modal-title').textContent = 'Nouvelle tache';
+  document.getElementById('task-modal-title').textContent = parentTaskId ? 'Nouvelle sous-tâche' : 'Nouvelle tâche';
   document.getElementById('task-titre').value = '';
   document.getElementById('task-desc').value = '';
   document.getElementById('task-livrable').value = '';
   document.getElementById('task-statut').value = 'Pas commence';
   document.getElementById('task-heures').value = '';
   document.getElementById('task-date').value = unixToInputDate(WuboGrist.daysFromToday(0));
-  document.getElementById('task-meta').textContent = 'Nouvelle tache';
+  document.getElementById('task-meta').textContent = parentTaskId ? 'Sous-tâche' : 'Nouvelle tâche';
   document.getElementById('task-reporter').style.display = 'none';
+  document.getElementById('subtasks-section').style.display = 'none';
   openModal('task-modal');
 }
 
@@ -479,6 +719,7 @@ function reportTaskDays(n) {
   currentPushCount = (currentPushCount || 0) + 1;
   document.getElementById('push-count-info').textContent = `Nouveau push_count : ${currentPushCount} (bonus score +${Math.min(currentPushCount*3, 10)})`;
 }
+
 async function saveBloc() {
   if (!currentBlocId) return;
   const fields = {
@@ -497,24 +738,65 @@ function openTaskEdit(taskId) {
   if (!t) return;
   currentTaskEditId = taskId;
   currentTaskNewBlocId = null;
+  currentTaskParent = null;
   currentTaskOriginalDate = t.date_cible || null;
   currentPushCount = t.push_count || 0;
-  document.getElementById('task-modal-title').textContent = 'Modifier la tache';
+  document.getElementById('task-modal-title').textContent = 'Modifier la tâche';
   document.getElementById('task-titre').value = t.titre || '';
   document.getElementById('task-desc').value = t.description || '';
   document.getElementById('task-livrable').value = t.livrable || '';
-  document.getElementById('task-statut').value = t.statut || 'Pas commence';
+  // Normalisation statut (valeurs Grist sans accents)
+  const statutSelect = document.getElementById('task-statut');
+  const curStatut = (t.statut || 'Pas commence').toLowerCase();
+  let selectVal = 'Pas commence';
+  if (curStatut.includes('fait')) selectVal = 'Fait';
+  else if (curStatut.includes('en cours')) selectVal = 'En cours';
+  else if (curStatut.includes('bloqu')) selectVal = 'Bloque';
+  else if (curStatut.includes('abandon')) selectVal = 'Abandonne';
+  statutSelect.value = selectVal;
   document.getElementById('task-heures').value = t.estim_heures || '';
   document.getElementById('task-date').value = unixToInputDate(t.date_cible);
   const meta = [];
   if (t.score) meta.push(`score ${t.score}`);
-  if (currentPushCount > 0) meta.push(`reportee ${currentPushCount}x`);
+  if (currentPushCount > 0) meta.push(`reportée ${currentPushCount}x`);
   document.getElementById('task-meta').textContent = meta.join(' · ');
   document.getElementById('task-reporter').style.display = 'flex';
-  document.getElementById('push-count-info').textContent = currentPushCount > 0 ? `Deja reportee ${currentPushCount}x (bonus score +${Math.min(currentPushCount*3, 10)})` : '';
+  document.getElementById('push-count-info').textContent = currentPushCount > 0 ? `Déjà reportée ${currentPushCount}x (bonus score +${Math.min(currentPushCount*3, 10)})` : '';
+  // Sous-tâches existantes
+  const subs = Object.values(tachesById).filter(x => x.parent_tache === taskId);
+  renderSubtasksList(subs);
+  document.getElementById('subtasks-section').style.display = '';
   openModal('task-modal');
 }
-function closeTaskEdit() { currentTaskEditId = null; currentTaskNewBlocId = null; closeModal('task-modal'); }
+
+function renderSubtasksList(subs) {
+  const node = document.getElementById('subtasks-list');
+  $clear(node);
+  if (subs.length === 0) {
+    node.appendChild($el('div', { class: 'empty', style: { fontSize: '11px' } }, 'Aucune sous-tâche'));
+    return;
+  }
+  subs.forEach(s => {
+    node.appendChild($el('div', { class: 'subtask', onclick: () => { closeTaskEdit(); setTimeout(() => openTaskEdit(s.id), 150); } },
+      $el('span', { class: 'status-pill ' + statutClass(s.statut) }),
+      $el('span', { style: { flex: '1' } }, s.titre || '-')
+    ));
+  });
+}
+
+function addSubtaskPrompt() {
+  if (!currentTaskEditId) return;
+  const parent = currentTaskEditId;
+  closeTaskEdit();
+  setTimeout(() => openTaskNew(null, parent), 150);
+}
+
+function closeTaskEdit() {
+  currentTaskEditId = null;
+  currentTaskNewBlocId = null;
+  currentTaskParent = null;
+  closeModal('task-modal');
+}
 
 async function saveTaskEdit() {
   const titre = document.getElementById('task-titre').value.trim();
@@ -543,6 +825,7 @@ async function saveTaskEdit() {
       fields.cash_impact = 2;
       fields.urgency = 2;
       fields.strategic_value = 2;
+      if (currentTaskParent) fields.parent_tache = currentTaskParent;
       const created = await WuboGrist.addRecord('Taches', fields);
       if (currentTaskNewBlocId && created && created.records && created.records[0]) {
         const newId = created.records[0].id;
@@ -587,12 +870,20 @@ async function refresh() {
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { closeBloc(); closeDump(); closeTaskEdit(); }
+  else if (e.key === 'ArrowLeft' && !document.querySelector('.modal:not(.hidden)')) shiftWindow(-1);
+  else if (e.key === 'ArrowRight' && !document.querySelector('.modal:not(.hidden)')) shiftWindow(1);
+});
+
+window.addEventListener('resize', () => {
+  const newSize = computeWindowSize();
+  if (newSize !== windowSize) { windowSize = newSize; render(); }
 });
 
 (async () => {
   await WuboGrist.initGrist();
   try { if (typeof grist !== 'undefined' && grist.onRecords) grist.onRecords(() => render()); } catch (_) {}
-  render();
+  await render();
+  setupSwipe();
 })();
 </script>
 
