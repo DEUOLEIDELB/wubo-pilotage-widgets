@@ -255,6 +255,16 @@ function showError(msg) {
 
 async function render() {
   document.getElementById('error').style.display = 'none';
+  // Titre par defaut (meme sans data)
+  const nowForTitle = new Date();
+  const wkFallback = (() => {
+    const d = new Date(Date.UTC(nowForTitle.getFullYear(), nowForTitle.getMonth(), nowForTitle.getDate()));
+    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+    const start = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d - start) / 86400000) + 1) / 7);
+  })();
+  document.getElementById('title').textContent = `Sprint S${wkFallback}`;
+
   let blocs = [], tachesById = {};
   try {
     const [b, t] = await Promise.all([
@@ -263,7 +273,11 @@ async function render() {
     ]);
     blocs = b;
     t.forEach(x => { tachesById[x.id] = x; });
-  } catch (e) { showError(e.message); return; }
+  } catch (e) {
+    showError(e.message);
+    document.getElementById('sub').textContent = 'Hors ligne';
+    return;
+  }
 
   const days = groupDays(blocs);
   if (days.length === 0) {

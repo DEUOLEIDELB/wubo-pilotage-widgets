@@ -271,7 +271,14 @@ function renderBloc(tranche, bloc, tachesById) {
 
 async function render() {
   clearError();
+
+  // Header : toujours affiche, independant du fetch
+  const now = new Date();
+  document.getElementById('date').textContent =
+    now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+
   let blocs = [], tachesById = {};
+  let fetchOk = true;
   try {
     const [b, t] = await Promise.all([
       WuboGrist.fetchRows('Blocs_temps'),
@@ -282,17 +289,16 @@ async function render() {
     t.forEach(x => { tachesById[x.id] = x; });
   } catch (e) {
     showError(e.message);
-    return;
+    fetchOk = false;
   }
-
-  const now = new Date();
-  document.getElementById('date').textContent =
-    now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
 
   const fait = blocs.filter(b => b.statut === 'Fait').length;
   const total = blocs.length;
-  document.getElementById('meta').textContent =
-    `Sprint S${weekNumber(now)} · ${fait}/${total} blocs faits`;
+  document.getElementById('meta').textContent = fetchOk
+    ? `Sprint S${weekNumber(now)} · ${fait}/${total} blocs faits`
+    : `Sprint S${weekNumber(now)} · hors ligne`;
+
+  if (!fetchOk) return;
 
   const driftNode = document.getElementById('drift');
   $clear(driftNode);
