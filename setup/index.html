@@ -154,19 +154,18 @@ async function testKey() {
   bodyNode.textContent = '';
   setDiag('');
 
-  const url = `${BASE}/api/docs/${DOC_ID}/tables/Taches/records?auth=${encodeURIComponent(key)}`;
-  const urlRedacted = url.replace(key, key.substring(0, 4) + '...' + key.substring(key.length - 4));
+  const url = `${BASE}/api/docs/${DOC_ID}/tables/Taches/records`;
 
   const lines = [];
-  lines.push(`URL testee : ${urlRedacted}`);
-  lines.push(`Cle : ${key.substring(0, 4)}...${key.substring(key.length - 4)} (${key.length} caracteres)`);
+  lines.push(`URL testée : ${url}`);
+  lines.push(`Auth : Authorization: Bearer ${key.substring(0, 4)}...${key.substring(key.length - 4)} (${key.length} caractères)`);
   lines.push(`User-Agent : ${navigator.userAgent}`);
   lines.push('');
 
   const t0 = Date.now();
   let res, status, statusText, bodyText, fetchErr;
   try {
-    res = await fetch(url);
+    res = await fetch(url, { headers: { 'Authorization': `Bearer ${key}` } });
     status = res.status;
     statusText = res.statusText;
     bodyText = await res.text();
