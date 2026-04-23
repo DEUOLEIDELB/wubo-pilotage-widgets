@@ -251,12 +251,24 @@ label { font-size: 12px; font-weight: 600; color: var(--text-dim); text-transfor
 .modal-content .sticky-save button { flex: 1; }
 .modal-content .sticky-save button.ghost { flex: 0 0 auto; padding-left: 14px; padding-right: 14px; }
 
-/* Modal comportement mobile : empeche scroll body quand modal ouvert */
+/* Modal comportement mobile : empêche scroll body quand modal ouvert + rigide horizontalement */
 body.modal-open {
   overflow: hidden;
   position: fixed;
   width: 100%;
   touch-action: none;
+}
+html, body {
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+}
+.modal {
+  touch-action: pan-y;
+}
+.modal-content {
+  overflow-x: hidden !important;
+  overscroll-behavior-x: none;
+  touch-action: pan-y;
 }
 
 .drift-alert {

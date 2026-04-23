@@ -1,6 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
-  <rect width="180" height="180" rx="36" fill="#111113"/>
-  <rect x="28" y="38" width="58" height="28" rx="4" fill="#FFDD0B"/>
-  <rect x="28" y="76" width="124" height="28" rx="4" fill="#5914D0"/>
-  <rect x="28" y="114" width="86" height="28" rx="4" fill="#666666"/>
+  <rect width="180" height="180" rx="38" fill="#111113"/>
+  <!-- Trois blocs représentant Matin/Aprem/Soir, celui du milieu accent courant violet -->
+  <rect x="28" y="34" width="58" height="26" rx="4" fill="#FFDD0B"/>
+  <rect x="28" y="68" width="124" height="26" rx="4" fill="#5914D0"/>
+  <rect x="28" y="102" width="86" height="26" rx="4" fill="#8A8A8A"/>
+  <!-- Pastille indicateur courant en haut à droite du bloc violet -->
+  <circle cx="146" cy="81" r="4" fill="#FFDD0B"/>
+  <!-- Texte "P" discret en bas -->
+  <text x="90" y="162" text-anchor="middle" font-family="-apple-system, system-ui, sans-serif" font-size="22" font-weight="900" fill="#FFDD0B">WUBO</text>
 </svg>
