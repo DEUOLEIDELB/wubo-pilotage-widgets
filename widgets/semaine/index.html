@@ -19,28 +19,25 @@
   #app {
     max-width: 720px;
     margin: 0 auto;
-    padding: 12px 10px calc(70px + env(safe-area-inset-bottom));
+    padding: 10px 10px calc(70px + env(safe-area-inset-bottom));
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
   }
-  header {
+  .sprint-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
-    padding-bottom: 6px;
+    padding: 2px 4px 6px;
     border-bottom: 1px solid var(--border);
-    padding-left: 4px;
-    padding-right: 4px;
   }
-  header h1 { font-size: 17px; line-height: 1.05; }
-  header .sub { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
-  header .actions button { padding: 6px 10px; font-size: 11px; }
+  .sprint-header h1 { font-size: 16px; line-height: 1.1; }
+  .sprint-header .sub { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
 
   .grid-week {
     display: grid;
-    grid-template-columns: 36px repeat(var(--days, 4), 1fr);
-    gap: 4px;
+    grid-template-columns: 32px repeat(var(--days, 4), 1fr);
+    gap: 3px;
   }
   .col-head {
     font-size: 10px;
@@ -48,16 +45,16 @@
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--text-dim);
-    padding: 4px 2px;
+    padding: 3px 2px;
     text-align: center;
     border-bottom: 1px solid var(--border);
   }
   .col-head.today { color: var(--current); }
-  .col-head .d-num { font-size: 15px; color: var(--text); display: block; margin-top: 1px; }
+  .col-head .d-num { font-size: 14px; color: var(--text); display: block; margin-top: 1px; }
   .col-head.today .d-num { color: var(--current); }
 
   .row-head {
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -74,8 +71,8 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 5px;
-    padding: 4px 3px 4px 4px;
-    min-height: 60px;
+    padding: 4px 14px 4px 4px;
+    min-height: 58px;
     font-size: 9px;
     line-height: 1.2;
     display: flex;
@@ -83,22 +80,16 @@
     gap: 1px;
     overflow: hidden;
     position: relative;
-    padding-right: 14px;
+    cursor: pointer;
   }
-  .cell.empty { background: var(--bg); border-style: dashed; }
+  .cell:active { opacity: 0.7; }
+  .cell.empty { background: var(--bg); border-style: dashed; cursor: default; }
   .cell.done { background: #EAF4EE; }
   .cell.current { background: var(--current-soft); border-color: var(--current); border-left: 3px solid var(--current); }
   .cell.skip { background: var(--done-bg); }
   .cell.wip { background: #FFFCE5; }
 
-  .cell .status-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    position: absolute;
-    top: 5px;
-    right: 5px;
-  }
+  .cell .status-dot { width: 6px; height: 6px; border-radius: 50%; position: absolute; top: 4px; right: 4px; }
   .status-dot.done { background: var(--success); }
   .status-dot.current { background: var(--current); }
   .status-dot.skip { background: var(--text-faint); }
@@ -106,14 +97,7 @@
   .status-dot.planned { background: var(--border-strong); }
 
   .cell ul { list-style: none; padding: 0; margin: 0; font-size: 9px; line-height: 1.2; }
-  .cell li {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    color: var(--text);
-    padding: 0;
-    max-width: 100%;
-  }
+  .cell li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); max-width: 100%; }
   .cell.done li, .cell.skip li { color: var(--text-faint); text-decoration: line-through; }
   .cell .note-dot { position: absolute; bottom: 3px; right: 4px; font-size: 8px; color: var(--warning); }
 
@@ -129,42 +113,59 @@
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     border-top: 1px solid var(--border);
+    z-index: 50;
   }
   .bottom button { flex: 1; padding: 13px; font-size: 14px; }
 
-  .legend {
-    display: flex;
-    gap: 8px;
-    font-size: 10px;
-    color: var(--text-dim);
-    padding: 4px 6px;
-    flex-wrap: wrap;
-  }
+  .legend { display: flex; gap: 8px; font-size: 10px; color: var(--text-dim); padding: 4px 4px 0; flex-wrap: wrap; }
   .legend .lg { display: flex; align-items: center; gap: 3px; }
   .legend .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 
-  #error { background: var(--danger); color: white; padding: 10px; border-radius: 6px; font-size: 12px; margin: 0 4px; }
+  #error { background: var(--danger); color: white; padding: 10px; border-radius: 6px; font-size: 12px; display: none; }
+  #error button { margin-top: 6px; background: white; color: var(--danger); border: 1px solid white; }
+
+  /* Modal */
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: flex-end; justify-content: center; z-index: 100; }
+  .modal.hidden { display: none; }
+  .modal-content {
+    background: var(--surface); width: 100%; max-width: 480px; border-radius: 12px 12px 0 0;
+    padding: 16px; padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    display: flex; flex-direction: column; gap: 10px;
+    max-height: 92vh; overflow-y: auto;
+  }
+  .modal-head { display: flex; justify-content: space-between; align-items: center; }
+  .modal-content textarea { min-height: 100px; font-size: 14px; }
+  .modal-content .field { display: flex; flex-direction: column; gap: 4px; }
+  .modal-content .field label { font-size: 10px; }
+  .task-list-mini { display: flex; flex-direction: column; gap: 4px; }
+  .task-list-mini .task-row { padding: 6px 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 12px; cursor: pointer; }
+  .task-list-mini .task-row:active { opacity: 0.7; }
 
   @media (min-width: 600px) {
     .bottom { max-width: 720px; left: 50%; transform: translateX(-50%); border-radius: 12px 12px 0 0; }
-    .cell { font-size: 11px; min-height: 80px; }
+    .cell { font-size: 10px; min-height: 70px; }
   }
 </style>
 </head>
 <body>
 
 <main id="app">
-  <header>
+  <nav class="app-nav">
+    <a href="../../" class="home" title="Accueil">⌂</a>
+    <a href="../aujourdhui/" class="tab">Jour</a>
+    <a href="../semaine/" class="tab active">Semaine</a>
+    <a href="../dashboard/" class="tab">Objectifs</a>
+    <a href="../dump/" class="tab">Dump</a>
+  </nav>
+
+  <div class="sprint-header">
     <div>
-      <h1 id="title">Semaine</h1>
+      <h1 id="title">Sprint</h1>
       <div class="sub" id="sub"></div>
     </div>
-    <div class="actions">
-      <button class="ghost" onclick="goAujourdhui()">‹ Aujourd'hui</button>
-    </div>
-  </header>
+  </div>
 
-  <div id="error" style="display:none"></div>
+  <div id="error"></div>
 
   <div class="grid-week" id="grid"></div>
 
@@ -178,15 +179,83 @@
 </main>
 
 <nav class="bottom">
-  <button class="ghost" onclick="goAujourdhui()">‹ Aujourd'hui</button>
-  <button class="ghost" onclick="refresh()">↻</button>
+  <button class="accent" onclick="openDump()">+ Dump</button>
+  <button class="ghost" onclick="refresh()">↻ Refresh</button>
 </nav>
+
+<!-- Bloc detail modal -->
+<div id="bloc-modal" class="modal hidden" onclick="backdropClose(event, 'bloc-modal')">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <h3 id="bloc-modal-title">Bloc</h3>
+      <button class="ghost small" onclick="closeBloc()">Fermer</button>
+    </div>
+    <div id="bloc-modal-meta" class="meta-info" style="font-size:11px;color:var(--text-dim)"></div>
+    <div class="field">
+      <label>Statut</label>
+      <select id="bloc-statut">
+        <option value="Planifie">Planifie</option>
+        <option value="En cours">En cours</option>
+        <option value="Fait">Fait</option>
+        <option value="Zappe">Zappe</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Note / note de fin de bloc</label>
+      <textarea id="bloc-note" placeholder="Ce que tu as fait, ce qui coince..."></textarea>
+    </div>
+    <div class="field">
+      <label>Taches liees</label>
+      <div id="bloc-tasks" class="task-list-mini"></div>
+    </div>
+    <button class="primary" onclick="saveBloc()">Enregistrer</button>
+  </div>
+</div>
+
+<!-- Quick dump modal -->
+<div id="dump-modal" class="modal hidden" onclick="backdropClose(event, 'dump-modal')">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <h3>Dump rapide</h3>
+      <button class="ghost small" onclick="closeDump()">Annuler</button>
+    </div>
+    <select id="dump-contexte">
+      <option value="Libre">Libre</option>
+      <option value="Post-RDV">Post-RDV</option>
+      <option value="Idee">Idee</option>
+      <option value="Probleme">Probleme</option>
+      <option value="Decision">Decision</option>
+    </select>
+    <textarea id="dump-content" placeholder="Ecris sans filtre."></textarea>
+    <button class="primary" onclick="submitDump()">Envoyer au dump</button>
+  </div>
+</div>
+
+<!-- Task edit modal -->
+<div id="task-modal" class="modal hidden" onclick="backdropClose(event, 'task-modal')">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <h3>Modifier la tache</h3>
+      <button class="ghost small" onclick="closeTaskEdit()">Annuler</button>
+    </div>
+    <div id="task-meta" style="font-size:11px;color:var(--text-dim)"></div>
+    <div class="field"><label>Titre</label><input id="task-titre"></div>
+    <div class="field"><label>Description / bullets</label><textarea id="task-desc"></textarea></div>
+    <div class="field"><label>Statut</label>
+      <select id="task-statut">
+        <option>Pas commence</option><option>En cours</option><option>Fait</option><option>Bloque</option><option>Abandonne</option>
+      </select>
+    </div>
+    <button class="primary" onclick="saveTaskEdit()">Enregistrer</button>
+  </div>
+</div>
 
 <script>
 const { $el, $clear } = Dom;
 const TRANCHES = ['Matin', 'Aprem', 'Soir'];
 const DAY_NAMES = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 const MONTHS = ['janv', 'fev', 'mars', 'avr', 'mai', 'juin', 'juil', 'aout', 'sep', 'oct', 'nov', 'dec'];
+let allBlocs = [], tachesById = {}, currentBlocId = null, currentTaskEditId = null;
 
 function groupDays(blocs) {
   const byDay = {};
@@ -197,6 +266,16 @@ function groupDays(blocs) {
     byDay[iso][b.tranche] = b;
   });
   return Object.keys(byDay).sort().map(iso => ({ iso, blocs: byDay[iso] }));
+}
+
+function showError(msg) {
+  const e = document.getElementById('error');
+  $clear(e);
+  e.appendChild($el('div', {}, msg));
+  if (!WuboGrist.inGristIframe()) {
+    e.appendChild($el('button', { class: 'small', onclick: () => { WuboGrist.resetApiKey(); location.reload(); } }, 'Changer de cle API'));
+  }
+  e.style.display = 'block';
 }
 
 function cellClass(bloc) {
@@ -219,20 +298,18 @@ function dotClass(bloc, isCurrent) {
   }
 }
 
-function renderCell(bloc, tachesById, isToday, tranche) {
+function renderCell(bloc, isToday, tranche) {
   const h = new Date().getHours();
-  const curTranche = h >= 8 && h < 13 ? 'Matin' : h >= 13 && h < 18 ? 'Aprem' : h >= 18 && h < 22 ? 'Soir' : null;
-  const isCurrent = isToday && curTranche === tranche && bloc && bloc.statut !== 'Fait' && bloc.statut !== 'Zappe';
+  const curT = h >= 8 && h < 13 ? 'Matin' : h >= 13 && h < 18 ? 'Aprem' : h >= 18 && h < 22 ? 'Soir' : null;
+  const isCurrent = isToday && curT === tranche && bloc && bloc.statut !== 'Fait' && bloc.statut !== 'Zappe';
   let cls = cellClass(bloc);
   if (isCurrent) cls = 'cell current';
 
   const cell = $el('div', { class: cls });
+  if (bloc) cell.onclick = () => openBloc(bloc.id);
   cell.appendChild($el('span', { class: dotClass(bloc, isCurrent) }));
 
-  if (!bloc) {
-    cell.appendChild($el('div', { class: 'empty', style: { fontSize: '9px', color: 'var(--text-faint)' } }, '-'));
-    return cell;
-  }
+  if (!bloc) { cell.appendChild($el('div', { style: { fontSize: '8px', color: 'var(--text-faint)' } }, '-')); return cell; }
 
   const tIds = WuboGrist.refListIds(bloc.taches_liees);
   const titles = tIds.map(id => (tachesById[id] && tachesById[id].titre) || '').filter(Boolean);
@@ -245,27 +322,12 @@ function renderCell(bloc, tachesById, isToday, tranche) {
     cell.appendChild(ul);
   }
 
-  if (bloc.note_fin_bloc) cell.appendChild($el('span', { class: 'note-dot', title: bloc.note_fin_bloc }, '⚠'));
+  if (bloc.note_fin_bloc) cell.appendChild($el('span', { class: 'note-dot', title: bloc.note_fin_bloc }, '●'));
   return cell;
-}
-
-function showError(msg) {
-  const e = document.getElementById('error');
-  $clear(e);
-  e.appendChild($el('div', {}, msg));
-  if (!WuboGrist.inGristIframe()) {
-    e.appendChild($el('button', {
-      class: 'small',
-      style: { marginTop: '6px', background: 'white', color: 'var(--danger)', border: '1px solid white' },
-      onclick: () => { WuboGrist.resetApiKey(); location.reload(); }
-    }, 'Changer de cle API'));
-  }
-  e.style.display = 'block';
 }
 
 async function render() {
   document.getElementById('error').style.display = 'none';
-  // Titre par defaut (meme sans data)
   const nowForTitle = new Date();
   const wkFallback = (() => {
     const d = new Date(Date.UTC(nowForTitle.getFullYear(), nowForTitle.getMonth(), nowForTitle.getDate()));
@@ -275,13 +337,10 @@ async function render() {
   })();
   document.getElementById('title').textContent = `Sprint S${wkFallback}`;
 
-  let blocs = [], tachesById = {};
+  allBlocs = []; tachesById = {};
   try {
-    const [b, t] = await Promise.all([
-      WuboGrist.fetchRows('Blocs_temps'),
-      WuboGrist.fetchRows('Taches')
-    ]);
-    blocs = b;
+    const [b, t] = await Promise.all([WuboGrist.fetchRows('Blocs_temps'), WuboGrist.fetchRows('Taches')]);
+    allBlocs = b;
     t.forEach(x => { tachesById[x.id] = x; });
   } catch (e) {
     showError(e.message);
@@ -289,56 +348,119 @@ async function render() {
     return;
   }
 
-  const days = groupDays(blocs);
-  if (days.length === 0) {
-    showError('Aucun bloc planifie. Ajoute des blocs dans Grist.');
-    return;
-  }
+  const days = groupDays(allBlocs);
+  if (days.length === 0) { showError('Aucun bloc planifie. Ajoute des blocs dans Grist.'); return; }
 
   const todayISO = WuboGrist.todayISO();
   const grid = document.getElementById('grid');
   $clear(grid);
   grid.style.setProperty('--days', days.length);
 
-  // week meta
   const firstDay = new Date(days[0].iso + 'T00:00:00');
   const lastDay = new Date(days[days.length - 1].iso + 'T00:00:00');
-  const weekN = (() => {
-    const d = new Date(Date.UTC(firstDay.getFullYear(), firstDay.getMonth(), firstDay.getDate()));
-    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-    const start = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    return Math.ceil((((d - start) / 86400000) + 1) / 7);
-  })();
-  document.getElementById('title').textContent = `Sprint S${weekN}`;
   const fmt = d => `${d.getDate()} ${MONTHS[d.getMonth()]}`;
-  const totalFait = blocs.filter(b => b.statut === 'Fait').length;
-  document.getElementById('sub').textContent =
-    `${fmt(firstDay)} au ${fmt(lastDay)} · ${totalFait}/${blocs.length} blocs faits`;
+  const totalFait = allBlocs.filter(b => b.statut === 'Fait').length;
+  document.getElementById('sub').textContent = `${fmt(firstDay)} au ${fmt(lastDay)} · ${totalFait}/${allBlocs.length} blocs faits`;
 
-  // top-left empty cell
   grid.appendChild($el('div', {}));
-  // day headers
   days.forEach(d => {
     const dd = new Date(d.iso + 'T00:00:00');
-    const head = $el('div', { class: 'col-head' + (d.iso === todayISO ? ' today' : '') },
-      DAY_NAMES[dd.getDay()],
-      $el('span', { class: 'd-num' }, String(dd.getDate()))
-    );
-    grid.appendChild(head);
+    grid.appendChild($el('div', { class: 'col-head' + (d.iso === todayISO ? ' today' : '') },
+      DAY_NAMES[dd.getDay()], $el('span', { class: 'd-num' }, String(dd.getDate()))));
   });
 
-  // rows per tranche
   TRANCHES.forEach(tranche => {
     grid.appendChild($el('div', { class: 'row-head' }, tranche));
-    days.forEach(d => {
-      grid.appendChild(renderCell(d.blocs[tranche], tachesById, d.iso === todayISO, tranche));
-    });
+    days.forEach(d => grid.appendChild(renderCell(d.blocs[tranche], d.iso === todayISO, tranche)));
   });
 }
 
-function goAujourdhui() { window.location.href = '../aujourdhui/'; }
+function openBloc(blocId) {
+  const bloc = allBlocs.find(b => b.id === blocId);
+  if (!bloc) return;
+  currentBlocId = blocId;
+  const d = new Date(bloc.date * 1000);
+  const dayName = DAY_NAMES[d.getDay()];
+  document.getElementById('bloc-modal-title').textContent = `${dayName} ${d.getDate()} ${MONTHS[d.getMonth()]} · ${bloc.tranche}`;
+  const meta = [];
+  if (bloc.proprietaire) meta.push(bloc.proprietaire);
+  if (bloc.duree_reelle_h) meta.push(`${bloc.duree_reelle_h}h reelles`);
+  document.getElementById('bloc-modal-meta').textContent = meta.join(' · ') || '';
+  document.getElementById('bloc-statut').value = bloc.statut || 'Planifie';
+  document.getElementById('bloc-note').value = bloc.note_fin_bloc || '';
+
+  const tasksNode = document.getElementById('bloc-tasks');
+  $clear(tasksNode);
+  const tIds = WuboGrist.refListIds(bloc.taches_liees);
+  if (tIds.length === 0) {
+    tasksNode.appendChild($el('div', { class: 'empty' }, 'Aucune tache liee'));
+  } else {
+    tIds.forEach(tid => {
+      const t = tachesById[tid];
+      if (!t) return;
+      tasksNode.appendChild($el('div', { class: 'task-row', onclick: () => openTaskEdit(tid) },
+        `${t.titre} (${t.statut || '-'})`));
+    });
+  }
+  document.getElementById('bloc-modal').classList.remove('hidden');
+}
+function closeBloc() { currentBlocId = null; document.getElementById('bloc-modal').classList.add('hidden'); }
+async function saveBloc() {
+  if (!currentBlocId) return;
+  const fields = {
+    statut: document.getElementById('bloc-statut').value,
+    note_fin_bloc: document.getElementById('bloc-note').value
+  };
+  try {
+    await WuboGrist.updateRecord('Blocs_temps', currentBlocId, fields);
+    closeBloc();
+    render();
+  } catch (e) { alert('Erreur : ' + e.message); }
+}
+
+function openTaskEdit(taskId) {
+  const t = tachesById[taskId];
+  if (!t) return;
+  currentTaskEditId = taskId;
+  document.getElementById('task-titre').value = t.titre || '';
+  document.getElementById('task-desc').value = t.description || '';
+  document.getElementById('task-statut').value = t.statut || 'Pas commence';
+  const meta = [];
+  if (t.estim_heures) meta.push(`${t.estim_heures}h`);
+  if (t.date_cible) meta.push('echeance ' + new Date(t.date_cible * 1000).toLocaleDateString('fr-FR'));
+  document.getElementById('task-meta').textContent = meta.join(' · ');
+  document.getElementById('task-modal').classList.remove('hidden');
+}
+function closeTaskEdit() { currentTaskEditId = null; document.getElementById('task-modal').classList.add('hidden'); }
+async function saveTaskEdit() {
+  if (!currentTaskEditId) return;
+  const fields = {
+    titre: document.getElementById('task-titre').value.trim(),
+    description: document.getElementById('task-desc').value,
+    statut: document.getElementById('task-statut').value
+  };
+  try {
+    await WuboGrist.updateRecord('Taches', currentTaskEditId, fields);
+    closeTaskEdit();
+    render();
+  } catch (e) { alert('Erreur : ' + e.message); }
+}
+
+async function submitDump() {
+  const ctx = document.getElementById('dump-contexte').value;
+  const content = document.getElementById('dump-content').value.trim();
+  if (!content) return;
+  try {
+    await WuboGrist.addRecord('Dump_notes', { timestamp: WuboGrist.nowUnix(), auteur: 'Taki', contenu: content, contexte: ctx, traite: false, converti_en: '' });
+    document.getElementById('dump-content').value = '';
+    closeDump();
+  } catch (e) { alert('Erreur : ' + e.message); }
+}
+function openDump() { document.getElementById('dump-modal').classList.remove('hidden'); }
+function closeDump() { document.getElementById('dump-modal').classList.add('hidden'); }
+function backdropClose(e, id) { if (e.target === e.currentTarget) document.getElementById(id).classList.add('hidden'); }
 async function refresh() {
-  const btn = document.querySelector('nav.bottom button:last-child');
+  const btn = document.querySelector('nav.bottom button.ghost');
   if (!btn) return;
   const orig = btn.textContent;
   btn.textContent = '⟳';
@@ -347,6 +469,10 @@ async function refresh() {
   catch (e) { btn.textContent = '✕'; }
   setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1000);
 }
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeBloc(); closeDump(); closeTaskEdit(); }
+});
 
 (async () => {
   await WuboGrist.initGrist();

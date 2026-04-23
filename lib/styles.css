@@ -181,6 +181,44 @@ label { font-size: 12px; font-weight: 600; color: var(--text-dim); text-transfor
   color: var(--text-faint);
 }
 
+/* Navigation tabs - present sur chaque widget */
+.app-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+.app-nav a.tab {
+  flex: 1;
+  text-align: center;
+  padding: 8px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-decoration: none;
+  border-radius: 5px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.app-nav a.tab.active {
+  background: var(--text);
+  color: white;
+}
+.app-nav a.tab:active { opacity: 0.6; }
+.app-nav a.home {
+  color: var(--text-dim);
+  text-decoration: none;
+  padding: 8px 8px 8px 6px;
+  font-size: 14px;
+  line-height: 1;
+  border-right: 1px solid var(--border);
+  margin-right: 2px;
+}
+
 .drift-alert {
   background: var(--accent);
   color: var(--text);

@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Dashboard">
+<meta name="apple-mobile-web-app-title" content="Objectifs">
 <meta name="theme-color" content="#F4F4F1">
 <link rel="apple-touch-icon" href="../../icon.svg">
 <link rel="icon" type="image/svg+xml" href="../../icon.svg">
 <link rel="manifest" href="../../manifest.webmanifest">
-<title>Dashboard - Pilotage Wubo</title>
+<title>Objectifs - Pilotage Wubo</title>
 <link rel="stylesheet" href="../../lib/styles.css">
 <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
 <script src="../../lib/dom.js"></script>
@@ -18,62 +18,125 @@
   #app {
     max-width: 800px;
     margin: 0 auto;
-    padding: 12px 14px 40px;
+    padding: 10px 14px 40px;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 10px;
   }
-  header { padding-bottom: 6px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-end; }
-  header h1 { font-size: 17px; }
-  header .sub { font-size: 11px; color: var(--text-dim); }
+  .page-title { padding: 2px 2px 6px; border-bottom: 1px solid var(--border); }
+  .page-title h1 { font-size: 17px; }
+  .page-title .sub { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
 
-  .stats {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-  }
-  .stat {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 8px 10px;
-  }
-  .stat .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); }
-  .stat .value { font-size: 20px; font-weight: 700; color: var(--text); line-height: 1.1; margin-top: 2px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 5px; padding: 6px 8px; }
+  .stat .label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); }
+  .stat .value { font-size: 18px; font-weight: 700; color: var(--text); line-height: 1.1; margin-top: 2px; }
 
-  .obj {
+  .objectif {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 6px;
     padding: 10px 12px;
-    margin-bottom: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
   }
-  .obj .title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
-  .obj .meta { font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.04em; }
-  .obj .desc { font-size: 12px; color: var(--text-dim); margin: 4px 0 6px; }
-  .obj .prog-line { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
-  .obj .prog-line .progress-bar { flex: 1; height: 5px; }
-  .obj .prog-val { font-size: 11px; font-weight: 600; min-width: 32px; text-align: right; }
-  .obj .kpi { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
-  .obj .kpi strong { color: var(--current); }
+  .obj-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .obj-title { font-size: 13px; font-weight: 700; line-height: 1.2; }
+  .obj-meta { font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px; }
+  .obj-prog { display: flex; gap: 6px; align-items: center; }
+  .obj-prog .progress-bar { flex: 1; height: 4px; }
+  .obj-prog .val { font-size: 11px; font-weight: 700; min-width: 34px; text-align: right; }
+  .obj-kpi { font-size: 11px; color: var(--text-dim); }
+  .obj-kpi strong { color: var(--current); }
 
-  .sujet {
+  .projet {
+    background: var(--bg);
+    border-radius: 5px;
+    padding: 6px 8px;
+    margin-top: 6px;
+    border-left: 3px solid var(--border-strong);
+  }
+  .projet-head { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+  .projet-title { font-size: 12px; font-weight: 600; }
+  .projet-meta { font-size: 10px; color: var(--text-faint); }
+
+  .gantt {
+    display: flex;
+    gap: 1px;
+    height: 10px;
+    margin: 4px 0 2px;
+    background: repeating-linear-gradient(90deg, var(--border) 0, var(--border) 1px, transparent 1px, transparent 20%);
+    border-radius: 2px;
+    position: relative;
+  }
+  .gantt-tick {
+    position: absolute;
+    top: 0;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    transform: translateX(-5px);
+  }
+  .gantt-tick.done { background: var(--success); }
+  .gantt-tick.wip { background: var(--accent-strong); }
+  .gantt-tick.bloque { background: var(--danger); }
+  .gantt-tick.todo { background: var(--border-strong); }
+  .gantt-tick.late { background: var(--danger); border: 1px solid white; }
+
+  .taches { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; }
+  .tache {
+    display: grid;
+    grid-template-columns: 18px 1fr auto auto;
+    gap: 6px;
+    align-items: center;
+    padding: 4px 6px;
     background: var(--surface);
     border: 1px solid var(--border);
-    border-left: 3px solid var(--border-strong);
     border-radius: 4px;
-    padding: 8px 10px;
-    margin-bottom: 4px;
+    font-size: 12px;
+    cursor: pointer;
   }
+  .tache:active { opacity: 0.7; }
+  .tache .ord { font-size: 10px; font-weight: 700; color: var(--text-faint); }
+  .tache .titre { color: var(--text); line-height: 1.25; overflow: hidden; text-overflow: ellipsis; }
+  .tache.done .titre { color: var(--text-faint); text-decoration: line-through; }
+  .tache .date { font-size: 10px; color: var(--text-faint); white-space: nowrap; }
+  .tache .date.late { color: var(--danger); font-weight: 700; }
+  .tache .statut-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .statut-dot.Fait { background: var(--success); }
+  .statut-dot.En.cours, .statut-dot.En { background: var(--accent-strong); }
+  .statut-dot.Pas { background: var(--border-strong); }
+  .statut-dot.Bloque { background: var(--danger); }
+  .statut-dot.Abandonne { background: var(--text-faint); }
+
+  .sujet { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--border-strong); border-radius: 4px; padding: 8px 10px; margin-bottom: 4px; }
   .sujet.warn { border-left-color: var(--warning); }
   .sujet.danger { border-left-color: var(--danger); }
-  .sujet-head { display: flex; justify-content: space-between; gap: 6px; font-size: 13px; font-weight: 600; }
+  .sujet-head { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; gap: 6px; }
   .sujet-meta { font-size: 10px; color: var(--text-faint); margin-top: 2px; }
   .sujet-step { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
 
-  #error { background: var(--danger); color: white; padding: 8px; border-radius: 4px; font-size: 12px; }
+  #error { background: var(--danger); color: white; padding: 8px; border-radius: 4px; font-size: 12px; display: none; }
+  #error button { margin-top: 6px; background: white; color: var(--danger); border: 1px solid white; }
 
-  @media (max-width: 600px) {
+  h2 { font-size: 11px; margin-bottom: 4px; }
+
+  /* Modals */
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: flex-end; justify-content: center; z-index: 100; }
+  .modal.hidden { display: none; }
+  .modal-content {
+    background: var(--surface); width: 100%; max-width: 520px; border-radius: 12px 12px 0 0;
+    padding: 16px; padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    display: flex; flex-direction: column; gap: 10px;
+    max-height: 92vh; overflow-y: auto;
+  }
+  .modal-head { display: flex; justify-content: space-between; align-items: center; }
+  .modal-content textarea { min-height: 110px; font-size: 14px; }
+  .modal-content .field { display: flex; flex-direction: column; gap: 4px; }
+  .modal-content .field label { font-size: 10px; }
+
+  @media (max-width: 560px) {
     .stats { grid-template-columns: repeat(2, 1fr); }
   }
 </style>
@@ -81,33 +144,74 @@
 <body>
 
 <main id="app">
-  <header>
-    <div>
-      <h1>Dashboard</h1>
-      <div class="sub" id="last-update"></div>
-    </div>
-  </header>
+  <nav class="app-nav">
+    <a href="../../" class="home" title="Accueil">⌂</a>
+    <a href="../aujourdhui/" class="tab">Jour</a>
+    <a href="../semaine/" class="tab">Semaine</a>
+    <a href="../dashboard/" class="tab active">Objectifs</a>
+    <a href="../dump/" class="tab">Dump</a>
+  </nav>
 
-  <div id="error" style="display:none"></div>
+  <div class="page-title">
+    <h1>Objectifs du trimestre</h1>
+    <div class="sub" id="sub"></div>
+  </div>
+
+  <div id="error"></div>
 
   <section>
-    <h2 style="margin-bottom:6px">Etat</h2>
+    <h2>Etat global</h2>
     <div class="stats" id="stats"></div>
   </section>
 
   <section>
-    <h2 style="margin-bottom:6px">Objectifs trimestre</h2>
     <div id="objectifs"></div>
   </section>
 
   <section>
-    <h2 style="margin-bottom:6px">Sujets a pousser (anti-evitement)</h2>
+    <h2>Sujets a pousser (anti-evitement)</h2>
     <div id="sujets"></div>
   </section>
 </main>
 
+<!-- Task edit modal -->
+<div id="task-modal" class="modal hidden" onclick="backdropClose(event, 'task-modal')">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <h3>Modifier la tache</h3>
+      <button class="ghost small" onclick="closeTaskEdit()">Annuler</button>
+    </div>
+    <div id="task-meta" style="font-size:11px;color:var(--text-dim)"></div>
+    <div class="field"><label>Titre</label><input id="task-titre"></div>
+    <div class="field"><label>Description / bullets</label><textarea id="task-desc" placeholder="- sous-tache 1&#10;- sous-tache 2"></textarea></div>
+    <div class="field"><label>Livrable</label><input id="task-livrable"></div>
+    <div class="field"><label>Statut</label>
+      <select id="task-statut">
+        <option>Pas commence</option><option>En cours</option><option>Fait</option><option>Bloque</option><option>Abandonne</option>
+      </select>
+    </div>
+    <button class="primary" onclick="saveTaskEdit()">Enregistrer</button>
+  </div>
+</div>
+
 <script>
 const { $el, $clear } = Dom;
+let objectifs = [], projets = [], taches = [], sujets = [];
+let currentTaskEditId = null;
+const tachesById = {};
+
+function showError(msg) {
+  const e = document.getElementById('error');
+  $clear(e);
+  e.appendChild($el('div', {}, msg));
+  if (!WuboGrist.inGristIframe()) {
+    e.appendChild($el('button', { class: 'small', onclick: () => { WuboGrist.resetApiKey(); location.reload(); } }, 'Changer de cle API'));
+  }
+  e.style.display = 'block';
+}
+
+function fmtDate(v) { if (!v) return '-'; const d = new Date(v * 1000); return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }); }
+function todayUnix() { const d = new Date(); d.setHours(0,0,0,0); return Math.floor(d.getTime() / 1000); }
 
 function stat(label, value) {
   return $el('div', { class: 'stat' },
@@ -116,48 +220,104 @@ function stat(label, value) {
   );
 }
 
-function progressBar(pct) {
-  return $el('div', { class: 'progress-bar' },
-    $el('div', { class: 'fill', style: { width: `${pct}%` } })
+function renderTache(t) {
+  const statutDot = (t.statut || 'Pas commence').split(' ')[0];
+  const late = t.date_cible && t.date_cible < todayUnix() && t.statut !== 'Fait';
+  const el = $el('div', { class: 'tache ' + (t.statut === 'Fait' ? 'done' : ''), onclick: () => openTaskEdit(t.id) },
+    $el('span', { class: 'ord' }, t.ordre ? String(t.ordre) : '-'),
+    $el('span', { class: 'titre', title: t.titre }, t.titre || ''),
+    $el('span', { class: 'date' + (late ? ' late' : '') }, fmtDate(t.date_cible) + (t.estim_heures ? ` · ${t.estim_heures}h` : '')),
+    $el('span', { class: 'statut-dot ' + statutDot, title: t.statut || '-' })
   );
+  return el;
 }
 
-function fmtDate(v) {
-  if (!v) return '-';
-  const d = typeof v === 'number' ? new Date(v * 1000) : new Date(v);
-  return d.toLocaleDateString('fr-FR');
+function renderGantt(taches, minTs, maxTs) {
+  const range = Math.max(1, maxTs - minTs);
+  const g = $el('div', { class: 'gantt' });
+  taches.forEach(t => {
+    if (!t.date_cible) return;
+    const pct = Math.max(0, Math.min(1, (t.date_cible - minTs) / range));
+    const cls = t.statut === 'Fait' ? 'done'
+              : t.statut === 'En cours' ? 'wip'
+              : t.statut === 'Bloque' ? 'bloque'
+              : (t.date_cible < todayUnix() ? 'late' : 'todo');
+    g.appendChild($el('span', {
+      class: 'gantt-tick ' + cls,
+      style: { left: `${pct * 100}%` },
+      title: `${t.titre} (${fmtDate(t.date_cible)})`
+    }));
+  });
+  return g;
 }
 
-function renderObj(o) {
+function renderProjet(p, tachesOfProjet) {
+  const total = tachesOfProjet.length;
+  const done = tachesOfProjet.filter(t => t.statut === 'Fait').length;
+  const totalH = tachesOfProjet.reduce((s, t) => s + (t.estim_heures || 0), 0);
+  const wrap = $el('div', { class: 'projet' });
+  wrap.appendChild($el('div', { class: 'projet-head' },
+    $el('span', { class: 'projet-title' }, p.titre || ''),
+    $el('span', { class: 'projet-meta' }, `${done}/${total} · ${totalH}h · ech. ${fmtDate(p.date_cible)}`)
+  ));
+
+  if (tachesOfProjet.length > 0) {
+    const datedTaches = tachesOfProjet.filter(t => t.date_cible);
+    if (datedTaches.length > 1) {
+      const minTs = Math.min(todayUnix(), ...datedTaches.map(t => t.date_cible));
+      const maxTs = Math.max(p.date_cible || 0, ...datedTaches.map(t => t.date_cible));
+      wrap.appendChild(renderGantt(datedTaches, minTs, maxTs));
+    }
+    const taches = $el('div', { class: 'taches' });
+    tachesOfProjet
+      .sort((a, b) => (a.ordre || 99) - (b.ordre || 99))
+      .forEach(t => taches.appendChild(renderTache(t)));
+    wrap.appendChild(taches);
+  } else {
+    wrap.appendChild($el('div', { class: 'empty', style: { fontSize: '11px' } }, 'Aucune tache'));
+  }
+  return wrap;
+}
+
+function renderObjectif(o, projetsOfObj) {
   const prog = Math.round(o.progression || 0);
-  const card = $el('div', { class: 'obj' });
-  card.appendChild($el('div', { class: 'title' }, o.titre || ''));
-  card.appendChild($el('div', { class: 'meta' },
-    `${o.trimestre || ''} · P${o.priorite || '-'} · ${fmtDate(o.deadline)} · ${o.proprietaire || ''}`));
-  if (o.description) card.appendChild($el('div', { class: 'desc' }, o.description));
-  card.appendChild($el('div', { class: 'prog-line' },
-    progressBar(prog),
-    $el('span', { class: 'prog-val' }, `${prog}%`)
+  const el = $el('div', { class: 'objectif' });
+  el.appendChild($el('div', { class: 'obj-head' },
+    $el('div', {},
+      $el('div', { class: 'obj-title' }, o.titre || ''),
+      $el('div', { class: 'obj-meta' }, `${o.trimestre || ''} · P${o.priorite || '-'} · ech ${fmtDate(o.deadline)} · ${o.proprietaire || ''}`)
+    ),
+    $el('span', { class: 'tag ' + (prog >= 75 ? 'done' : prog >= 25 ? 'wip' : '') }, `${prog}%`)
+  ));
+  if (o.description) el.appendChild($el('div', { style: { fontSize: '11px', color: 'var(--text-dim)' } }, o.description));
+  el.appendChild($el('div', { class: 'obj-prog' },
+    $el('div', { class: 'progress-bar' }, $el('div', { class: 'fill', style: { width: prog + '%' } })),
+    $el('span', { class: 'val' }, `${prog}%`)
   ));
   if (o.kpi_vise || o.kpi_actuel) {
-    card.appendChild($el('div', { class: 'kpi' },
-      'Vise : ', o.kpi_vise || '-', ' · Actuel : ',
+    el.appendChild($el('div', { class: 'obj-kpi' },
+      'KPI vise : ', o.kpi_vise || '-', ' · actuel : ',
       $el('strong', {}, o.kpi_actuel || '-')
     ));
   }
-  return card;
+
+  projetsOfObj.forEach(p => {
+    const tachesOfP = taches.filter(t => t.projet === p.id);
+    el.appendChild(renderProjet(p, tachesOfP));
+  });
+  if (projetsOfObj.length === 0) el.appendChild($el('div', { class: 'empty', style: { fontSize: '11px' } }, 'Aucun projet rattache'));
+  return el;
 }
 
 function renderSujet(s) {
   const j = s.jours_stagnation || 0;
   let cls = 'sujet';
-  if (j > 14) cls += ' danger';
-  else if (j > 7) cls += ' warn';
-  const tag = j > 14 ? 'danger' : j > 7 ? 'warn' : '';
+  if (j > 14) cls += ' danger'; else if (j > 7) cls += ' warn';
+  const tagClass = j > 14 ? 'danger' : j > 7 ? 'warn' : '';
   const item = $el('div', { class: cls });
   item.appendChild($el('div', { class: 'sujet-head' },
     $el('span', {}, s.titre || ''),
-    $el('span', { class: 'tag ' + tag }, `Stagnation ${j === 999 ? '∞' : j + 'j'}`)
+    $el('span', { class: 'tag ' + tagClass }, `Stag. ${j === 999 ? '∞' : j + 'j'}`)
   ));
   item.appendChild($el('div', { class: 'sujet-meta' }, `${s.type || ''} · ${s.proprietaire || ''}`));
   if (s.prochaine_etape) item.appendChild($el('div', { class: 'sujet-step' }, '→ ' + s.prochaine_etape));
@@ -165,50 +325,94 @@ function renderSujet(s) {
 }
 
 async function render() {
-  const err = document.getElementById('error');
-  err.style.display = 'none';
+  document.getElementById('error').style.display = 'none';
   try {
-    const [objT, tachesT, sujetsT] = await Promise.all([
+    const [o, p, t, s] = await Promise.all([
       WuboGrist.fetchRows('Objectifs'),
+      WuboGrist.fetchRows('Projets'),
       WuboGrist.fetchRows('Taches'),
       WuboGrist.fetchRows('Sujets_a_pousser')
     ]);
-
-    const objectifs = objT.filter(o => o.statut === 'Actif');
-    const sujets = sujetsT.filter(s => s.statut === 'Actif');
-
-    const total = tachesT.length;
-    const fait = tachesT.filter(t => t.statut === 'Fait').length;
-    const enCours = tachesT.filter(t => t.statut === 'En cours').length;
-    const bloque = tachesT.filter(t => t.statut === 'Bloque').length;
-    const pct = total > 0 ? Math.round((fait / total) * 100) : 0;
-
-    const statsNode = document.getElementById('stats');
-    $clear(statsNode);
-    statsNode.appendChild(stat('Faites', `${fait}/${total}`));
-    statsNode.appendChild(stat('En cours', enCours));
-    statsNode.appendChild(stat('Bloquees', bloque));
-    statsNode.appendChild(stat('Avancement', `${pct}%`));
-
-    const oNode = document.getElementById('objectifs');
-    $clear(oNode);
-    if (objectifs.length === 0) oNode.appendChild($el('div', { class: 'empty' }, 'Aucun objectif actif'));
-    else objectifs.forEach(o => oNode.appendChild(renderObj(o)));
-
-    const sNode = document.getElementById('sujets');
-    $clear(sNode);
-    if (sujets.length === 0) sNode.appendChild($el('div', { class: 'empty' }, 'Aucun sujet en attente'));
-    else {
-      sujets.sort((a, b) => (b.jours_stagnation || 0) - (a.jours_stagnation || 0));
-      sujets.forEach(s => sNode.appendChild(renderSujet(s)));
-    }
-
-    document.getElementById('last-update').textContent = 'MAJ ' + new Date().toLocaleTimeString('fr-FR');
+    objectifs = o.filter(x => x.statut === 'Actif');
+    projets = p.filter(x => x.statut !== 'Archive' && x.statut !== 'Abandonne');
+    taches = t;
+    sujets = s.filter(x => x.statut === 'Actif');
+    t.forEach(x => { tachesById[x.id] = x; });
   } catch (e) {
-    err.textContent = 'Erreur : ' + e.message;
-    err.style.display = 'block';
+    showError(e.message);
+    document.getElementById('sub').textContent = 'Hors ligne';
+    return;
+  }
+
+  const total = taches.length;
+  const fait = taches.filter(x => x.statut === 'Fait').length;
+  const enCours = taches.filter(x => x.statut === 'En cours').length;
+  const bloque = taches.filter(x => x.statut === 'Bloque').length;
+
+  const statsNode = document.getElementById('stats');
+  $clear(statsNode);
+  statsNode.appendChild(stat('Faites', `${fait}/${total}`));
+  statsNode.appendChild(stat('En cours', enCours));
+  statsNode.appendChild(stat('Bloquees', bloque));
+  statsNode.appendChild(stat('Avancement', `${total ? Math.round(fait/total*100) : 0}%`));
+
+  document.getElementById('sub').textContent = `${objectifs.length} objectifs · ${projets.length} projets · ${total} taches`;
+
+  const oNode = document.getElementById('objectifs');
+  $clear(oNode);
+  if (objectifs.length === 0) oNode.appendChild($el('div', { class: 'empty' }, 'Aucun objectif actif'));
+  else {
+    objectifs
+      .sort((a, b) => (a.priorite || 99) - (b.priorite || 99))
+      .forEach(o => {
+        const projetsOfO = projets.filter(p => p.objectif === o.id);
+        oNode.appendChild(renderObjectif(o, projetsOfO));
+      });
+  }
+
+  const sNode = document.getElementById('sujets');
+  $clear(sNode);
+  if (sujets.length === 0) sNode.appendChild($el('div', { class: 'empty' }, 'Aucun sujet en attente'));
+  else {
+    sujets.sort((a, b) => (b.jours_stagnation || 0) - (a.jours_stagnation || 0));
+    sujets.forEach(s => sNode.appendChild(renderSujet(s)));
   }
 }
+
+function openTaskEdit(taskId) {
+  const t = tachesById[taskId];
+  if (!t) return;
+  currentTaskEditId = taskId;
+  document.getElementById('task-titre').value = t.titre || '';
+  document.getElementById('task-desc').value = t.description || '';
+  document.getElementById('task-livrable').value = t.livrable || '';
+  document.getElementById('task-statut').value = t.statut || 'Pas commence';
+  const meta = [];
+  if (t.estim_heures) meta.push(`${t.estim_heures}h`);
+  if (t.date_cible) meta.push('echeance ' + fmtDate(t.date_cible));
+  if (t.score) meta.push(`score ${t.score}`);
+  document.getElementById('task-meta').textContent = meta.join(' · ');
+  document.getElementById('task-modal').classList.remove('hidden');
+}
+function closeTaskEdit() { currentTaskEditId = null; document.getElementById('task-modal').classList.add('hidden'); }
+async function saveTaskEdit() {
+  if (!currentTaskEditId) return;
+  const fields = {
+    titre: document.getElementById('task-titre').value.trim(),
+    description: document.getElementById('task-desc').value,
+    livrable: document.getElementById('task-livrable').value,
+    statut: document.getElementById('task-statut').value
+  };
+  try {
+    await WuboGrist.updateRecord('Taches', currentTaskEditId, fields);
+    closeTaskEdit();
+    render();
+  } catch (e) { alert('Erreur : ' + e.message); }
+}
+
+function backdropClose(e, id) { if (e.target === e.currentTarget) document.getElementById(id).classList.add('hidden'); }
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeTaskEdit(); });
 
 (async () => {
   await WuboGrist.initGrist();
