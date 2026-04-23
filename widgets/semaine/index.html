@@ -32,6 +32,10 @@
     gap: 8px;
     padding: 2px 4px 6px;
     border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: env(safe-area-inset-top);
+    background: var(--bg);
+    z-index: 20;
   }
   .sprint-header .title-block { flex: 1; min-width: 0; }
   .sprint-header h1 { font-size: 16px; line-height: 1.1; }
@@ -51,6 +55,7 @@
     border: 1px solid var(--border-strong); border-radius: 6px;
   }
 
+  /* ============ GRID DESKTOP ============ */
   .grid-week {
     display: grid;
     grid-template-columns: 32px repeat(var(--days, 4), 1fr);
@@ -134,6 +139,141 @@
   .cell.done .task-main, .cell.skip .task-main { color: var(--text-faint); text-decoration: line-through; }
   .cell .libre { font-size: 8px; color: var(--text-faint); font-style: italic; }
   .cell .note-dot { position: absolute; bottom: 3px; right: 4px; font-size: 9px; color: var(--warning); line-height: 1; }
+  .cell .ext-dot { position: absolute; bottom: 3px; left: 4px; font-size: 8px; color: var(--danger); line-height: 1; }
+
+  /* ============ LIST MOBILE ============ */
+  .list-days {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    touch-action: pan-y;
+  }
+  .day-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .day-card.today {
+    border-color: var(--current);
+    border-left: 3px solid var(--current);
+  }
+  .day-card .day-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+  }
+  .day-card.today .day-head { background: var(--current-soft); }
+  .day-card .day-head .day-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .day-card.today .day-head .day-label { color: var(--current); }
+  .day-card .day-head .day-stats {
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .day-card .slots {
+    display: flex;
+    flex-direction: column;
+  }
+  .slot {
+    position: relative;
+    display: grid;
+    grid-template-columns: 54px 1fr 14px;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    min-height: 60px;
+    border-top: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .slot:first-child { border-top: none; }
+  .slot:active { opacity: 0.7; }
+  .slot.empty { background: var(--bg); cursor: default; }
+  .slot.done { background: #EAF4EE; }
+  .slot.current { background: var(--current-soft); border-left: 3px solid var(--current); padding-left: 7px; }
+  .slot.skip { background: var(--done-bg); }
+  .slot.wip { background: #FFFCE5; }
+  .slot .slot-tranche {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+  }
+  .slot.current .slot-tranche { color: var(--current); }
+  .slot .slot-body {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .slot .slot-title {
+    font-size: 13px;
+    line-height: 1.25;
+    color: var(--text);
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    word-break: break-word;
+  }
+  .slot.done .slot-title, .slot.skip .slot-title {
+    color: var(--text-faint);
+    text-decoration: line-through;
+  }
+  .slot .slot-extra {
+    font-size: 10px;
+    color: var(--text-faint);
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .slot .slot-libre {
+    font-size: 11px;
+    color: var(--text-faint);
+    font-style: italic;
+  }
+  .slot .slot-empty-label {
+    font-size: 11px;
+    color: var(--text-faint);
+  }
+  .slot .slot-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    justify-self: center;
+  }
+  .slot-dot.done { background: var(--success); }
+  .slot-dot.current { background: var(--current); }
+  .slot-dot.skip { background: var(--text-faint); }
+  .slot-dot.wip { background: var(--accent-strong); }
+  .slot-dot.planned { background: var(--border-strong); }
+  .slot .slot-note {
+    color: var(--warning);
+    font-size: 11px;
+    line-height: 1;
+  }
+  .slot .slot-ext-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--danger);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
 
   .empty-window {
     grid-column: 2 / -1;
@@ -148,6 +288,19 @@
     flex-direction: column;
     align-items: center;
     gap: 8px;
+  }
+  .empty-window-mobile {
+    padding: 24px 14px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-dim);
+    border: 1px dashed var(--border-strong);
+    border-radius: 6px;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
   }
 
   .bottom {
@@ -180,9 +333,36 @@
   .legend .dash { display: inline-block; width: 10px; height: 0; border-top: 1px dashed var(--border-strong); }
   .legend .note-ico { color: var(--warning); font-size: 10px; line-height: 1; }
   .legend .libre-ico { font-style: italic; font-size: 9px; color: var(--text-faint); }
+  .legend .ext-ico { color: var(--danger); font-weight: 700; }
 
   #error { background: var(--danger); color: white; padding: 10px; border-radius: 6px; font-size: 12px; display: none; }
   #error button { margin-top: 6px; background: white; color: var(--danger); border: 1px solid white; }
+
+  /* Badge deadline externe */
+  .ext-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 7px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: #FCE8E6;
+    color: var(--danger);
+    border: 1px solid var(--danger);
+  }
+
+  /* Flash animation sur cellule venant d'etre modifiee */
+  @keyframes justUpdatedFlash {
+    0%   { box-shadow: 0 0 0 0 var(--current); background-color: var(--current-soft); }
+    50%  { box-shadow: 0 0 0 3px var(--accent); }
+    100% { box-shadow: 0 0 0 0 transparent; }
+  }
+  .just-updated {
+    animation: justUpdatedFlash 1.2s ease-out;
+  }
 
   /* Modal */
   .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: flex-end; justify-content: center; z-index: 100; }
@@ -205,7 +385,14 @@
   }
   .task-list-mini .task-row:active, .task-list-mini .subtask:active { opacity: 0.7; }
 
+  /* ============ MEDIA QUERIES ============ */
+  @media (max-width: 599px) {
+    .grid-week { display: none; }
+    .list-days { display: flex; }
+  }
   @media (min-width: 600px) {
+    .grid-week { display: grid; }
+    .list-days { display: none; }
     .bottom { max-width: 720px; left: 50%; transform: translateX(-50%); border-radius: 12px 12px 0 0; }
     .cell { font-size: 10px; min-height: 72px; }
     .cell .task-main { font-size: 10px; max-height: 40px; }
@@ -236,7 +423,11 @@
 
   <div id="error"></div>
 
+  <!-- Vue desktop : grille 4x3 -->
   <div class="grid-week" id="grid"></div>
+
+  <!-- Vue mobile : liste verticale de jours -->
+  <div class="list-days" id="list"></div>
 
   <div class="legend">
     <span class="lg"><span class="dot" style="background:#188038"></span>Fait</span>
@@ -245,6 +436,7 @@
     <span class="lg"><span class="dot" style="background:#C8C8C3"></span>Planifié</span>
     <span class="lg"><span class="dot" style="background:#9A9A95"></span>Zappé</span>
     <span class="lg"><span class="note-ico">●</span>Note</span>
+    <span class="lg"><span class="ext-ico">⏰</span>Deadline externe</span>
     <span class="lg"><span class="libre-ico">Libre</span> sans tâche</span>
     <span class="lg"><span class="dash"></span>pas de bloc</span>
   </div>
@@ -318,6 +510,7 @@
       <button class="ghost small" onclick="closeTaskEdit()">Annuler</button>
     </div>
     <div id="task-meta" style="font-size:11px;color:var(--text-dim)"></div>
+    <div id="task-ext-preview" style="display:none"></div>
     <div class="field"><label>Titre</label><input id="task-titre"></div>
     <div class="field"><label>Description / bullets</label><textarea id="task-desc" placeholder="- détail 1&#10;- détail 2"></textarea></div>
     <div class="field"><label>Livrable</label><input id="task-livrable"></div>
@@ -333,6 +526,12 @@
     <div class="field" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
       <div><label>Heures</label><input id="task-heures" type="number" step="0.5" min="0"></div>
       <div><label>Échéance</label><input id="task-date" type="date"></div>
+    </div>
+    <div class="field">
+      <label style="display:flex;gap:6px;align-items:center;font-size:12px;text-transform:none;letter-spacing:0;color:var(--text)">
+        <input type="checkbox" id="task-ext-deadline" style="width:auto">
+        <span>Vraie deadline externe (AAP, event, atelier école)</span>
+      </label>
     </div>
     <div id="task-reporter" class="field" style="display:none">
       <label>Reporter</label>
@@ -363,6 +562,7 @@ const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'aoû
 let allBlocs = [], tachesById = {}, currentBlocId = null;
 let currentTaskEditId = null, currentTaskNewBlocId = null, currentTaskParent = null;
 let currentTaskOriginalDate = null, currentPushCount = 0;
+let pendingFlashBlocId = null; // id du bloc a flasher au prochain render
 
 // Fenêtre glissante
 let dayOffset = 0;      // offset en jours depuis today
@@ -455,6 +655,14 @@ function cellClass(bloc) {
   if (s.includes('zapp')) return 'cell skip';
   return 'cell';
 }
+function slotClass(bloc) {
+  if (!bloc) return 'slot empty';
+  const s = (bloc.statut || '').toLowerCase();
+  if (s.includes('fait')) return 'slot done';
+  if (s.includes('en cours')) return 'slot wip';
+  if (s.includes('zapp')) return 'slot skip';
+  return 'slot';
+}
 function dotClass(bloc, isCurrent) {
   if (isCurrent) return 'status-dot current';
   if (!bloc) return '';
@@ -464,14 +672,34 @@ function dotClass(bloc, isCurrent) {
   if (s.includes('zapp')) return 'status-dot skip';
   return 'status-dot planned';
 }
+function slotDotClass(bloc, isCurrent) {
+  if (isCurrent) return 'slot-dot current';
+  if (!bloc) return 'slot-dot';
+  const s = (bloc.statut || '').toLowerCase();
+  if (s.includes('fait')) return 'slot-dot done';
+  if (s.includes('en cours')) return 'slot-dot wip';
+  if (s.includes('zapp')) return 'slot-dot skip';
+  return 'slot-dot planned';
+}
 
-function renderCell(bloc, isToday, tranche) {
+function blocHasExtDeadline(bloc) {
+  if (!bloc) return false;
+  const tIds = WuboGrist.refListIds(bloc.taches_liees);
+  return tIds.some(id => tachesById[id] && tachesById[id].est_deadline_externe);
+}
+
+function isBlocCurrent(bloc, isToday, tranche) {
   const h = new Date().getHours();
   const curT = h >= 8 && h < 13 ? 'Matin' : h >= 13 && h < 18 ? 'Aprem' : h >= 18 && h < 22 ? 'Soir' : null;
   const blocStatut = (bloc && bloc.statut || '').toLowerCase();
-  const isCurrent = isToday && curT === tranche && bloc && !blocStatut.includes('fait') && !blocStatut.includes('zapp');
+  return isToday && curT === tranche && bloc && !blocStatut.includes('fait') && !blocStatut.includes('zapp');
+}
+
+function renderCell(bloc, isToday, tranche) {
+  const isCurrent = isBlocCurrent(bloc, isToday, tranche);
   let cls = cellClass(bloc);
   if (isCurrent) cls = 'cell current';
+  if (bloc && pendingFlashBlocId === bloc.id) cls += ' just-updated';
 
   const cell = $el('div', { class: cls });
   if (bloc) cell.onclick = () => openBloc(bloc.id);
@@ -494,7 +722,50 @@ function renderCell(bloc, isToday, tranche) {
   }
 
   if (bloc.note_fin_bloc) cell.appendChild($el('span', { class: 'note-dot', title: bloc.note_fin_bloc }, '●'));
+  if (blocHasExtDeadline(bloc)) cell.appendChild($el('span', { class: 'ext-dot', title: 'Deadline externe' }, '⏰'));
   return cell;
+}
+
+function renderSlot(bloc, isToday, tranche) {
+  const isCurrent = isBlocCurrent(bloc, isToday, tranche);
+  let cls = slotClass(bloc);
+  if (isCurrent) cls = 'slot current';
+  if (bloc && pendingFlashBlocId === bloc.id) cls += ' just-updated';
+
+  const slot = $el('div', { class: cls });
+  if (bloc) slot.onclick = () => openBloc(bloc.id);
+
+  slot.appendChild($el('div', { class: 'slot-tranche' }, tranche));
+
+  const body = $el('div', { class: 'slot-body' });
+  if (!bloc) {
+    body.appendChild($el('div', { class: 'slot-empty-label' }, 'Pas de bloc'));
+    slot.appendChild(body);
+    slot.appendChild($el('span', {}));
+    return slot;
+  }
+
+  const tIds = WuboGrist.refListIds(bloc.taches_liees);
+  const titles = tIds.map(id => (tachesById[id] && tachesById[id].titre) || '').filter(Boolean);
+  if (titles.length === 0) {
+    body.appendChild($el('div', { class: 'slot-libre' }, 'Libre'));
+  } else {
+    body.appendChild($el('div', { class: 'slot-title', title: titles.join(' · ') }, titles[0]));
+    const extraBits = [];
+    if (titles.length > 1) extraBits.push(`+${titles.length - 1}`);
+    const extra = $el('div', { class: 'slot-extra' });
+    if (extraBits.length) extra.appendChild($el('span', {}, extraBits.join(' · ')));
+    if (bloc.note_fin_bloc) {
+      extra.appendChild($el('span', { class: 'slot-note', title: bloc.note_fin_bloc }, '● note'));
+    }
+    if (blocHasExtDeadline(bloc)) {
+      extra.appendChild($el('span', { class: 'slot-ext-badge' }, '⏰ deadline'));
+    }
+    if (extra.children.length) body.appendChild(extra);
+  }
+  slot.appendChild(body);
+  slot.appendChild($el('span', { class: slotDotClass(bloc, isCurrent) }));
+  return slot;
 }
 
 function formatRange(firstISO, lastISO) {
@@ -511,7 +782,6 @@ function computeTitle(daysISO) {
   const todayISO = WuboGrist.todayISO();
   const firstISO = daysISO[0];
   const lastISO = daysISO[daysISO.length - 1];
-  // Semaine ISO du jour du milieu pour être représentative
   const midIdx = Math.floor(daysISO.length / 2);
   const [ym, mm, dm] = daysISO[midIdx].split('-').map(Number);
   const mid = new Date(ym, mm-1, dm);
@@ -529,7 +799,6 @@ function computeTitle(daysISO) {
 }
 
 function renderEmptyWindow(grid, daysISO) {
-  // Laisser la colonne vide pour row-head, et placer un message sur toute la largeur
   grid.appendChild($el('div', {}));
   daysISO.forEach(iso => {
     const [y, m, d] = iso.split('-').map(Number);
@@ -545,57 +814,26 @@ function renderEmptyWindow(grid, daysISO) {
   grid.appendChild(empty);
 }
 
-async function render() {
-  document.getElementById('error').style.display = 'none';
-  windowSize = computeWindowSize();
+function renderEmptyWindowList(list) {
+  const empty = $el('div', { class: 'empty-window-mobile' },
+    $el('div', {}, 'Aucun bloc planifié pour cette période.'),
+    $el('button', { class: 'ghost small', onclick: () => resetWindow() }, 'Revenir à aujourd\'hui')
+  );
+  list.appendChild(empty);
+}
 
-  // Titre initial (avant fetch), basé sur la fenêtre
-  const daysISO = windowDaysISO();
-  const { label, range } = computeTitle(daysISO);
-  document.getElementById('title').textContent = label;
-  document.getElementById('sub').textContent = range;
-
-  allBlocs = []; tachesById = {};
-  try {
-    const [b, t] = await Promise.all([WuboGrist.fetchRows('Blocs_temps'), WuboGrist.fetchRows('Taches')]);
-    allBlocs = b;
-    t.forEach(x => { tachesById[x.id] = x; });
-  } catch (e) {
-    showError(e.message);
-    document.getElementById('sub').textContent = 'Hors ligne';
-    return;
-  }
-
-  const todayISO = WuboGrist.todayISO();
+function renderGrid(daysISO, byDay, todayISO) {
   const grid = document.getElementById('grid');
   $clear(grid);
   grid.style.setProperty('--days', daysISO.length);
 
-  const byDay = blocsByDayISO(allBlocs);
-
-  // Compter les blocs dans la fenêtre
   let countInWindow = 0;
   daysISO.forEach(iso => { if (byDay[iso]) countInWindow += Object.keys(byDay[iso]).length; });
-
   if (countInWindow === 0) {
     renderEmptyWindow(grid, daysISO);
-    // Met à jour le sous-titre avec info
-    document.getElementById('sub').textContent = `${range} · aucun bloc`;
     return;
   }
 
-  // Stats sur la fenêtre
-  let fait = 0, total = 0;
-  daysISO.forEach(iso => {
-    if (!byDay[iso]) return;
-    Object.values(byDay[iso]).forEach(bloc => {
-      total++;
-      if ((bloc.statut || '').toLowerCase().includes('fait')) fait++;
-    });
-  });
-  document.getElementById('sub').textContent = `${range} · ${fait}/${total} blocs faits`;
-
-  // Header row
   grid.appendChild($el('div', {}));
   daysISO.forEach(iso => {
     const [y, m, d] = iso.split('-').map(Number);
@@ -613,8 +851,97 @@ async function render() {
   });
 }
 
+function renderList(daysISO, byDay, todayISO) {
+  const list = document.getElementById('list');
+  $clear(list);
+
+  let countInWindow = 0;
+  daysISO.forEach(iso => { if (byDay[iso]) countInWindow += Object.keys(byDay[iso]).length; });
+  if (countInWindow === 0) {
+    renderEmptyWindowList(list);
+    return;
+  }
+
+  daysISO.forEach(iso => {
+    const [y, m, d] = iso.split('-').map(Number);
+    const dd = new Date(y, m-1, d);
+    const isToday = iso === todayISO;
+    const blocsOfDay = byDay[iso] || {};
+
+    // Compte blocs faits / total du jour
+    let dayFait = 0, dayTotal = 0;
+    Object.values(blocsOfDay).forEach(b => {
+      dayTotal++;
+      if ((b.statut || '').toLowerCase().includes('fait')) dayFait++;
+    });
+
+    const dayCard = $el('div', { class: 'day-card' + (isToday ? ' today' : '') });
+    const label = `${DAY_NAMES[dd.getDay()]} ${dd.getDate()} ${MONTHS[dd.getMonth()]}${isToday ? ' · aujourd\'hui' : ''}`;
+    const stats = dayTotal > 0 ? `${dayFait}/${dayTotal} faits` : 'aucun bloc';
+    const head = $el('div', { class: 'day-head' },
+      $el('div', { class: 'day-label' }, label),
+      $el('div', { class: 'day-stats' }, stats)
+    );
+    dayCard.appendChild(head);
+
+    const slots = $el('div', { class: 'slots' });
+    TRANCHES.forEach(tranche => {
+      slots.appendChild(renderSlot(blocsOfDay[tranche], isToday, tranche));
+    });
+    dayCard.appendChild(slots);
+    list.appendChild(dayCard);
+  });
+}
+
+async function render() {
+  document.getElementById('error').style.display = 'none';
+  windowSize = computeWindowSize();
+
+  const daysISO = windowDaysISO();
+  const { label, range } = computeTitle(daysISO);
+  document.getElementById('title').textContent = label;
+  document.getElementById('sub').textContent = range;
+
+  allBlocs = []; tachesById = {};
+  try {
+    const [b, t] = await Promise.all([WuboGrist.fetchRows('Blocs_temps'), WuboGrist.fetchRows('Taches')]);
+    allBlocs = b;
+    t.forEach(x => { tachesById[x.id] = x; });
+  } catch (e) {
+    showError(e.message);
+    document.getElementById('sub').textContent = 'Hors ligne';
+    return;
+  }
+
+  const todayISO = WuboGrist.todayISO();
+  const byDay = blocsByDayISO(allBlocs);
+
+  // Stats agregees sur la fenetre
+  let fait = 0, total = 0;
+  daysISO.forEach(iso => {
+    if (!byDay[iso]) return;
+    Object.values(byDay[iso]).forEach(bloc => {
+      total++;
+      if ((bloc.statut || '').toLowerCase().includes('fait')) fait++;
+    });
+  });
+  if (total === 0) {
+    document.getElementById('sub').textContent = `${range} · aucun bloc`;
+  } else {
+    document.getElementById('sub').textContent = `${range} · ${fait}/${total} blocs faits`;
+  }
+
+  // Rend les deux vues, le CSS cache celle qui ne s'affiche pas
+  renderGrid(daysISO, byDay, todayISO);
+  renderList(daysISO, byDay, todayISO);
+
+  // Reset flash apres un cycle (laisse l'animation se jouer)
+  if (pendingFlashBlocId) {
+    setTimeout(() => { pendingFlashBlocId = null; }, 1400);
+  }
+}
+
 function shiftWindow(direction) {
-  // direction = -1 (précédent) ou +1 (suivant). Pas de windowSize jours.
   dayOffset += direction * windowSize;
   render();
 }
@@ -624,30 +951,30 @@ function resetWindow() {
   render();
 }
 
-// Swipe sur la grille (mobile)
+// Swipe sur la grille ET la liste (mobile)
 let touchStartX = 0, touchStartY = 0, touchActive = false;
 function setupSwipe() {
-  const grid = document.getElementById('grid');
-  if (!grid) return;
-  grid.addEventListener('touchstart', (e) => {
-    if (e.touches.length !== 1) { touchActive = false; return; }
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-    touchActive = true;
-  }, { passive: true });
-  grid.addEventListener('touchend', (e) => {
-    if (!touchActive) return;
-    touchActive = false;
-    const t = e.changedTouches[0];
-    const dx = t.clientX - touchStartX;
-    const dy = t.clientY - touchStartY;
-    // seuil horizontal ~50px et |dx| > 2 * |dy| pour distinguer du scroll vertical
-    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 2) {
-      if (dx < 0) shiftWindow(1);  // swipe gauche = période suivante
-      else shiftWindow(-1);        // swipe droite = période précédente
-    }
-  }, { passive: true });
-  grid.addEventListener('touchcancel', () => { touchActive = false; });
+  const targets = [document.getElementById('grid'), document.getElementById('list')].filter(Boolean);
+  targets.forEach(node => {
+    node.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) { touchActive = false; return; }
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      touchActive = true;
+    }, { passive: true });
+    node.addEventListener('touchend', (e) => {
+      if (!touchActive) return;
+      touchActive = false;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - touchStartX;
+      const dy = t.clientY - touchStartY;
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 2) {
+        if (dx < 0) shiftWindow(1);
+        else shiftWindow(-1);
+      }
+    }, { passive: true });
+    node.addEventListener('touchcancel', () => { touchActive = false; });
+  });
 }
 
 function openBloc(blocId) {
@@ -661,7 +988,6 @@ function openBloc(blocId) {
   if (bloc.proprietaire) meta.push(bloc.proprietaire);
   if (bloc.duree_reelle_h) meta.push(`${bloc.duree_reelle_h}h réelles`);
   document.getElementById('bloc-modal-meta').textContent = meta.join(' · ') || '';
-  // Normalisation statut pour le select (valeurs Grist sans accents)
   const statutSelect = document.getElementById('bloc-statut');
   const curStatut = (bloc.statut || 'Planifie').toLowerCase();
   let selectVal = 'Planifie';
@@ -680,9 +1006,13 @@ function openBloc(blocId) {
     tIds.forEach(tid => {
       const t = tachesById[tid];
       if (!t) return;
-      tasksNode.appendChild($el('div', { class: 'task-row', onclick: () => openTaskEdit(tid) },
+      const row = $el('div', { class: 'task-row', onclick: () => openTaskEdit(tid) },
         $el('span', { class: 'status-pill ' + statutClass(t.statut) }),
-        $el('span', { style: { flex: '1' } }, t.titre || '-')));
+        $el('span', { style: { flex: '1' } }, t.titre || '-'));
+      if (t.est_deadline_externe) {
+        row.appendChild($el('span', { class: 'ext-badge', title: 'Deadline externe' }, '⏰'));
+      }
+      tasksNode.appendChild(row);
     });
   }
   openModal('bloc-modal');
@@ -712,7 +1042,21 @@ function openTaskNew(blocId, parentTaskId) {
   document.getElementById('task-meta').textContent = parentTaskId ? 'Sous-tâche' : 'Nouvelle tâche';
   document.getElementById('task-reporter').style.display = 'none';
   document.getElementById('subtasks-section').style.display = 'none';
+  document.getElementById('task-ext-deadline').checked = false;
+  refreshTaskExtPreview();
   openModal('task-modal');
+}
+
+function refreshTaskExtPreview() {
+  const box = document.getElementById('task-ext-preview');
+  const checked = document.getElementById('task-ext-deadline').checked;
+  $clear(box);
+  if (checked) {
+    box.style.display = 'block';
+    box.appendChild($el('span', { class: 'ext-badge' }, '⏰ Deadline externe'));
+  } else {
+    box.style.display = 'none';
+  }
 }
 
 function reportTaskDays(n) {
@@ -723,15 +1067,20 @@ function reportTaskDays(n) {
 
 async function saveBloc() {
   if (!currentBlocId) return;
+  const blocId = currentBlocId;
   const fields = {
     statut: document.getElementById('bloc-statut').value,
     note_fin_bloc: document.getElementById('bloc-note').value
   };
   try {
-    await WuboGrist.updateRecord('Blocs_temps', currentBlocId, fields);
+    await WuboGrist.updateRecord('Blocs_temps', blocId, fields);
     closeBloc();
-    render();
-  } catch (e) { alert('Erreur : ' + e.message); }
+    pendingFlashBlocId = blocId;
+    await render();
+    WuboGrist.toast('Bloc sauvegardé', 'success');
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error', 4000);
+  }
 }
 
 function openTaskEdit(taskId) {
@@ -746,7 +1095,6 @@ function openTaskEdit(taskId) {
   document.getElementById('task-titre').value = t.titre || '';
   document.getElementById('task-desc').value = t.description || '';
   document.getElementById('task-livrable').value = t.livrable || '';
-  // Normalisation statut (valeurs Grist sans accents)
   const statutSelect = document.getElementById('task-statut');
   const curStatut = (t.statut || 'Pas commence').toLowerCase();
   let selectVal = 'Pas commence';
@@ -757,13 +1105,14 @@ function openTaskEdit(taskId) {
   statutSelect.value = selectVal;
   document.getElementById('task-heures').value = t.estim_heures || '';
   document.getElementById('task-date').value = unixToInputDate(t.date_cible);
+  document.getElementById('task-ext-deadline').checked = !!t.est_deadline_externe;
+  refreshTaskExtPreview();
   const meta = [];
   if (t.score) meta.push(`score ${t.score}`);
   if (currentPushCount > 0) meta.push(`reportée ${currentPushCount}x`);
   document.getElementById('task-meta').textContent = meta.join(' · ');
   document.getElementById('task-reporter').style.display = 'flex';
   document.getElementById('push-count-info').textContent = currentPushCount > 0 ? `Déjà reportée ${currentPushCount}x (bonus score +${Math.min(currentPushCount*3, 10)})` : '';
-  // Sous-tâches existantes
   const subs = Object.values(tachesById).filter(x => x.parent_tache === taskId);
   renderSubtasksList(subs);
   document.getElementById('subtasks-section').style.display = '';
@@ -801,24 +1150,39 @@ function closeTaskEdit() {
 
 async function saveTaskEdit() {
   const titre = document.getElementById('task-titre').value.trim();
-  if (!titre) { alert('Titre obligatoire'); return; }
+  if (!titre) { WuboGrist.toast('Titre obligatoire', 'warn'); return; }
   const heures = parseFloat(document.getElementById('task-heures').value) || 0;
   const dateStr = document.getElementById('task-date').value;
   const dateUnix = inputDateToUnix(dateStr);
+  const extDeadline = document.getElementById('task-ext-deadline').checked;
   const fields = {
     titre,
     description: document.getElementById('task-desc').value,
     livrable: document.getElementById('task-livrable').value,
     statut: document.getElementById('task-statut').value,
-    estim_heures: heures
+    estim_heures: heures,
+    est_deadline_externe: extDeadline
   };
   if (dateUnix) fields.date_cible = dateUnix;
+  const editingId = currentTaskEditId;
+  const targetBlocId = currentTaskNewBlocId;
+  const isReport = editingId && currentTaskOriginalDate && dateUnix && dateUnix > currentTaskOriginalDate;
   try {
-    if (currentTaskEditId) {
-      if (currentTaskOriginalDate && dateUnix && dateUnix > currentTaskOriginalDate) {
+    if (editingId) {
+      if (isReport) {
         fields.push_count = currentPushCount;
       }
-      await WuboGrist.updateRecord('Taches', currentTaskEditId, fields);
+      await WuboGrist.updateRecord('Taches', editingId, fields);
+      closeTaskEdit();
+      if (targetBlocId) pendingFlashBlocId = targetBlocId;
+      await render();
+      if (isReport) {
+        const reportDate = new Date(dateUnix * 1000);
+        const reportLabel = `${reportDate.getUTCDate()} ${MONTHS[reportDate.getUTCMonth()]}`;
+        WuboGrist.toast(`Tâche reportée au ${reportLabel}`, 'success');
+      } else {
+        WuboGrist.toast('Tâche mise à jour', 'success');
+      }
     } else {
       fields.date_creation = WuboGrist.daysFromToday(0);
       fields.push_count = 0;
@@ -828,31 +1192,41 @@ async function saveTaskEdit() {
       fields.strategic_value = 2;
       if (currentTaskParent) fields.parent_tache = currentTaskParent;
       const created = await WuboGrist.addRecord('Taches', fields);
-      if (currentTaskNewBlocId && created && created.records && created.records[0]) {
-        const newId = created.records[0].id;
+      const newId = created && created.id;
+      if (targetBlocId && newId) {
         const blocRows = await WuboGrist.fetchRows('Blocs_temps');
-        const bloc = blocRows.find(b => b.id === currentTaskNewBlocId);
+        const bloc = blocRows.find(b => b.id === targetBlocId);
         if (bloc) {
           const existingIds = WuboGrist.refListIds(bloc.taches_liees);
           const newList = ['L', ...existingIds, newId];
-          await WuboGrist.updateRecord('Blocs_temps', currentTaskNewBlocId, { taches_liees: newList });
+          await WuboGrist.updateRecord('Blocs_temps', targetBlocId, { taches_liees: newList });
         }
       }
+      closeTaskEdit();
+      if (targetBlocId) pendingFlashBlocId = targetBlocId;
+      await render();
+      WuboGrist.toast(targetBlocId ? 'Tâche créée et liée au bloc' : 'Tâche créée', 'success');
     }
-    closeTaskEdit();
-    render();
-  } catch (e) { alert('Erreur : ' + e.message); }
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error', 4000);
+  }
 }
 
 async function submitDump() {
   const ctx = document.getElementById('dump-contexte').value;
   const content = document.getElementById('dump-content').value.trim();
-  if (!content) return;
+  if (!content) {
+    WuboGrist.toast('Rien à envoyer', 'warn');
+    return;
+  }
   try {
     await WuboGrist.addRecord('Dump_notes', { timestamp: WuboGrist.nowUnix(), auteur: 'Taki', contenu: content, contexte: ctx, traite: false, converti_en: '' });
     document.getElementById('dump-content').value = '';
     closeDump();
-  } catch (e) { alert('Erreur : ' + e.message); }
+    WuboGrist.toast('Note ajoutée au dump', 'success');
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error', 4000);
+  }
 }
 function openDump() { openModal('dump-modal'); }
 function closeDump() { closeModal('dump-modal'); }
@@ -864,8 +1238,14 @@ async function refresh() {
   const orig = btn.textContent;
   btn.textContent = '⟳';
   btn.disabled = true;
-  try { await render(); btn.textContent = '✓'; }
-  catch (e) { btn.textContent = '✕'; }
+  try {
+    await render();
+    btn.textContent = '✓';
+    WuboGrist.toast('Actualisé', 'info', 1500);
+  } catch (e) {
+    btn.textContent = '✕';
+    WuboGrist.toast('Erreur de chargement', 'error');
+  }
   setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1000);
 }
 
@@ -885,6 +1265,8 @@ window.addEventListener('resize', () => {
   try { if (typeof grist !== 'undefined' && grist.onRecords) grist.onRecords(() => render()); } catch (_) {}
   await render();
   setupSwipe();
+  const extCheckbox = document.getElementById('task-ext-deadline');
+  if (extCheckbox) extCheckbox.addEventListener('change', refreshTaskExtPreview);
 })();
 </script>
 
