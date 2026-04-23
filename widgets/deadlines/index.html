@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Échéances">
+<meta name="theme-color" content="#F4F4F1">
+<link rel="apple-touch-icon" href="../../icon.svg">
+<link rel="icon" type="image/svg+xml" href="../../icon.svg">
+<link rel="manifest" href="../../manifest.webmanifest">
+<title>Échéances - Pilotage Wubo</title>
+<link rel="stylesheet" href="../../lib/styles.css">
+<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+<script src="../../lib/dom.js"></script>
+<script src="../../lib/grist-api.js"></script>
+<style>
+  #app {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 10px 14px calc(80px + env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .page-title { padding: 2px 2px 6px; border-bottom: 1px solid var(--border); }
+  .page-title h1 { font-size: 17px; }
+  .page-title .sub { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+
+  .filters {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 2px 0;
+    scrollbar-width: none;
+  }
+  .filters::-webkit-scrollbar { display: none; }
+  .filter-chip {
+    flex-shrink: 0;
+    padding: 6px 12px;
+    border-radius: 14px;
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .filter-chip.active {
+    background: var(--text);
+    color: white;
+    border-color: var(--text);
+  }
+  .filter-chip:active { opacity: 0.7; }
+
+  .group-head {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    padding: 10px 2px 4px;
+  }
+
+  .deadline-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border-strong);
+    border-radius: 5px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    cursor: pointer;
+  }
+  .deadline-item:active { opacity: 0.7; }
+  .deadline-item.late { border-left-color: var(--danger); background: #FDECEB; }
+  .deadline-item.soon { border-left-color: #E87722; }
+  .deadline-item.ok { border-left-color: var(--success); }
+
+  .dl-line1 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+  }
+  .dl-date { font-weight: 700; color: var(--text); }
+  .dl-jours { font-weight: 700; }
+  .deadline-item.late .dl-jours { color: var(--danger); }
+  .deadline-item.soon .dl-jours { color: #E87722; }
+  .deadline-item.ok .dl-jours { color: var(--success); }
+  .dl-type {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    padding: 2px 6px;
+    background: var(--done-bg);
+    border-radius: 3px;
+    font-weight: 700;
+  }
+  .dl-type.projet { background: #E2F0FB; color: #0B63A8; }
+  .dl-type.objectif { background: var(--current-soft); color: var(--current); }
+
+  .dl-titre {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--text);
+  }
+  .dl-line3 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+  .dl-contexte { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  #error {
+    background: var(--danger);
+    color: white;
+    padding: 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    display: none;
+  }
+  #error button { margin-top: 6px; background: white; color: var(--danger); border: 1px solid white; }
+
+  .bottom {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+    display: flex;
+    gap: 8px;
+    background: rgba(244, 244, 241, 0.95);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid var(--border);
+    z-index: 50;
+  }
+  .bottom button { flex: 1; padding: 13px; font-size: 14px; }
+  @media (min-width: 600px) {
+    .bottom { max-width: 480px; left: 50%; transform: translateX(-50%); border-radius: 12px 12px 0 0; }
+  }
+
+  /* Modals */
+  .modal {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: flex; align-items: flex-end; justify-content: center;
+    z-index: 100;
+    overscroll-behavior: contain;
+  }
+  .modal.hidden { display: none; }
+  .modal-content {
+    background: var(--surface);
+    width: 100%;
+    max-width: 520px;
+    border-radius: 12px 12px 0 0;
+    padding: 16px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    display: flex; flex-direction: column; gap: 10px;
+    max-height: 88vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .modal-head { display: flex; justify-content: space-between; align-items: center; }
+  .modal-content textarea { min-height: 90px; font-size: 14px; }
+  .modal-content .field { display: flex; flex-direction: column; gap: 4px; }
+  .modal-content .field label { font-size: 10px; }
+</style>
+</head>
+<body>
+
+<main id="app">
+  <nav class="app-nav">
+    <a href="../aujourdhui/" class="tab">Jour</a>
+    <a href="../semaine/" class="tab">Semaine</a>
+    <a href="../dashboard/" class="tab">Objectifs</a>
+    <a href="../deadlines/" class="tab active">Échéances</a>
+  </nav>
+
+  <div class="page-title">
+    <h1>Échéances à venir</h1>
+    <div class="sub" id="sub">Chargement…</div>
+  </div>
+
+  <div id="error"></div>
+
+  <div class="filters" id="filters"></div>
+
+  <section id="deadlines-list"></section>
+</main>
+
+<nav class="bottom">
+  <button class="accent" onclick="openDump()">+ Dump</button>
+  <button class="ghost" onclick="refresh()">↻ Refresh</button>
+</nav>
+
+<!-- Dump modal -->
+<div id="dump-modal" class="modal hidden" onclick="backdropClose(event, 'dump-modal')">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <h3>Dump rapide</h3>
+      <button class="ghost small" onclick="closeDump()">Annuler</button>
+    </div>
+    <select id="dump-contexte">
+      <option value="Libre">Libre</option>
+      <option value="Post-RDV">Post-RDV</option>
+      <option value="Idee">Idée</option>
+      <option value="Probleme">Problème</option>
+      <option value="Decision">Décision</option>
+    </select>
+    <textarea id="dump-content" placeholder="Écris sans filtre. Claude rangera."></textarea>
+    <button class="primary" onclick="submitDump()">Envoyer au dump</button>
+  </div>
+</div>
+
+<!-- Task edit modal -->
+<div id="task-modal" class="modal hidden" onclick="backdropClose(event, 'task-modal')">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <h3 id="task-modal-title">Modifier la tâche</h3>
+      <button class="ghost small" onclick="closeTaskEdit()">Annuler</button>
+    </div>
+    <div id="task-meta" style="font-size:11px;color:var(--text-dim)"></div>
+    <div class="field"><label>Titre</label><input id="task-titre"></div>
+    <div class="field"><label>Description</label><textarea id="task-desc"></textarea></div>
+    <div class="field"><label>Statut</label>
+      <select id="task-statut">
+        <option>Pas commencé</option>
+        <option>En cours</option>
+        <option>Fait</option>
+        <option>Bloqué</option>
+        <option>Abandonné</option>
+      </select>
+    </div>
+    <div class="field"><label>Échéance</label><input id="task-date" type="date"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+      <button class="primary" style="flex:1" onclick="saveTaskEdit()">Enregistrer</button>
+      <button id="task-archive-btn" class="ghost" style="display:none" onclick="archiveCurrentTask()">Archiver</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const { $el, $clear } = Dom;
+
+let taches = [], projets = [], objectifs = [];
+let projetsById = {}, objectifsById = {};
+let allDeadlines = [];
+let currentFilter = '7';
+let currentTaskEditId = null;
+
+const FILTERS = [
+  { id: '7',  label: '7 jours' },
+  { id: '14', label: '14 jours' },
+  { id: '30', label: '30 jours' },
+  { id: 'q',  label: 'Ce trimestre' },
+  { id: 'all', label: 'Tout' }
+];
+
+function showError(msg) {
+  const e = document.getElementById('error');
+  $clear(e);
+  e.appendChild($el('div', {}, msg));
+  if (!WuboGrist.inGristIframe()) {
+    e.appendChild($el('button', {
+      class: 'small',
+      onclick: () => { WuboGrist.resetApiKey(); location.reload(); }
+    }, 'Changer de clé API'));
+  }
+  e.style.display = 'block';
+}
+
+function todayUnix() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return Math.floor(d.getTime() / 1000);
+}
+
+function unixToInputDate(ts) {
+  if (!ts) return '';
+  const d = new Date(ts * 1000);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+}
+
+function inputDateToUnix(s) {
+  if (!s) return null;
+  const [y, m, d] = s.split('-').map(Number);
+  return Math.floor(Date.UTC(y, m - 1, d) / 1000);
+}
+
+function fmtDate(ts) {
+  if (!ts) return '-';
+  const d = new Date(ts * 1000);
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+}
+
+function joursRestants(ts) {
+  if (!ts) return null;
+  const today = todayUnix();
+  return Math.round((ts - today) / 86400);
+}
+
+function labelJours(n) {
+  if (n === null) return '';
+  if (n < 0) return `J+${Math.abs(n)} (retard)`;
+  if (n === 0) return "Aujourd'hui";
+  if (n === 1) return 'Demain';
+  return `J-${n}`;
+}
+
+function urgenceClass(n) {
+  if (n === null) return 'ok';
+  if (n < 3) return 'late';
+  if (n < 7) return 'soon';
+  return 'ok';
+}
+
+function trimestreEndUnix() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  const month = d.getMonth();
+  const qEndMonth = month - (month % 3) + 2;
+  const end = new Date(d.getFullYear(), qEndMonth + 1, 0);
+  end.setHours(23, 59, 59, 999);
+  return Math.floor(end.getTime() / 1000);
+}
+
+function applyFilter(items, filter) {
+  const today = todayUnix();
+  if (filter === 'all') return items;
+  if (filter === 'q') {
+    const end = trimestreEndUnix();
+    return items.filter(x => x.ts <= end);
+  }
+  const days = parseInt(filter, 10);
+  const cutoff = today + days * 86400;
+  return items.filter(x => x.ts <= cutoff);
+}
+
+function isTaskActive(t) {
+  const s = (t.statut || '').toLowerCase();
+  if (s.includes('fait')) return false;
+  if (s.includes('archive')) return false;
+  if (s.includes('abandon')) return false;
+  return true;
+}
+
+function isProjetActive(p) {
+  const s = (p.statut || '').toLowerCase();
+  if (s.includes('archive')) return false;
+  if (s.includes('abandon')) return false;
+  if (s.includes('termin')) return false;
+  return true;
+}
+
+function isObjectifActive(o) {
+  const s = (o.statut || '').toLowerCase();
+  if (s.includes('archive')) return false;
+  if (s.includes('abandon')) return false;
+  return true;
+}
+
+function buildDeadlines() {
+  const list = [];
+
+  taches.filter(isTaskActive).forEach(t => {
+    if (!t.date_cible) return;
+    const projet = t.projet ? projetsById[t.projet] : null;
+    list.push({
+      id: 'tache-' + t.id,
+      rawId: t.id,
+      type: 'Tâche',
+      typeKey: 'tache',
+      titre: t.titre || '(sans titre)',
+      ts: t.date_cible,
+      statut: t.statut || 'Pas commencé',
+      contexte: projet ? ('Projet : ' + (projet.titre || '')) : 'Hors projet',
+      raw: t
+    });
+  });
+
+  projets.filter(isProjetActive).forEach(p => {
+    if (!p.date_cible) return;
+    const obj = p.objectif ? objectifsById[p.objectif] : null;
+    list.push({
+      id: 'projet-' + p.id,
+      rawId: p.id,
+      type: 'Projet',
+      typeKey: 'projet',
+      titre: p.titre || '(sans titre)',
+      ts: p.date_cible,
+      statut: p.statut || '',
+      contexte: obj ? ('Objectif : ' + (obj.titre || '')) : 'Hors objectif',
+      raw: p
+    });
+  });
+
+  objectifs.filter(isObjectifActive).forEach(o => {
+    if (!o.deadline) return;
+    list.push({
+      id: 'objectif-' + o.id,
+      rawId: o.id,
+      type: 'Objectif',
+      typeKey: 'objectif',
+      titre: o.titre || '(sans titre)',
+      ts: o.deadline,
+      statut: o.statut || '',
+      contexte: o.trimestre ? ('Trimestre : ' + o.trimestre) : (o.priorite ? ('Priorité ' + o.priorite) : ''),
+      raw: o
+    });
+  });
+
+  list.sort((a, b) => a.ts - b.ts);
+  return list;
+}
+
+function statutPillClass(s) {
+  if (!s) return 'todo';
+  const k = s.toLowerCase();
+  if (k.includes('archive')) return 'archived';
+  if (k.includes('fait')) return 'done';
+  if (k.includes('en cours')) return 'wip';
+  if (k.includes('bloque') || k.includes('bloqué')) return 'blocked';
+  if (k.includes('abandon')) return 'abandoned';
+  return 'todo';
+}
+
+function renderDeadlineItem(item) {
+  const jours = joursRestants(item.ts);
+  const cls = urgenceClass(jours);
+  const el = $el('div', {
+    class: 'deadline-item ' + cls,
+    onclick: () => openItem(item)
+  });
+
+  el.appendChild($el('div', { class: 'dl-line1' },
+    $el('span', { class: 'dl-date' }, fmtDate(item.ts)),
+    $el('span', { class: 'dl-jours' }, labelJours(jours)),
+    $el('span', { class: 'dl-type ' + item.typeKey }, item.type)
+  ));
+
+  el.appendChild($el('div', { class: 'dl-titre' }, item.titre));
+
+  el.appendChild($el('div', { class: 'dl-line3' },
+    $el('span', { class: 'dl-contexte' }, item.contexte || ''),
+    $el('span', { class: 'status-pill ' + statutPillClass(item.statut), title: item.statut || '' })
+  ));
+
+  return el;
+}
+
+function groupByWeek(items) {
+  const today = todayUnix();
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  const dow = (d.getDay() + 6) % 7; // lundi = 0
+  const startOfWeek = today - dow * 86400;
+
+  const groups = new Map();
+  items.forEach(item => {
+    const deltaDays = Math.floor((item.ts - startOfWeek) / 86400);
+    const weekIdx = Math.floor(deltaDays / 7);
+    if (!groups.has(weekIdx)) groups.set(weekIdx, []);
+    groups.get(weekIdx).push(item);
+  });
+
+  return Array.from(groups.entries()).sort((a, b) => a[0] - b[0]).map(([idx, list]) => ({
+    idx,
+    label: weekLabel(idx),
+    items: list
+  }));
+}
+
+function weekLabel(idx) {
+  if (idx < 0) return 'En retard';
+  if (idx === 0) return 'Cette semaine';
+  if (idx === 1) return 'Semaine prochaine';
+  if (idx < 5) return `Dans ${idx} semaines`;
+  return `Plus tard (semaine ${idx})`;
+}
+
+function renderFilters() {
+  const node = document.getElementById('filters');
+  $clear(node);
+  FILTERS.forEach(f => {
+    node.appendChild($el('button', {
+      class: 'filter-chip' + (currentFilter === f.id ? ' active' : ''),
+      onclick: () => { currentFilter = f.id; renderList(); renderFilters(); }
+    }, f.label));
+  });
+}
+
+function renderList() {
+  const list = document.getElementById('deadlines-list');
+  $clear(list);
+
+  const filtered = applyFilter(allDeadlines, currentFilter);
+
+  const nbTaches = filtered.filter(x => x.typeKey === 'tache').length;
+  const nbProjets = filtered.filter(x => x.typeKey === 'projet').length;
+  const nbObjectifs = filtered.filter(x => x.typeKey === 'objectif').length;
+  document.getElementById('sub').textContent = `${nbTaches} tâches, ${nbProjets} projets, ${nbObjectifs} objectifs avec échéance`;
+
+  if (filtered.length === 0) {
+    list.appendChild($el('div', { class: 'empty' }, 'Aucune échéance dans cette période.'));
+    return;
+  }
+
+  if (filtered.length > 20) {
+    const groups = groupByWeek(filtered);
+    groups.forEach(g => {
+      list.appendChild($el('div', { class: 'group-head' }, `${g.label} (${g.items.length})`));
+      g.items.forEach(item => list.appendChild(renderDeadlineItem(item)));
+    });
+  } else {
+    filtered.forEach(item => list.appendChild(renderDeadlineItem(item)));
+  }
+}
+
+async function render() {
+  document.getElementById('error').style.display = 'none';
+  try {
+    const [t, p, o] = await Promise.all([
+      WuboGrist.fetchRows('Taches'),
+      WuboGrist.fetchRows('Projets'),
+      WuboGrist.fetchRows('Objectifs')
+    ]);
+    taches = t;
+    projets = p;
+    objectifs = o;
+    projetsById = {};
+    objectifsById = {};
+    p.forEach(x => { projetsById[x.id] = x; });
+    o.forEach(x => { objectifsById[x.id] = x; });
+    allDeadlines = buildDeadlines();
+  } catch (e) {
+    showError(e.message);
+    document.getElementById('sub').textContent = 'Hors ligne';
+    return;
+  }
+  renderFilters();
+  renderList();
+}
+
+function openItem(item) {
+  if (item.typeKey === 'tache') {
+    openTaskEdit(item.raw);
+  } else {
+    // Projets / Objectifs : redirection vers Grist direct (page web)
+    const url = `https://grist.playwubo.com/doc/cmTvfM75iZzS8eRsPAJdpy`;
+    window.open(url, '_blank', 'noopener');
+  }
+}
+
+function openTaskEdit(t) {
+  currentTaskEditId = t.id;
+  document.getElementById('task-modal-title').textContent = 'Modifier la tâche';
+  document.getElementById('task-titre').value = t.titre || '';
+  document.getElementById('task-desc').value = t.description || '';
+  document.getElementById('task-statut').value = t.statut || 'Pas commencé';
+  document.getElementById('task-date').value = unixToInputDate(t.date_cible);
+  const meta = [];
+  if (t.score) meta.push(`score ${t.score}`);
+  if (t.estim_heures) meta.push(`${t.estim_heures}h`);
+  if (t.push_count) meta.push(`reportée ${t.push_count}x`);
+  document.getElementById('task-meta').textContent = meta.join(' · ');
+  document.getElementById('task-archive-btn').style.display = (t.statut === 'Fait') ? '' : 'none';
+  openModal('task-modal');
+}
+
+async function saveTaskEdit() {
+  if (!currentTaskEditId) return;
+  const titre = document.getElementById('task-titre').value.trim();
+  if (!titre) { alert('Titre obligatoire'); return; }
+  const dateStr = document.getElementById('task-date').value;
+  const dateUnix = inputDateToUnix(dateStr);
+  const fields = {
+    titre,
+    description: document.getElementById('task-desc').value,
+    statut: document.getElementById('task-statut').value
+  };
+  if (dateUnix) fields.date_cible = dateUnix;
+  try {
+    await WuboGrist.updateRecord('Taches', currentTaskEditId, fields);
+    closeTaskEdit();
+    render();
+  } catch (e) {
+    alert('Erreur : ' + e.message);
+  }
+}
+
+async function archiveCurrentTask() {
+  if (!currentTaskEditId) return;
+  if (!confirm('Archiver cette tâche ?')) return;
+  try {
+    await WuboGrist.archiveTask(currentTaskEditId);
+    closeTaskEdit();
+    render();
+  } catch (e) {
+    alert('Erreur : ' + e.message);
+  }
+}
+
+function closeTaskEdit() {
+  currentTaskEditId = null;
+  closeModal('task-modal');
+}
+
+function openModal(id) { document.getElementById(id).classList.remove('hidden'); WuboGrist.lockBody(); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); WuboGrist.unlockBody(); }
+function backdropClose(e, id) { if (e.target === e.currentTarget) closeModal(id); }
+function openDump() { openModal('dump-modal'); }
+function closeDump() { closeModal('dump-modal'); }
+
+async function submitDump() {
+  const ctx = document.getElementById('dump-contexte').value;
+  const content = document.getElementById('dump-content').value.trim();
+  if (!content) return;
+  try {
+    await WuboGrist.addRecord('Dump_notes', {
+      timestamp: WuboGrist.nowUnix(),
+      auteur: 'Taki',
+      contenu: content,
+      contexte: ctx,
+      traite: false,
+      converti_en: ''
+    });
+    document.getElementById('dump-content').value = '';
+    closeDump();
+  } catch (e) {
+    alert('Erreur : ' + e.message);
+  }
+}
+
+async function refresh() {
+  const btn = document.querySelector('nav.bottom button.ghost');
+  if (!btn) return;
+  const orig = btn.textContent;
+  btn.textContent = '⟳';
+  btn.disabled = true;
+  try { await render(); btn.textContent = '✓'; }
+  catch (e) { btn.textContent = '✕'; }
+  setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1000);
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeTaskEdit(); closeDump(); }
+});
+
+(async () => {
+  await WuboGrist.initGrist();
+  try { if (typeof grist !== 'undefined' && grist.onRecords) grist.onRecords(() => render()); } catch (_) {}
+  render();
+})();
+</script>
+
+</body>
+</html>

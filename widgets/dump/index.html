@@ -18,10 +18,10 @@
   #app {
     max-width: 560px;
     margin: 0 auto;
-    padding: 12px 14px 40px;
+    padding: 12px 14px calc(96px + env(safe-area-inset-bottom));
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
   }
   header { padding-bottom: 6px; border-bottom: 1px solid var(--border); }
   header h1 { font-size: 17px; }
@@ -29,15 +29,101 @@
 
   .form-row { display: flex; gap: 8px; }
   .form-row select { flex: 1; }
-  .form-row label { display: flex; align-items: center; }
 
-  textarea { min-height: 160px; font-size: 15px; }
+  .format-toolbar {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    margin-bottom: -1px;
+  }
+  .fmt-btn {
+    min-width: 34px;
+    height: 26px;
+    padding: 0 8px;
+    background: transparent;
+    color: var(--text);
+    border: 1px solid transparent;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .fmt-btn:hover { background: var(--done-bg); }
+  .fmt-btn:active { opacity: 0.6; }
+  .fmt-btn.bold-btn { font-weight: 900; }
+  .fmt-btn .lbl { font-size: 12px; }
+
+  textarea#contenu {
+    min-height: 170px;
+    font-size: 15px;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Courier New', monospace;
+  }
+
+  .meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-faint);
+    padding: 2px 2px;
+  }
+  .meta-row .draft-ok { color: var(--success); font-weight: 600; }
+
+  .draft-banner {
+    background: var(--current-soft);
+    color: var(--current);
+    border: 1px solid var(--current);
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    display: none;
+  }
+  .draft-banner.show { display: block; }
 
   #feedback { font-size: 12px; min-height: 16px; }
   #feedback.ok { color: var(--success); }
   #feedback.err { color: var(--danger); }
 
+  /* Sticky save in the form (non-modal) */
+  .sticky-save {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+    display: flex;
+    gap: 8px;
+    background: rgba(244, 244, 241, 0.95);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid var(--border);
+    z-index: 50;
+  }
+  .sticky-save button { flex: 1; padding: 13px; font-size: 14px; }
+  .sticky-save button.ghost { flex: 0 0 auto; padding-left: 14px; padding-right: 14px; }
+  @media (min-width: 600px) {
+    .sticky-save { max-width: 480px; left: 50%; transform: translateX(-50%); border-radius: 12px 12px 0 0; }
+  }
+
   .history h2 { margin-bottom: 6px; }
+  .history-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .history-head button { font-size: 11px; }
   .entry {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -48,7 +134,14 @@
   }
   .entry.traite { border-left-color: var(--success); background: var(--done-bg); opacity: 0.7; }
   .entry-meta { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-faint); margin-bottom: 3px; }
-  .entry-content { font-size: 13px; white-space: pre-wrap; word-break: break-word; color: var(--text); }
+  .entry-content {
+    font-size: 13px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--text);
+    font-family: inherit;
+    margin: 0;
+  }
   .entry .converti { font-size: 10px; color: var(--current); margin-top: 4px; }
 </style>
 </head>
@@ -64,10 +157,12 @@
 
   <header>
     <h1>Dump notes</h1>
-    <div class="sub">Ecris sans filtre. Claude traitera et rangera dans les bonnes tables.</div>
+    <div class="sub">Écris sans filtre. Claude traitera et rangera dans les bonnes tables.</div>
   </header>
 
-  <form id="dump-form" style="display:flex;flex-direction:column;gap:10px">
+  <div id="draft-banner" class="draft-banner">Brouillon restauré.</div>
+
+  <form id="dump-form" style="display:flex;flex-direction:column;gap:8px">
     <div class="form-row">
       <select id="auteur">
         <option value="Taki" selected>Taki</option>
@@ -77,24 +172,53 @@
       <select id="contexte">
         <option value="Libre" selected>Libre</option>
         <option value="Post-RDV">Post-RDV</option>
-        <option value="Idee">Idee</option>
-        <option value="Probleme">Probleme</option>
-        <option value="Decision">Decision</option>
+        <option value="Idee">Idée</option>
+        <option value="Probleme">Problème</option>
+        <option value="Decision">Décision</option>
       </select>
     </div>
-    <textarea id="contenu" placeholder="Ecris ici. Aucun format, aucune structure." required></textarea>
-    <button type="submit" class="primary">Envoyer au dump</button>
+
+    <div>
+      <div class="format-toolbar" role="toolbar" aria-label="Format">
+        <button type="button" class="fmt-btn bold-btn" title="Gras (entoure avec **)" onclick="applyFormat('bold')">B</button>
+        <button type="button" class="fmt-btn" title="Liste numérotée" onclick="applyFormat('numbered')"><span class="lbl">1.</span></button>
+        <button type="button" class="fmt-btn" title="Liste à puces" onclick="applyFormat('bullets')"><span class="lbl">•</span></button>
+      </div>
+      <textarea id="contenu" placeholder="Écris ici. Format markdown disponible." required></textarea>
+    </div>
+
+    <div class="meta-row">
+      <span id="char-counter">0 caractère</span>
+      <span id="draft-status"></span>
+    </div>
+
     <div id="feedback"></div>
   </form>
 
   <div class="history">
-    <h2>Dump recents</h2>
+    <div class="history-head">
+      <h2>Dump récents</h2>
+      <button type="button" class="ghost small" id="clear-draft-btn" onclick="clearDraftManual()" style="display:none">Nettoyer brouillon</button>
+    </div>
     <div id="entries"></div>
   </div>
 </main>
 
+<div class="sticky-save">
+  <button type="submit" form="dump-form" class="primary">Envoyer au dump</button>
+</div>
+
 <script>
 const { $el, $clear } = Dom;
+
+const $contenu = document.getElementById('contenu');
+const $contexte = document.getElementById('contexte');
+const $counter = document.getElementById('char-counter');
+const $draftStatus = document.getElementById('draft-status');
+const $draftBanner = document.getElementById('draft-banner');
+const $clearDraftBtn = document.getElementById('clear-draft-btn');
+
+let draftTimer = null;
 
 function fmtTs(v) {
   if (!v) return '';
@@ -102,13 +226,115 @@ function fmtTs(v) {
   return d.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 
+function updateCounter() {
+  const len = $contenu.value.length;
+  const plural = len > 1 ? 'caractères' : 'caractère';
+  $counter.textContent = `${len} ${plural}`;
+  $clearDraftBtn.style.display = len > 0 ? '' : 'none';
+}
+
+function setDraftStatus(txt, cls) {
+  $draftStatus.textContent = txt || '';
+  $draftStatus.className = cls || '';
+}
+
+function scheduleDraftSave() {
+  if (draftTimer) clearTimeout(draftTimer);
+  draftTimer = setTimeout(() => {
+    const content = $contenu.value;
+    const ctx = $contexte.value;
+    if (content.trim()) {
+      WuboGrist.saveDumpDraft(content, ctx);
+      setDraftStatus('brouillon sauvé', 'draft-ok');
+    } else {
+      WuboGrist.clearDumpDraft();
+      setDraftStatus('');
+    }
+  }, 500);
+}
+
+function loadDraft() {
+  const draft = WuboGrist.loadDumpDraft();
+  if (draft && draft.content) {
+    $contenu.value = draft.content;
+    if (draft.contexte) {
+      // Préserver la sélection du contexte si trouvé
+      const opts = Array.from($contexte.options).map(o => o.value);
+      if (opts.includes(draft.contexte)) $contexte.value = draft.contexte;
+    }
+    updateCounter();
+    $draftBanner.classList.add('show');
+    setDraftStatus('brouillon sauvé', 'draft-ok');
+    setTimeout(() => $draftBanner.classList.remove('show'), 3000);
+  }
+}
+
+function clearDraftManual() {
+  if (!confirm('Effacer le brouillon en cours ?')) return;
+  WuboGrist.clearDumpDraft();
+  $contenu.value = '';
+  updateCounter();
+  setDraftStatus('');
+}
+
+/* ---- Format toolbar ---- */
+
+function applyFormat(kind) {
+  const ta = $contenu;
+  const value = ta.value;
+  const start = ta.selectionStart;
+  const end = ta.selectionEnd;
+  const selected = value.substring(start, end);
+
+  let replaced, newStart, newEnd;
+
+  if (kind === 'bold') {
+    if (selected.length > 0) {
+      replaced = `**${selected}**`;
+      newStart = start + 2;
+      newEnd = end + 2;
+    } else {
+      replaced = '****';
+      newStart = start + 2;
+      newEnd = start + 2;
+    }
+    ta.value = value.substring(0, start) + replaced + value.substring(end);
+    ta.focus();
+    ta.setSelectionRange(newStart, newEnd);
+  } else if (kind === 'numbered' || kind === 'bullets') {
+    // Étend la sélection aux lignes complètes
+    let lineStart = start;
+    while (lineStart > 0 && value[lineStart - 1] !== '\n') lineStart--;
+    let lineEnd = end;
+    while (lineEnd < value.length && value[lineEnd] !== '\n') lineEnd++;
+
+    const block = value.substring(lineStart, lineEnd);
+    const lines = block.split('\n');
+    const transformed = lines.map((line, i) => {
+      if (!line.trim() && lines.length > 1) return line;
+      if (kind === 'numbered') return `${i + 1}. ${line.replace(/^\s*(\d+\.\s+|-\s+)/, '')}`;
+      return `- ${line.replace(/^\s*(\d+\.\s+|-\s+)/, '')}`;
+    }).join('\n');
+
+    ta.value = value.substring(0, lineStart) + transformed + value.substring(lineEnd);
+    ta.focus();
+    ta.setSelectionRange(lineStart, lineStart + transformed.length);
+  }
+
+  updateCounter();
+  scheduleDraftSave();
+}
+
+/* ---- Historique ---- */
+
 function renderEntry(r) {
   const el = $el('div', { class: r.traite ? 'entry traite' : 'entry' });
   el.appendChild($el('div', { class: 'entry-meta' },
     $el('span', {}, `${r.auteur || '-'} · ${r.contexte || '-'}`),
-    $el('span', {}, fmtTs(r.timestamp) + (r.traite ? ' · traite' : ''))
+    $el('span', {}, fmtTs(r.timestamp) + (r.traite ? ' · traité' : ''))
   ));
-  el.appendChild($el('div', { class: 'entry-content' }, r.contenu || ''));
+  // pre avec white-space pre-wrap conserve les markers markdown texte
+  el.appendChild($el('pre', { class: 'entry-content' }, r.contenu || ''));
   if (r.converti_en) el.appendChild($el('div', { class: 'converti' }, `→ ${r.converti_en}`));
   return el;
 }
@@ -121,7 +347,7 @@ async function load() {
     rows.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
     const recent = rows.slice(0, 10);
     if (recent.length === 0) {
-      container.appendChild($el('div', { class: 'empty' }, 'Aucun dump pour l\'instant'));
+      container.appendChild($el('div', { class: 'empty' }, "Aucun dump pour l'instant."));
       return;
     }
     recent.forEach(r => container.appendChild(renderEntry(r)));
@@ -130,23 +356,28 @@ async function load() {
   }
 }
 
+/* ---- Envoi ---- */
+
 document.getElementById('dump-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const auteur = document.getElementById('auteur').value;
-  const contexte = document.getElementById('contexte').value;
-  const contenu = document.getElementById('contenu').value.trim();
+  const contexte = $contexte.value;
+  const contenu = $contenu.value.trim();
   const fb = document.getElementById('feedback');
   if (!contenu) return;
   fb.className = '';
-  fb.textContent = 'Envoi...';
+  fb.textContent = 'Envoi…';
   try {
     await WuboGrist.addRecord('Dump_notes', {
       timestamp: WuboGrist.nowUnix(),
       auteur, contenu, contexte, traite: false, converti_en: ''
     });
-    document.getElementById('contenu').value = '';
+    WuboGrist.clearDumpDraft();
+    $contenu.value = '';
+    updateCounter();
+    setDraftStatus('');
     fb.className = 'ok';
-    fb.textContent = 'Envoye. Claude le traitera.';
+    fb.textContent = 'Envoyé. Claude le traitera.';
     setTimeout(() => { fb.textContent = ''; }, 2500);
     load();
   } catch (err) {
@@ -155,8 +386,18 @@ document.getElementById('dump-form').addEventListener('submit', async (e) => {
   }
 });
 
+$contenu.addEventListener('input', () => {
+  updateCounter();
+  scheduleDraftSave();
+});
+$contexte.addEventListener('change', () => {
+  scheduleDraftSave();
+});
+
 (async () => {
   await WuboGrist.initGrist();
+  loadDraft();
+  updateCounter();
   try { if (typeof grist !== 'undefined' && grist.onRecords) grist.onRecords(() => load()); } catch (_) {}
   load();
 })();
