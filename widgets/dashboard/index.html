@@ -18,7 +18,7 @@
   #app {
     max-width: 800px;
     margin: 0 auto;
-    padding: 10px 14px 40px;
+    padding: 10px 14px calc(80px + env(safe-area-inset-bottom));
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -31,6 +31,40 @@
   .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 5px; padding: 6px 8px; }
   .stat .label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); }
   .stat .value { font-size: 18px; font-weight: 700; color: var(--text); line-height: 1.1; margin-top: 2px; }
+
+  /* Sujets a pousser en PREMIER, en ribbon haut */
+  .sujets-top {
+    background: #FFF9D6;
+    border: 1px solid var(--accent-strong);
+    border-radius: 6px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .sujets-top-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--warning);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .sujet-ribbon {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    padding: 4px 0;
+  }
+  .sujet-ribbon + .sujet-ribbon { border-top: 1px dashed rgba(0,0,0,0.1); padding-top: 6px; }
+  .sujet-ribbon .sr-titre { font-weight: 600; flex: 1; }
+  .sujet-ribbon .sr-stagnation { font-size: 10px; color: var(--danger); font-weight: 700; }
+  .sujet-ribbon.moyen .sr-stagnation { color: var(--warning); }
+  .sujet-ribbon .sr-step { font-size: 10px; color: var(--text-dim); width: 100%; margin-top: 2px; }
 
   .objectif {
     background: var(--surface);
@@ -70,24 +104,17 @@
     border-radius: 2px;
     position: relative;
   }
-  .gantt-tick {
-    position: absolute;
-    top: 0;
-    width: 10px;
-    height: 10px;
-    border-radius: 2px;
-    transform: translateX(-5px);
-  }
+  .gantt-tick { position: absolute; top: 0; width: 10px; height: 10px; border-radius: 2px; transform: translateX(-5px); }
   .gantt-tick.done { background: var(--success); }
   .gantt-tick.wip { background: var(--accent-strong); }
-  .gantt-tick.bloque { background: var(--danger); }
+  .gantt-tick.blocked { background: var(--danger); }
   .gantt-tick.todo { background: var(--border-strong); }
   .gantt-tick.late { background: var(--danger); border: 1px solid white; }
 
   .taches { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; }
   .tache {
     display: grid;
-    grid-template-columns: 18px 1fr auto auto;
+    grid-template-columns: 14px 18px 1fr auto;
     gap: 6px;
     align-items: center;
     padding: 4px 6px;
@@ -98,46 +125,72 @@
     cursor: pointer;
   }
   .tache:active { opacity: 0.7; }
+  .tache.subtask { margin-left: 16px; border-left: 2px solid var(--border-strong); font-size: 11px; }
   .tache .ord { font-size: 10px; font-weight: 700; color: var(--text-faint); }
-  .tache .titre { color: var(--text); line-height: 1.25; overflow: hidden; text-overflow: ellipsis; }
+  .tache .titre { color: var(--text); line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tache.done .titre { color: var(--text-faint); text-decoration: line-through; }
   .tache .date { font-size: 10px; color: var(--text-faint); white-space: nowrap; }
   .tache .date.late { color: var(--danger); font-weight: 700; }
-  .tache .statut-dot { width: 8px; height: 8px; border-radius: 50%; }
-  .statut-dot.Fait { background: var(--success); }
-  .statut-dot.En.cours, .statut-dot.En { background: var(--accent-strong); }
-  .statut-dot.Pas { background: var(--border-strong); }
-  .statut-dot.Bloque { background: var(--danger); }
-  .statut-dot.Abandonne { background: var(--text-faint); }
+  .push-indicator { font-size: 9px; color: var(--warning); font-weight: 700; margin-left: 3px; }
 
-  .sujet { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--border-strong); border-radius: 4px; padding: 8px 10px; margin-bottom: 4px; }
-  .sujet.warn { border-left-color: var(--warning); }
-  .sujet.danger { border-left-color: var(--danger); }
-  .sujet-head { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; gap: 6px; }
-  .sujet-meta { font-size: 10px; color: var(--text-faint); margin-top: 2px; }
-  .sujet-step { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
+  .add-tache-projet {
+    margin-top: 4px;
+    padding: 5px 8px;
+    background: transparent;
+    border: 1px dashed var(--border-strong);
+    border-radius: 4px;
+    color: var(--text-dim);
+    font-size: 11px;
+    cursor: pointer;
+    width: 100%;
+    text-align: center;
+  }
+  .add-tache-projet:hover { border-color: var(--current); color: var(--current); }
 
   #error { background: var(--danger); color: white; padding: 8px; border-radius: 4px; font-size: 12px; display: none; }
   #error button { margin-top: 6px; background: white; color: var(--danger); border: 1px solid white; }
 
   h2 { font-size: 11px; margin-bottom: 4px; }
 
+  /* Bottom Dump button */
+  .bottom {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+    display: flex;
+    gap: 8px;
+    background: rgba(244, 244, 241, 0.95);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid var(--border);
+    z-index: 50;
+  }
+  .bottom button { flex: 1; padding: 13px; font-size: 14px; }
+
   /* Modals */
-  .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: flex-end; justify-content: center; z-index: 100; }
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: flex-end; justify-content: center; z-index: 100; overscroll-behavior: contain; }
   .modal.hidden { display: none; }
   .modal-content {
     background: var(--surface); width: 100%; max-width: 520px; border-radius: 12px 12px 0 0;
     padding: 16px; padding-bottom: calc(16px + env(safe-area-inset-bottom));
     display: flex; flex-direction: column; gap: 10px;
-    max-height: 92vh; overflow-y: auto;
+    max-height: 88vh; overflow-y: auto;
+    overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
   }
   .modal-head { display: flex; justify-content: space-between; align-items: center; }
-  .modal-content textarea { min-height: 110px; font-size: 14px; }
+  .modal-content textarea { min-height: 110px; max-height: 260px; font-size: 14px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
   .modal-content .field { display: flex; flex-direction: column; gap: 4px; }
   .modal-content .field label { font-size: 10px; }
 
+  .task-list-mini { display:flex; flex-direction:column; gap:3px; margin-top:4px; }
+  .task-list-mini .subtask-row { padding: 5px 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 12px; display:flex; align-items:center; gap:6px; cursor: pointer; }
+
   @media (max-width: 560px) {
     .stats { grid-template-columns: repeat(2, 1fr); }
+    .bottom { max-width: 100%; }
+  }
+  @media (min-width: 600px) {
+    .bottom { max-width: 480px; left: 50%; transform: translateX(-50%); border-radius: 12px 12px 0 0; }
   }
 </style>
 </head>
@@ -145,11 +198,9 @@
 
 <main id="app">
   <nav class="app-nav">
-    <a href="../../" class="home" title="Accueil">⌂</a>
     <a href="../aujourdhui/" class="tab">Jour</a>
     <a href="../semaine/" class="tab">Semaine</a>
     <a href="../dashboard/" class="tab active">Objectifs</a>
-    <a href="../dump/" class="tab">Dump</a>
   </nav>
 
   <div class="page-title">
@@ -164,31 +215,76 @@
     <div class="stats" id="stats"></div>
   </section>
 
+  <!-- SUJETS A POUSSER EN HAUT, pas en bas -->
+  <section id="sujets-top-section"></section>
+
   <section>
     <div id="objectifs"></div>
   </section>
-
-  <section>
-    <h2>Sujets a pousser (anti-evitement)</h2>
-    <div id="sujets"></div>
-  </section>
 </main>
 
-<!-- Task edit modal -->
+<nav class="bottom">
+  <button class="accent" onclick="openDump()">+ Dump</button>
+  <button class="ghost" onclick="refresh()">↻ Refresh</button>
+</nav>
+
+<!-- Dump modal -->
+<div id="dump-modal" class="modal hidden" onclick="backdropClose(event, 'dump-modal')">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <h3>Dump rapide</h3>
+      <button class="ghost small" onclick="closeDump()">Annuler</button>
+    </div>
+    <select id="dump-contexte">
+      <option value="Libre">Libre</option>
+      <option value="Post-RDV">Post-RDV</option>
+      <option value="Idee">Idee</option>
+      <option value="Probleme">Probleme</option>
+      <option value="Decision">Decision</option>
+    </select>
+    <textarea id="dump-content" placeholder="Ecris sans filtre. Claude rangera."></textarea>
+    <button class="primary" onclick="submitDump()">Envoyer au dump</button>
+  </div>
+</div>
+
+<!-- Task edit/create modal -->
 <div id="task-modal" class="modal hidden" onclick="backdropClose(event, 'task-modal')">
   <div class="modal-content" onclick="event.stopPropagation()">
     <div class="modal-head">
-      <h3>Modifier la tache</h3>
+      <h3 id="task-modal-title">Modifier la tache</h3>
       <button class="ghost small" onclick="closeTaskEdit()">Annuler</button>
     </div>
     <div id="task-meta" style="font-size:11px;color:var(--text-dim)"></div>
     <div class="field"><label>Titre</label><input id="task-titre"></div>
-    <div class="field"><label>Description / bullets</label><textarea id="task-desc" placeholder="- sous-tache 1&#10;- sous-tache 2"></textarea></div>
+    <div class="field"><label>Description / bullets (fragmentation)</label><textarea id="task-desc" placeholder="- detail 1&#10;- detail 2"></textarea></div>
     <div class="field"><label>Livrable</label><input id="task-livrable"></div>
     <div class="field"><label>Statut</label>
       <select id="task-statut">
         <option>Pas commence</option><option>En cours</option><option>Fait</option><option>Bloque</option><option>Abandonne</option>
       </select>
+    </div>
+    <div class="field" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+      <div><label>Heures</label><input id="task-heures" type="number" step="0.5" min="0"></div>
+      <div><label>Echeance</label><input id="task-date" type="date"></div>
+    </div>
+    <div class="field" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+      <div><label>Cash (0-5)</label><input id="task-cash" type="number" min="0" max="5" step="1"></div>
+      <div><label>Urgence (0-5)</label><input id="task-urgency" type="number" min="0" max="5" step="1"></div>
+      <div><label>Strategique</label><input id="task-strat" type="number" min="0" max="5" step="1"></div>
+    </div>
+    <div id="task-reporter" class="field" style="display:none">
+      <label>Reporter l'echeance</label>
+      <div style="display:flex;gap:4px;flex-wrap:wrap">
+        <button type="button" class="ghost small" onclick="reportTaskDays(1)">+1j</button>
+        <button type="button" class="ghost small" onclick="reportTaskDays(3)">+3j</button>
+        <button type="button" class="ghost small" onclick="reportTaskDays(7)">+1sem</button>
+      </div>
+      <div id="push-count-info" style="font-size:10px;color:var(--warning);margin-top:3px"></div>
+    </div>
+    <div id="subtasks-section" style="display:none">
+      <label>Sous-taches</label>
+      <div id="subtasks-list" class="task-list-mini"></div>
+      <button type="button" class="ghost small" onclick="addSubtaskPrompt()" style="margin-top:4px">+ Sous-tache</button>
     </div>
     <button class="primary" onclick="saveTaskEdit()">Enregistrer</button>
   </div>
@@ -197,7 +293,8 @@
 <script>
 const { $el, $clear } = Dom;
 let objectifs = [], projets = [], taches = [], sujets = [];
-let currentTaskEditId = null;
+let currentTaskEditId = null, currentTaskProjetId = null, currentTaskParent = null;
+let currentTaskOriginalDate = null, currentPushCount = 0;
 const tachesById = {};
 
 function showError(msg) {
@@ -210,8 +307,22 @@ function showError(msg) {
   e.style.display = 'block';
 }
 
+function statutClass(s) {
+  if (!s) return 'todo';
+  const k = s.toLowerCase();
+  if (k.includes('fait')) return 'done';
+  if (k.includes('en cours')) return 'wip';
+  if (k.includes('bloque')) return 'blocked';
+  if (k.includes('abandon')) return 'abandoned';
+  return 'todo';
+}
 function fmtDate(v) { if (!v) return '-'; const d = new Date(v * 1000); return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }); }
 function todayUnix() { const d = new Date(); d.setHours(0,0,0,0); return Math.floor(d.getTime() / 1000); }
+function unixToInputDate(ts) { if (!ts) return ''; const d = new Date(ts * 1000); return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`; }
+function inputDateToUnix(s) { if (!s) return null; const [y, m, d] = s.split('-').map(Number); return Math.floor(Date.UTC(y, m-1, d) / 1000); }
+
+function openModal(id) { document.getElementById(id).classList.remove('hidden'); WuboGrist.lockBody(); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); WuboGrist.unlockBody(); }
 
 function stat(label, value) {
   return $el('div', { class: 'stat' },
@@ -220,14 +331,53 @@ function stat(label, value) {
   );
 }
 
-function renderTache(t) {
-  const statutDot = (t.statut || 'Pas commence').split(' ')[0];
-  const late = t.date_cible && t.date_cible < todayUnix() && t.statut !== 'Fait';
-  const el = $el('div', { class: 'tache ' + (t.statut === 'Fait' ? 'done' : ''), onclick: () => openTaskEdit(t.id) },
-    $el('span', { class: 'ord' }, t.ordre ? String(t.ordre) : '-'),
+function renderSujetRibbon(s) {
+  const j = s.jours_stagnation || 0;
+  let cls = 'sujet-ribbon';
+  if (j > 14) cls += ' haute';
+  else if (j > 7) cls += ' moyen';
+  const el = $el('div', { class: cls });
+  el.appendChild($el('span', { class: 'sr-titre' }, s.titre || ''));
+  el.appendChild($el('span', { class: 'sr-stagnation' }, `${j === 999 ? 'jamais' : j + 'j'}`));
+  if (s.prochaine_etape) el.appendChild($el('span', { class: 'sr-step' }, '→ ' + s.prochaine_etape));
+  return el;
+}
+
+function renderSujetsTop(sujets) {
+  const section = document.getElementById('sujets-top-section');
+  $clear(section);
+  if (sujets.length === 0) return;
+  // Trier par jours_stagnation desc
+  const sorted = [...sujets].sort((a, b) => (b.jours_stagnation || 0) - (a.jours_stagnation || 0));
+  const top3 = sorted.slice(0, 3);
+
+  const card = $el('div', { class: 'sujets-top' });
+  card.appendChild($el('div', { class: 'sujets-top-title' },
+    `⚠ Sujets a pousser (${sujets.length})`,
+    $el('span', { style: { fontSize: '10px', fontWeight: '500', color: 'var(--text-dim)' } }, 'Stagnation')
+  ));
+  top3.forEach(s => card.appendChild(renderSujetRibbon(s)));
+  if (sorted.length > 3) {
+    card.appendChild($el('div', { style: { fontSize: '10px', color: 'var(--text-dim)', textAlign: 'center', marginTop: '2px' } },
+      `+ ${sorted.length - 3} autres (voir Grist pour le detail complet)`));
+  }
+  section.appendChild(card);
+}
+
+function renderTache(t, isSubtask) {
+  const statutPill = statutClass(t.statut);
+  const late = t.date_cible && t.date_cible < todayUnix() && t.statut !== 'Fait' && t.statut !== 'Abandonne';
+  const el = $el('div', {
+    class: 'tache ' + (t.statut === 'Fait' ? 'done ' : '') + (isSubtask ? 'subtask' : ''),
+    onclick: () => openTaskEdit(t.id)
+  },
+    $el('span', { class: 'status-pill ' + statutPill }),
+    $el('span', { class: 'ord' }, t.ordre ? String(t.ordre) : (isSubtask ? '└' : '-')),
     $el('span', { class: 'titre', title: t.titre }, t.titre || ''),
-    $el('span', { class: 'date' + (late ? ' late' : '') }, fmtDate(t.date_cible) + (t.estim_heures ? ` · ${t.estim_heures}h` : '')),
-    $el('span', { class: 'statut-dot ' + statutDot, title: t.statut || '-' })
+    $el('span', { class: 'date' + (late ? ' late' : '') },
+      fmtDate(t.date_cible) + (t.estim_heures ? ` · ${t.estim_heures}h` : ''),
+      t.push_count ? $el('span', { class: 'push-indicator' }, ` ↻${t.push_count}`) : null
+    )
   );
   return el;
 }
@@ -240,46 +390,53 @@ function renderGantt(taches, minTs, maxTs) {
     const pct = Math.max(0, Math.min(1, (t.date_cible - minTs) / range));
     const cls = t.statut === 'Fait' ? 'done'
               : t.statut === 'En cours' ? 'wip'
-              : t.statut === 'Bloque' ? 'bloque'
+              : t.statut === 'Bloque' ? 'blocked'
               : (t.date_cible < todayUnix() ? 'late' : 'todo');
-    g.appendChild($el('span', {
-      class: 'gantt-tick ' + cls,
-      style: { left: `${pct * 100}%` },
-      title: `${t.titre} (${fmtDate(t.date_cible)})`
-    }));
+    g.appendChild($el('span', { class: 'gantt-tick ' + cls, style: { left: `${pct * 100}%` }, title: `${t.titre} (${fmtDate(t.date_cible)})` }));
   });
   return g;
 }
 
-function renderProjet(p, tachesOfProjet) {
-  const total = tachesOfProjet.length;
-  const done = tachesOfProjet.filter(t => t.statut === 'Fait').length;
-  const totalH = tachesOfProjet.reduce((s, t) => s + (t.estim_heures || 0), 0);
+function renderProjet(p) {
+  // Tâches du projet (exclut les sous-tâches qui ont un parent)
+  const tachesRoot = taches.filter(t => t.projet === p.id && !t.parent_tache);
+  const total = tachesRoot.length;
+  const done = tachesRoot.filter(t => t.statut === 'Fait').length;
+  const totalH = tachesRoot.reduce((s, t) => s + (t.estim_heures || 0), 0);
+
   const wrap = $el('div', { class: 'projet' });
   wrap.appendChild($el('div', { class: 'projet-head' },
     $el('span', { class: 'projet-title' }, p.titre || ''),
-    $el('span', { class: 'projet-meta' }, `${done}/${total} · ${totalH}h · ech. ${fmtDate(p.date_cible)}`)
+    $el('span', { class: 'projet-meta' }, `${done}/${total} · ${totalH}h · ech ${fmtDate(p.date_cible)}`)
   ));
 
-  if (tachesOfProjet.length > 0) {
-    const datedTaches = tachesOfProjet.filter(t => t.date_cible);
+  if (tachesRoot.length > 0) {
+    const datedTaches = tachesRoot.filter(t => t.date_cible);
     if (datedTaches.length > 1) {
       const minTs = Math.min(todayUnix(), ...datedTaches.map(t => t.date_cible));
       const maxTs = Math.max(p.date_cible || 0, ...datedTaches.map(t => t.date_cible));
       wrap.appendChild(renderGantt(datedTaches, minTs, maxTs));
     }
-    const taches = $el('div', { class: 'taches' });
-    tachesOfProjet
+    const tachesNode = $el('div', { class: 'taches' });
+    tachesRoot
       .sort((a, b) => (a.ordre || 99) - (b.ordre || 99))
-      .forEach(t => taches.appendChild(renderTache(t)));
-    wrap.appendChild(taches);
+      .forEach(t => {
+        tachesNode.appendChild(renderTache(t, false));
+        // Sous-tâches
+        const subs = taches.filter(s => s.parent_tache === t.id);
+        subs.forEach(s => tachesNode.appendChild(renderTache(s, true)));
+      });
+    wrap.appendChild(tachesNode);
   } else {
     wrap.appendChild($el('div', { class: 'empty', style: { fontSize: '11px' } }, 'Aucune tache'));
   }
+
+  wrap.appendChild($el('button', { class: 'add-tache-projet', onclick: (e) => { e.stopPropagation(); openTaskNew(p.id); } }, '+ Ajouter une tache'));
   return wrap;
 }
 
-function renderObjectif(o, projetsOfObj) {
+function renderObjectif(o) {
+  const projetsOfObj = projets.filter(p => p.objectif === o.id);
   const prog = Math.round(o.progression || 0);
   const el = $el('div', { class: 'objectif' });
   el.appendChild($el('div', { class: 'obj-head' },
@@ -300,28 +457,9 @@ function renderObjectif(o, projetsOfObj) {
       $el('strong', {}, o.kpi_actuel || '-')
     ));
   }
-
-  projetsOfObj.forEach(p => {
-    const tachesOfP = taches.filter(t => t.projet === p.id);
-    el.appendChild(renderProjet(p, tachesOfP));
-  });
+  projetsOfObj.forEach(p => el.appendChild(renderProjet(p)));
   if (projetsOfObj.length === 0) el.appendChild($el('div', { class: 'empty', style: { fontSize: '11px' } }, 'Aucun projet rattache'));
   return el;
-}
-
-function renderSujet(s) {
-  const j = s.jours_stagnation || 0;
-  let cls = 'sujet';
-  if (j > 14) cls += ' danger'; else if (j > 7) cls += ' warn';
-  const tagClass = j > 14 ? 'danger' : j > 7 ? 'warn' : '';
-  const item = $el('div', { class: cls });
-  item.appendChild($el('div', { class: 'sujet-head' },
-    $el('span', {}, s.titre || ''),
-    $el('span', { class: 'tag ' + tagClass }, `Stag. ${j === 999 ? '∞' : j + 'j'}`)
-  ));
-  item.appendChild($el('div', { class: 'sujet-meta' }, `${s.type || ''} · ${s.proprietaire || ''}`));
-  if (s.prochaine_etape) item.appendChild($el('div', { class: 'sujet-step' }, '→ ' + s.prochaine_etape));
-  return item;
 }
 
 async function render() {
@@ -356,63 +494,168 @@ async function render() {
   statsNode.appendChild(stat('Bloquees', bloque));
   statsNode.appendChild(stat('Avancement', `${total ? Math.round(fait/total*100) : 0}%`));
 
-  document.getElementById('sub').textContent = `${objectifs.length} objectifs · ${projets.length} projets · ${total} taches`;
+  document.getElementById('sub').textContent = `${objectifs.length} obj · ${projets.length} projets · ${total} taches`;
+
+  renderSujetsTop(sujets);
 
   const oNode = document.getElementById('objectifs');
   $clear(oNode);
   if (objectifs.length === 0) oNode.appendChild($el('div', { class: 'empty' }, 'Aucun objectif actif'));
-  else {
-    objectifs
-      .sort((a, b) => (a.priorite || 99) - (b.priorite || 99))
-      .forEach(o => {
-        const projetsOfO = projets.filter(p => p.objectif === o.id);
-        oNode.appendChild(renderObjectif(o, projetsOfO));
-      });
-  }
+  else objectifs.sort((a, b) => (a.priorite || 99) - (b.priorite || 99)).forEach(o => oNode.appendChild(renderObjectif(o)));
+}
 
-  const sNode = document.getElementById('sujets');
-  $clear(sNode);
-  if (sujets.length === 0) sNode.appendChild($el('div', { class: 'empty' }, 'Aucun sujet en attente'));
-  else {
-    sujets.sort((a, b) => (b.jours_stagnation || 0) - (a.jours_stagnation || 0));
-    sujets.forEach(s => sNode.appendChild(renderSujet(s)));
-  }
+function openTaskNew(projetId, parentTaskId) {
+  currentTaskEditId = null;
+  currentTaskProjetId = projetId || null;
+  currentTaskParent = parentTaskId || null;
+  currentTaskOriginalDate = null;
+  currentPushCount = 0;
+  document.getElementById('task-modal-title').textContent = parentTaskId ? 'Nouvelle sous-tache' : 'Nouvelle tache';
+  document.getElementById('task-titre').value = '';
+  document.getElementById('task-desc').value = '';
+  document.getElementById('task-livrable').value = '';
+  document.getElementById('task-statut').value = 'Pas commence';
+  document.getElementById('task-heures').value = '';
+  document.getElementById('task-cash').value = 2;
+  document.getElementById('task-urgency').value = 2;
+  document.getElementById('task-strat').value = 2;
+  document.getElementById('task-date').value = unixToInputDate(WuboGrist.daysFromToday(7));
+  document.getElementById('task-meta').textContent = parentTaskId ? 'Sous-tache' : 'Nouvelle tache dans projet';
+  document.getElementById('task-reporter').style.display = 'none';
+  document.getElementById('subtasks-section').style.display = 'none';
+  openModal('task-modal');
 }
 
 function openTaskEdit(taskId) {
   const t = tachesById[taskId];
   if (!t) return;
   currentTaskEditId = taskId;
+  currentTaskProjetId = null;
+  currentTaskParent = null;
+  currentTaskOriginalDate = t.date_cible || null;
+  currentPushCount = t.push_count || 0;
+  document.getElementById('task-modal-title').textContent = 'Modifier la tache';
   document.getElementById('task-titre').value = t.titre || '';
   document.getElementById('task-desc').value = t.description || '';
   document.getElementById('task-livrable').value = t.livrable || '';
   document.getElementById('task-statut').value = t.statut || 'Pas commence';
+  document.getElementById('task-heures').value = t.estim_heures || '';
+  document.getElementById('task-cash').value = t.cash_impact || 0;
+  document.getElementById('task-urgency').value = t.urgency || 0;
+  document.getElementById('task-strat').value = t.strategic_value || 0;
+  document.getElementById('task-date').value = unixToInputDate(t.date_cible);
   const meta = [];
-  if (t.estim_heures) meta.push(`${t.estim_heures}h`);
-  if (t.date_cible) meta.push('echeance ' + fmtDate(t.date_cible));
   if (t.score) meta.push(`score ${t.score}`);
+  if (currentPushCount > 0) meta.push(`reportee ${currentPushCount}x`);
   document.getElementById('task-meta').textContent = meta.join(' · ');
-  document.getElementById('task-modal').classList.remove('hidden');
+  document.getElementById('task-reporter').style.display = 'flex';
+  document.getElementById('push-count-info').textContent = currentPushCount > 0 ? `Deja reportee ${currentPushCount}x (bonus score +${Math.min(currentPushCount*3, 10)})` : '';
+  const subs = Object.values(tachesById).filter(x => x.parent_tache === taskId);
+  renderSubtasksList(subs);
+  document.getElementById('subtasks-section').style.display = '';
+  openModal('task-modal');
 }
-function closeTaskEdit() { currentTaskEditId = null; document.getElementById('task-modal').classList.add('hidden'); }
-async function saveTaskEdit() {
+
+function renderSubtasksList(subs) {
+  const node = document.getElementById('subtasks-list');
+  $clear(node);
+  if (subs.length === 0) {
+    node.appendChild($el('div', { class: 'empty', style: { fontSize: '11px' } }, 'Aucune sous-tache'));
+    return;
+  }
+  subs.forEach(s => {
+    node.appendChild($el('div', { class: 'subtask-row', onclick: () => { closeTaskEdit(); setTimeout(() => openTaskEdit(s.id), 150); } },
+      $el('span', { class: 'status-pill ' + statutClass(s.statut) }),
+      $el('span', { style: { flex: '1' } }, s.titre)
+    ));
+  });
+}
+
+function addSubtaskPrompt() {
   if (!currentTaskEditId) return;
+  const parent = currentTaskEditId;
+  const t = tachesById[parent];
+  const projetId = t ? t.projet : null;
+  closeTaskEdit();
+  setTimeout(() => openTaskNew(projetId, parent), 150);
+}
+
+function reportTaskDays(n) {
+  document.getElementById('task-date').value = unixToInputDate(WuboGrist.daysFromToday(n));
+  currentPushCount = (currentPushCount || 0) + 1;
+  document.getElementById('push-count-info').textContent = `Nouveau push_count : ${currentPushCount} (bonus score +${Math.min(currentPushCount*3, 10)})`;
+}
+
+function closeTaskEdit() {
+  currentTaskEditId = null;
+  currentTaskProjetId = null;
+  currentTaskParent = null;
+  closeModal('task-modal');
+}
+
+async function saveTaskEdit() {
+  const titre = document.getElementById('task-titre').value.trim();
+  if (!titre) { alert('Titre obligatoire'); return; }
+  const heures = parseFloat(document.getElementById('task-heures').value) || 0;
+  const dateStr = document.getElementById('task-date').value;
+  const dateUnix = inputDateToUnix(dateStr);
   const fields = {
-    titre: document.getElementById('task-titre').value.trim(),
+    titre,
     description: document.getElementById('task-desc').value,
     livrable: document.getElementById('task-livrable').value,
-    statut: document.getElementById('task-statut').value
+    statut: document.getElementById('task-statut').value,
+    estim_heures: heures,
+    cash_impact: parseInt(document.getElementById('task-cash').value) || 0,
+    urgency: parseInt(document.getElementById('task-urgency').value) || 0,
+    strategic_value: parseInt(document.getElementById('task-strat').value) || 0
   };
+  if (dateUnix) fields.date_cible = dateUnix;
   try {
-    await WuboGrist.updateRecord('Taches', currentTaskEditId, fields);
+    if (currentTaskEditId) {
+      if (currentTaskOriginalDate && dateUnix && dateUnix > currentTaskOriginalDate) {
+        fields.push_count = currentPushCount;
+      }
+      await WuboGrist.updateRecord('Taches', currentTaskEditId, fields);
+    } else {
+      fields.date_creation = WuboGrist.daysFromToday(0);
+      fields.push_count = 0;
+      fields.proprietaire = 'Taki';
+      if (currentTaskProjetId) fields.projet = currentTaskProjetId;
+      if (currentTaskParent) fields.parent_tache = currentTaskParent;
+      await WuboGrist.addRecord('Taches', fields);
+    }
     closeTaskEdit();
     render();
   } catch (e) { alert('Erreur : ' + e.message); }
 }
 
-function backdropClose(e, id) { if (e.target === e.currentTarget) document.getElementById(id).classList.add('hidden'); }
+async function submitDump() {
+  const ctx = document.getElementById('dump-contexte').value;
+  const content = document.getElementById('dump-content').value.trim();
+  if (!content) return;
+  try {
+    await WuboGrist.addRecord('Dump_notes', { timestamp: WuboGrist.nowUnix(), auteur: 'Taki', contenu: content, contexte: ctx, traite: false, converti_en: '' });
+    document.getElementById('dump-content').value = '';
+    closeDump();
+  } catch (e) { alert('Erreur : ' + e.message); }
+}
 
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeTaskEdit(); });
+function openDump() { openModal('dump-modal'); }
+function closeDump() { closeModal('dump-modal'); }
+function backdropClose(e, id) { if (e.target === e.currentTarget) closeModal(id); }
+
+async function refresh() {
+  const btn = document.querySelector('nav.bottom button.ghost');
+  if (!btn) return;
+  const orig = btn.textContent;
+  btn.textContent = '⟳';
+  btn.disabled = true;
+  try { await render(); btn.textContent = '✓'; }
+  catch (e) { btn.textContent = '✕'; }
+  setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1000);
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeTaskEdit(); closeDump(); } });
 
 (async () => {
   await WuboGrist.initGrist();
