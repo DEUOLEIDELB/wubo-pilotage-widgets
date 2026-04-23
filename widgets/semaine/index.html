@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Semaine">
+<meta name="theme-color" content="#F4F4F1">
+<link rel="apple-touch-icon" href="../../icon.svg">
+<link rel="icon" type="image/svg+xml" href="../../icon.svg">
+<link rel="manifest" href="../../manifest.webmanifest">
+<title>Semaine - Pilotage Wubo</title>
+<link rel="stylesheet" href="../../lib/styles.css">
+<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+<script src="../../lib/dom.js"></script>
+<script src="../../lib/grist-api.js"></script>
+<style>
+  #app {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 12px 10px calc(70px + env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+  header h1 { font-size: 17px; line-height: 1.05; }
+  header .sub { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+  header .actions button { padding: 6px 10px; font-size: 11px; }
+
+  .grid-week {
+    display: grid;
+    grid-template-columns: 36px repeat(var(--days, 4), 1fr);
+    gap: 4px;
+  }
+  .col-head {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+    padding: 4px 2px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+  }
+  .col-head.today { color: var(--current); }
+  .col-head .d-num { font-size: 15px; color: var(--text); display: block; margin-top: 1px; }
+  .col-head.today .d-num { color: var(--current); }
+
+  .row-head {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 0;
+  }
+
+  .cell {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 5px 4px;
+    min-height: 68px;
+    font-size: 10px;
+    line-height: 1.25;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow: hidden;
+    position: relative;
+  }
+  .cell.empty { background: var(--bg); border-style: dashed; }
+  .cell.done { background: #EAF4EE; }
+  .cell.current { background: var(--current-soft); border-color: var(--current); border-left: 3px solid var(--current); }
+  .cell.skip { background: var(--done-bg); }
+  .cell.wip { background: #FFFCE5; }
+
+  .cell .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    position: absolute;
+    top: 5px;
+    right: 5px;
+  }
+  .status-dot.done { background: var(--success); }
+  .status-dot.current { background: var(--current); }
+  .status-dot.skip { background: var(--text-faint); }
+  .status-dot.wip { background: var(--accent-strong); }
+  .status-dot.planned { background: var(--border-strong); }
+
+  .cell ul { list-style: none; padding: 0; margin: 0; }
+  .cell li {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text);
+    padding: 1px 0;
+  }
+  .cell.done li, .cell.skip li { color: var(--text-faint); text-decoration: line-through; }
+  .cell .note-dot { position: absolute; bottom: 4px; right: 5px; font-size: 9px; color: var(--warning); }
+
+  .bottom {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+    display: flex;
+    gap: 8px;
+    background: rgba(244, 244, 241, 0.95);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid var(--border);
+  }
+  .bottom button { flex: 1; padding: 13px; font-size: 14px; }
+
+  .legend {
+    display: flex;
+    gap: 8px;
+    font-size: 10px;
+    color: var(--text-dim);
+    padding: 4px 6px;
+    flex-wrap: wrap;
+  }
+  .legend .lg { display: flex; align-items: center; gap: 3px; }
+  .legend .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+  #error { background: var(--danger); color: white; padding: 10px; border-radius: 6px; font-size: 12px; margin: 0 4px; }
+
+  @media (min-width: 600px) {
+    .bottom { max-width: 720px; left: 50%; transform: translateX(-50%); border-radius: 12px 12px 0 0; }
+    .cell { font-size: 11px; min-height: 80px; }
+  }
+</style>
+</head>
+<body>
+
+<main id="app">
+  <header>
+    <div>
+      <h1 id="title">Semaine</h1>
+      <div class="sub" id="sub"></div>
+    </div>
+    <div class="actions">
+      <button class="ghost" onclick="goAujourdhui()">‹ Aujourd'hui</button>
+    </div>
+  </header>
+
+  <div id="error" style="display:none"></div>
+
+  <div class="grid-week" id="grid"></div>
+
+  <div class="legend">
+    <span class="lg"><span class="dot" style="background:#188038"></span>Fait</span>
+    <span class="lg"><span class="dot" style="background:#5914D0"></span>Courant</span>
+    <span class="lg"><span class="dot" style="background:#F0CC00"></span>En cours</span>
+    <span class="lg"><span class="dot" style="background:#C8C8C3"></span>Planifie</span>
+    <span class="lg"><span class="dot" style="background:#9A9A95"></span>Zappe</span>
+  </div>
+</main>
+
+<nav class="bottom">
+  <button class="ghost" onclick="goAujourdhui()">‹ Aujourd'hui</button>
+  <button class="ghost" onclick="refresh()">↻</button>
+</nav>
+
+<script>
+const { $el, $clear } = Dom;
+const TRANCHES = ['Matin', 'Aprem', 'Soir'];
+const DAY_NAMES = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+const MONTHS = ['janv', 'fev', 'mars', 'avr', 'mai', 'juin', 'juil', 'aout', 'sep', 'oct', 'nov', 'dec'];
+
+function groupDays(blocs) {
+  const byDay = {};
+  blocs.forEach(b => {
+    const iso = WuboGrist.gristDateToISO(b.date);
+    if (!iso) return;
+    if (!byDay[iso]) byDay[iso] = {};
+    byDay[iso][b.tranche] = b;
+  });
+  return Object.keys(byDay).sort().map(iso => ({ iso, blocs: byDay[iso] }));
+}
+
+function cellClass(bloc) {
+  if (!bloc) return 'cell empty';
+  switch (bloc.statut) {
+    case 'Fait': return 'cell done';
+    case 'En cours': return 'cell wip';
+    case 'Zappe': return 'cell skip';
+    default: return 'cell';
+  }
+}
+function dotClass(bloc, isCurrent) {
+  if (isCurrent) return 'status-dot current';
+  if (!bloc) return '';
+  switch (bloc.statut) {
+    case 'Fait': return 'status-dot done';
+    case 'En cours': return 'status-dot wip';
+    case 'Zappe': return 'status-dot skip';
+    default: return 'status-dot planned';
+  }
+}
+
+function renderCell(bloc, tachesById, isToday, tranche) {
+  const h = new Date().getHours();
+  const curTranche = h >= 8 && h < 13 ? 'Matin' : h >= 13 && h < 18 ? 'Aprem' : h >= 18 && h < 22 ? 'Soir' : null;
+  const isCurrent = isToday && curTranche === tranche && bloc && bloc.statut !== 'Fait' && bloc.statut !== 'Zappe';
+  let cls = cellClass(bloc);
+  if (isCurrent) cls = 'cell current';
+
+  const cell = $el('div', { class: cls });
+  cell.appendChild($el('span', { class: dotClass(bloc, isCurrent) }));
+
+  if (!bloc) {
+    cell.appendChild($el('div', { class: 'empty', style: { fontSize: '9px', color: 'var(--text-faint)' } }, '-'));
+    return cell;
+  }
+
+  const tIds = WuboGrist.refListIds(bloc.taches_liees);
+  const ul = $el('ul', {});
+  const titles = tIds.map(id => (tachesById[id] && tachesById[id].titre) || '').filter(Boolean);
+  if (titles.length === 0) {
+    cell.appendChild($el('div', { class: 'empty', style: { fontSize: '9px' } }, 'Libre'));
+  } else {
+    titles.slice(0, 2).forEach(t => ul.appendChild($el('li', {}, t)));
+    if (titles.length > 2) ul.appendChild($el('li', { style: { color: 'var(--text-faint)' } }, `+${titles.length - 2}`));
+    cell.appendChild(ul);
+  }
+
+  if (bloc.note_fin_bloc) cell.appendChild($el('span', { class: 'note-dot', title: bloc.note_fin_bloc }, '⚠'));
+  return cell;
+}
+
+function showError(msg) {
+  const e = document.getElementById('error');
+  e.textContent = msg;
+  e.style.display = 'block';
+}
+
+async function render() {
+  document.getElementById('error').style.display = 'none';
+  let blocs = [], tachesById = {};
+  try {
+    const [b, t] = await Promise.all([
+      WuboGrist.fetchRows('Blocs_temps'),
+      WuboGrist.fetchRows('Taches')
+    ]);
+    blocs = b;
+    t.forEach(x => { tachesById[x.id] = x; });
+  } catch (e) { showError(e.message); return; }
+
+  const days = groupDays(blocs);
+  if (days.length === 0) {
+    showError('Aucun bloc planifie. Ajoute des blocs dans Grist.');
+    return;
+  }
+
+  const todayISO = WuboGrist.todayISO();
+  const grid = document.getElementById('grid');
+  $clear(grid);
+  grid.style.setProperty('--days', days.length);
+
+  // week meta
+  const firstDay = new Date(days[0].iso + 'T00:00:00');
+  const lastDay = new Date(days[days.length - 1].iso + 'T00:00:00');
+  const weekN = (() => {
+    const d = new Date(Date.UTC(firstDay.getFullYear(), firstDay.getMonth(), firstDay.getDate()));
+    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+    const start = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d - start) / 86400000) + 1) / 7);
+  })();
+  document.getElementById('title').textContent = `Sprint S${weekN}`;
+  const fmt = d => `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  const totalFait = blocs.filter(b => b.statut === 'Fait').length;
+  document.getElementById('sub').textContent =
+    `${fmt(firstDay)} — ${fmt(lastDay)} · ${totalFait}/${blocs.length} blocs faits`;
+
+  // top-left empty cell
+  grid.appendChild($el('div', {}));
+  // day headers
+  days.forEach(d => {
+    const dd = new Date(d.iso + 'T00:00:00');
+    const head = $el('div', { class: 'col-head' + (d.iso === todayISO ? ' today' : '') },
+      DAY_NAMES[dd.getDay()],
+      $el('span', { class: 'd-num' }, String(dd.getDate()))
+    );
+    grid.appendChild(head);
+  });
+
+  // rows per tranche
+  TRANCHES.forEach(tranche => {
+    grid.appendChild($el('div', { class: 'row-head' }, tranche));
+    days.forEach(d => {
+      grid.appendChild(renderCell(d.blocs[tranche], tachesById, d.iso === todayISO, tranche));
+    });
+  });
+}
+
+function goAujourdhui() { window.location.href = '../aujourdhui/'; }
+function refresh() { render(); }
+
+(async () => {
+  await WuboGrist.initGrist();
+  try { if (typeof grist !== 'undefined' && grist.onRecords) grist.onRecords(() => render()); } catch (_) {}
+  render();
+})();
+</script>
+
+</body>
+</html>

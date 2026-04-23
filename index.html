@@ -2,27 +2,65 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Wubo Pilotage Widgets</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#F4F4F1">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Pilotage Wubo</title>
 <link rel="stylesheet" href="lib/styles.css">
+<style>
+  main { max-width: 640px; margin: 0 auto; padding: 20px 16px; display: flex; flex-direction: column; gap: 16px; }
+  .card-link {
+    display: block;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.15s ease;
+  }
+  .card-link:hover { border-color: var(--current); }
+  .card-link h3 { font-size: 15px; margin-bottom: 3px; }
+  .card-link p { font-size: 12px; color: var(--text-dim); line-height: 1.4; }
+  .card-link.primary { border-left: 4px solid var(--current); }
+  .card-link.accent { border-left: 4px solid var(--accent-strong); }
+  .intro { font-size: 13px; color: var(--text-dim); padding: 0 4px; }
+  .footer { font-size: 11px; color: var(--text-faint); text-align: center; padding-top: 8px; }
+  .footer code { background: var(--surface); padding: 1px 5px; border-radius: 3px; font-size: 10px; }
+</style>
 </head>
 <body>
-<h1>Wubo Pilotage Widgets</h1>
-<div style="color: var(--wubo-gray); margin-bottom: 20px;">
-  Widgets personnalises pour le doc Grist <strong>Pilotage Wubo</strong>.
-</div>
-<div class="grid cols-3">
-  <a href="widgets/aujourdhui/" class="card yellow" style="text-decoration:none;color:inherit">
+<main>
+  <header>
+    <h1 style="font-size:20px">Pilotage Wubo</h1>
+    <p class="intro">Widgets pour le doc Grist <strong>Pilotage Wubo</strong>. Clique pour ouvrir en standalone (cle API Grist demandee au 1er lancement).</p>
+  </header>
+
+  <a href="widgets/aujourdhui/" class="card-link primary">
     <h3>Aujourd'hui</h3>
-    <div>Vue des 3 blocs du jour (matin / aprem / soir) avec leurs taches liees. Boutons demarrer / terminer / zapper.</div>
+    <p>3 blocs du jour (matin / aprem / soir), bloc courant en evidence, actions rapides. Dump integre.</p>
   </a>
-  <a href="widgets/dump/" class="card" style="text-decoration:none;color:inherit">
-    <h3>Dump notes</h3>
-    <div>Capture rapide de pensees, post-RDV, idees. Claude traitera et rangera.</div>
+
+  <a href="widgets/semaine/" class="card-link accent">
+    <h3>Semaine</h3>
+    <p>Sprint entier en 1 vue : 4 jours x 3 tranches. Projection sans scroll.</p>
   </a>
-  <a href="widgets/dashboard/" class="card pink" style="text-decoration:none;color:inherit">
+
+  <a href="widgets/dashboard/" class="card-link">
     <h3>Dashboard</h3>
-    <div>Vue d'ensemble objectifs trimestre avec jauges + sujets a pousser avec stagnation.</div>
+    <p>Stats globales, objectifs trimestre avec progression, sujets a pousser avec stagnation.</p>
   </a>
-</div>
+
+  <a href="widgets/dump/" class="card-link">
+    <h3>Dump notes</h3>
+    <p>Version longue : capture avec historique. (Un bouton Dump est deja dans Aujourd'hui.)</p>
+  </a>
+
+  <p class="footer">
+    A ajouter a l'ecran d'accueil iPhone : Safari > bouton partage > <code>Ajouter a l'ecran d'accueil</code>. Pointe sur Aujourd'hui de preference.
+  </p>
+</main>
 </body>
 </html>

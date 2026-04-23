@@ -1,0 +1,14 @@
+{
+  "name": "Pilotage Wubo",
+  "short_name": "Pilotage",
+  "description": "Pilotage quotidien Wubo",
+  "start_url": "./widgets/aujourdhui/",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F4F4F1",
+  "theme_color": "#F4F4F1",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

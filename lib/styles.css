@@ -1,18 +1,21 @@
-/* Wubo Pilotage Widgets - DA commune */
-
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap');
+/* Wubo Pilotage - DA utilitaire dense */
 
 :root {
-  --wubo-cream: #FAF5F2;
-  --wubo-yellow: #FFDD0B;
-  --wubo-purple: #5914D0;
-  --wubo-pink: #D40272;
-  --wubo-black: #1A1A1A;
-  --wubo-gray: #6B6B6B;
-  --wubo-light-gray: #E5E5E5;
-  --wubo-success: #2BB673;
-  --wubo-warning: #F39C12;
-  --wubo-danger: #E74C3C;
+  --bg: #F4F4F1;
+  --surface: #FFFFFF;
+  --border: #E0E0DC;
+  --border-strong: #C8C8C3;
+  --text: #111113;
+  --text-dim: #6B6B6B;
+  --text-faint: #9A9A95;
+  --accent: #FFDD0B;
+  --accent-strong: #F0CC00;
+  --current: #5914D0;
+  --current-soft: #EEE2FB;
+  --danger: #D93025;
+  --success: #188038;
+  --warning: #B06000;
+  --done-bg: #EDEDE8;
 }
 
 * {
@@ -21,159 +24,172 @@
   padding: 0;
 }
 
+html, body {
+  height: 100%;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
-  font-family: 'Outfit', -apple-system, sans-serif;
-  background: var(--wubo-cream);
-  color: var(--wubo-black);
-  padding: 16px;
-  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  background: var(--bg);
+  color: var(--text);
   font-size: 14px;
-  line-height: 1.4;
+  line-height: 1.35;
+  overflow-x: hidden;
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-top: env(safe-area-inset-top);
 }
 
-h1, h2, h3 {
-  font-family: 'Outfit', sans-serif;
-  font-weight: 700;
-  color: var(--wubo-black);
-}
+h1 { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); }
+h3 { font-size: 14px; font-weight: 600; }
 
-h1 { font-size: 24px; margin-bottom: 12px; }
-h2 { font-size: 18px; margin-bottom: 8px; }
-h3 { font-size: 15px; margin-bottom: 6px; }
-
-.card {
-  background: white;
-  border: 2px solid var(--wubo-black);
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 12px;
-  box-shadow: 4px 4px 0 var(--wubo-purple);
-  transition: transform 0.1s ease;
-}
-
-.card:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 5px 5px 0 var(--wubo-purple);
-}
-
-.card.yellow { box-shadow: 4px 4px 0 var(--wubo-yellow); }
-.card.pink { box-shadow: 4px 4px 0 var(--wubo-pink); }
-
-.btn {
-  font-family: 'Outfit', sans-serif;
+button {
+  font-family: inherit;
+  font-size: 13px;
   font-weight: 600;
-  background: var(--wubo-black);
+  background: var(--text);
   color: white;
   border: none;
-  padding: 8px 16px;
-  border-radius: 8px;
+  padding: 10px 14px;
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 13px;
-  transition: transform 0.1s ease;
+  line-height: 1;
 }
+button:active { opacity: 0.7; }
+button.primary { background: var(--current); color: white; }
+button.accent { background: var(--accent); color: var(--text); }
+button.ghost { background: transparent; color: var(--text); border: 1px solid var(--border-strong); }
+button.success { background: var(--success); color: white; }
+button.danger { background: var(--danger); color: white; }
+button.small { padding: 6px 10px; font-size: 12px; }
+button:disabled { opacity: 0.4; cursor: not-allowed; }
 
-.btn:hover { transform: translateY(-1px); }
-.btn:active { transform: translateY(0); }
+input, select, textarea {
+  font-family: inherit;
+  font-size: 15px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  padding: 10px 12px;
+  width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--current);
+}
+textarea { resize: vertical; min-height: 100px; line-height: 1.4; }
+select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23111' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+}
+label { font-size: 12px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; }
 
-.btn.primary { background: var(--wubo-purple); }
-.btn.accent { background: var(--wubo-yellow); color: var(--wubo-black); }
-.btn.danger { background: var(--wubo-danger); }
-.btn.success { background: var(--wubo-success); }
+.surface {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
 
 .tag {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 600;
-  background: var(--wubo-light-gray);
-  color: var(--wubo-black);
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--done-bg);
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+.tag.current { background: var(--current); color: white; }
+.tag.done { background: var(--success); color: white; }
+.tag.skip { background: var(--done-bg); color: var(--text-faint); text-decoration: line-through; }
+.tag.wip { background: var(--accent); color: var(--text); }
+.tag.warn { background: var(--warning); color: white; }
+.tag.danger { background: var(--danger); color: white; }
+
+.empty {
+  color: var(--text-faint);
+  font-size: 12px;
+  font-style: italic;
+  padding: 8px 0;
 }
 
-.tag.yellow { background: var(--wubo-yellow); }
-.tag.purple { background: var(--wubo-purple); color: white; }
-.tag.pink { background: var(--wubo-pink); color: white; }
-.tag.success { background: var(--wubo-success); color: white; }
-.tag.warning { background: var(--wubo-warning); color: white; }
-.tag.danger { background: var(--wubo-danger); color: white; }
+.divider { height: 1px; background: var(--border); margin: 12px 0; }
 
 .progress-bar {
-  background: var(--wubo-light-gray);
-  border-radius: 8px;
-  height: 10px;
+  background: var(--done-bg);
+  border-radius: 2px;
+  height: 4px;
   overflow: hidden;
-  margin: 6px 0;
-  border: 1px solid var(--wubo-black);
 }
-
 .progress-bar .fill {
   height: 100%;
-  background: var(--wubo-purple);
+  background: var(--current);
   transition: width 0.3s ease;
 }
 
-textarea, input, select {
-  font-family: 'Outfit', sans-serif;
-  border: 2px solid var(--wubo-black);
+/* Keep compatibility with old cards used by dashboard/dump (flatter look) */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 8px;
-  font-size: 14px;
-  background: white;
-  width: 100%;
+  padding: 14px;
+  margin-bottom: 12px;
+  box-shadow: none;
 }
-
-textarea { min-height: 80px; resize: vertical; }
+.card.yellow { border-left: 3px solid var(--accent-strong); }
+.card.pink { border-left: 3px solid var(--danger); }
 
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
 }
 
-.grid {
-  display: grid;
-  gap: 12px;
-}
-
+.grid { display: grid; gap: 8px; }
 .grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
 .grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
-
-@media (max-width: 768px) {
+@media (max-width: 600px) {
   .grid.cols-3, .grid.cols-2 { grid-template-columns: 1fr; }
 }
 
 .task-item {
-  padding: 8px 10px;
-  border: 1px solid var(--wubo-light-gray);
-  border-radius: 6px;
-  margin-bottom: 6px;
-  background: white;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  margin-bottom: 4px;
+  background: var(--surface);
   font-size: 13px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
-
 .task-item.done {
-  background: var(--wubo-light-gray);
+  background: var(--done-bg);
   text-decoration: line-through;
-  opacity: 0.7;
-}
-
-.empty {
-  color: var(--wubo-gray);
-  font-style: italic;
-  text-align: center;
-  padding: 20px;
+  color: var(--text-faint);
 }
 
 .drift-alert {
-  background: var(--wubo-warning);
-  color: white;
-  padding: 10px;
-  border-radius: 8px;
-  margin-bottom: 12px;
+  background: var(--accent);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 6px;
+  margin: 0 0 12px;
   font-weight: 600;
+  font-size: 13px;
+  border-left: 4px solid var(--warning);
 }
+
+/* Hide Outfit references if anywhere */

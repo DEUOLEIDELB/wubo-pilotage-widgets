@@ -2,43 +2,186 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Pilotage">
+<meta name="theme-color" content="#F4F4F1">
+<link rel="apple-touch-icon" href="../../icon.svg">
+<link rel="icon" type="image/svg+xml" href="../../icon.svg">
+<link rel="manifest" href="../../manifest.webmanifest">
 <title>Aujourd'hui - Pilotage Wubo</title>
 <link rel="stylesheet" href="../../lib/styles.css">
 <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
 <script src="../../lib/dom.js"></script>
+<script src="../../lib/grist-api.js"></script>
 <style>
-  .bloc-card { min-height: 180px; }
-  .bloc-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
-  .bloc-title { font-weight: 700; font-size: 16px; }
-  .bloc-time { color: var(--wubo-gray); font-size: 12px; }
-  .bloc-actions { display: flex; gap: 4px; margin-top: 10px; flex-wrap: wrap; }
-  .bloc-actions .btn { padding: 4px 10px; font-size: 12px; }
-  .bloc-note { margin-top: 8px; font-size: 12px; color: var(--wubo-gray); font-style: italic; }
+  #app {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 12px 14px 90px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 { font-size: 22px; line-height: 1.05; text-transform: capitalize; }
+  header .sub { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+  header .actions button { padding: 6px 10px; font-size: 11px; }
+
+  .bloc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .bloc.current {
+    border: 1px solid var(--current);
+    border-left-width: 4px;
+    background: var(--current-soft);
+  }
+  .bloc.done { background: var(--done-bg); }
+  .bloc.done .bloc-title, .bloc.done ul { color: var(--text-faint); text-decoration: line-through; }
+  .bloc.skip { background: var(--done-bg); }
+  .bloc.skip ul { color: var(--text-faint); text-decoration: line-through; }
+
+  .bloc-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+  }
+  .bloc-tranche {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+  }
+  .bloc.current .bloc-tranche { color: var(--current); }
+  .bloc-time { font-size: 11px; color: var(--text-faint); }
+
+  .bloc ul { padding: 0; margin: 0; list-style: none; font-size: 13px; line-height: 1.4; }
+  .bloc ul li { padding: 2px 0; display: flex; align-items: baseline; gap: 6px; }
+  .bloc ul li::before { content: "·"; color: var(--text-faint); }
+
+  .bloc-note {
+    font-size: 11px;
+    color: var(--warning);
+    padding: 2px 0 0;
+    border-top: 1px dashed var(--border);
+    padding-top: 6px;
+  }
+
+  .bloc-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 2px;
+  }
+  .bloc-actions button { flex: 1; min-width: 88px; }
+
+  .bottom {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+    display: flex;
+    gap: 8px;
+    background: rgba(244, 244, 241, 0.95);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid var(--border);
+    z-index: 50;
+  }
+  .bottom button { flex: 1; padding: 13px; font-size: 14px; }
+
+  .modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 100;
+  }
+  .modal.hidden { display: none; }
+  .modal-content {
+    background: var(--surface);
+    width: 100%;
+    max-width: 480px;
+    border-radius: 12px 12px 0 0;
+    padding: 16px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .modal-head { display: flex; justify-content: space-between; align-items: center; }
+  .modal-content textarea { min-height: 140px; }
+
+  #error { background: var(--danger); color: white; padding: 10px; border-radius: 6px; font-size: 12px; }
+
+  @media (min-width: 600px) {
+    .bottom { max-width: 480px; left: 50%; transform: translateX(-50%); border-radius: 12px 12px 0 0; }
+  }
 </style>
 </head>
 <body>
 
-<div class="header">
-  <div>
-    <h1>Aujourd'hui</h1>
-    <div id="today-date" style="color: var(--wubo-gray); font-size: 13px;"></div>
+<main id="app">
+  <header>
+    <div>
+      <h1 id="date">...</h1>
+      <div class="sub" id="meta"></div>
+    </div>
+    <div class="actions">
+      <button class="ghost" onclick="goSemaine()">Semaine ›</button>
+    </div>
+  </header>
+
+  <div id="drift"></div>
+  <div id="error"></div>
+  <div id="blocs"></div>
+</main>
+
+<nav class="bottom">
+  <button class="accent" onclick="openDump()">+ Dump</button>
+  <button class="ghost" onclick="refresh()">↻ Refresh</button>
+</nav>
+
+<div id="dump-modal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-head">
+      <h3>Dump rapide</h3>
+      <button class="ghost small" onclick="closeDump()">Annuler</button>
+    </div>
+    <select id="dump-contexte">
+      <option value="Libre">Libre</option>
+      <option value="Post-RDV">Post-RDV</option>
+      <option value="Idee">Idee</option>
+      <option value="Probleme">Probleme</option>
+      <option value="Decision">Decision</option>
+    </select>
+    <textarea id="dump-content" placeholder="Ecris sans filtre. Claude rangera."></textarea>
+    <button class="primary" onclick="submitDump()">Envoyer au dump</button>
   </div>
 </div>
 
-<div id="drift-alerts"></div>
-
-<div class="grid cols-3" id="blocs-container"></div>
-
 <script>
+const { $el, $clear, $replace } = Dom;
 const TRANCHES = ['Matin', 'Aprem', 'Soir'];
-const TRANCHE_TIMES = { 'Matin': '8h - 12h', 'Aprem': '13h - 17h', 'Soir': '18h - 22h' };
-const TRANCHE_COLOR = { 'Matin': 'yellow', 'Aprem': '', 'Soir': 'pink' };
-const STATUT_TAG = { 'Planifie': 'purple', 'En cours': 'yellow', 'Fait': 'success', 'Zappe': 'danger' };
-
-function formatDate(d) {
-  return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
-}
+const TRANCHE_TIMES = { Matin: '8-12h', Aprem: '13-17h', Soir: '18-22h' };
 
 function currentTranche() {
   const h = new Date().getHours();
@@ -48,111 +191,175 @@ function currentTranche() {
   return null;
 }
 
-async function onActionClick(blocId, action) {
-  const fields = { statut: action };
-  if (action === 'Fait') {
-    const note = prompt('Note de fin de bloc (ce que tu as fait, ce qui coince) :');
-    if (note !== null) fields.note_fin_bloc = note;
+function weekNumber(d) {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+}
+
+function showError(msg) {
+  const e = document.getElementById('error');
+  e.textContent = msg;
+  e.style.display = 'block';
+}
+function clearError() {
+  const e = document.getElementById('error');
+  e.textContent = '';
+  e.style.display = 'none';
+}
+
+function renderBloc(tranche, bloc, tachesById) {
+  const cur = currentTranche();
+  const statut = bloc ? bloc.statut : null;
+  const isCurrent = bloc && (statut === 'En cours' || (cur === tranche && statut === 'Planifie'));
+
+  const classNames = ['bloc'];
+  if (isCurrent) classNames.push('current');
+  else if (statut === 'Fait') classNames.push('done');
+  else if (statut === 'Zappe') classNames.push('skip');
+
+  const tagClass = statut === 'Fait' ? 'done' :
+                   statut === 'Zappe' ? 'skip' :
+                   isCurrent ? 'current' : '';
+  const tagLabel = statut === 'Fait' ? 'Fait' :
+                   statut === 'Zappe' ? 'Zappe' :
+                   isCurrent ? 'En cours' : 'Planifie';
+
+  const head = $el('div', { class: 'bloc-head' },
+    $el('div', {},
+      $el('span', { class: 'bloc-tranche' }, tranche),
+      $el('span', { class: 'bloc-time' }, ' · ' + TRANCHE_TIMES[tranche])
+    ),
+    $el('span', { class: 'tag ' + tagClass }, tagLabel)
+  );
+
+  const el = $el('div', { class: classNames.join(' ') }, head);
+
+  if (!bloc) {
+    el.appendChild($el('div', { class: 'empty' }, 'Aucun bloc planifie'));
+    return el;
+  }
+
+  const tIds = WuboGrist.refListIds(bloc.taches_liees);
+  if (tIds.length > 0) {
+    const ul = $el('ul', {});
+    tIds.forEach(tid => {
+      const t = tachesById[tid];
+      if (!t) return;
+      ul.appendChild($el('li', {}, t.titre));
+    });
+    el.appendChild(ul);
+  }
+
+  if (bloc.note_fin_bloc) {
+    el.appendChild($el('div', { class: 'bloc-note' }, bloc.note_fin_bloc));
+  }
+
+  if (isCurrent) {
+    const actions = $el('div', { class: 'bloc-actions' });
+    if (statut === 'Planifie') {
+      actions.appendChild($el('button', { class: 'primary small', onclick: () => action(bloc.id, 'En cours') }, '▶ Demarrer'));
+    }
+    actions.appendChild($el('button', { class: 'success small', onclick: () => action(bloc.id, 'Fait') }, '✓ Terminer'));
+    actions.appendChild($el('button', { class: 'ghost small', onclick: () => action(bloc.id, 'Zappe') }, 'Zapper'));
+    el.appendChild(actions);
+  }
+
+  return el;
+}
+
+async function render() {
+  clearError();
+  let blocs = [], tachesById = {};
+  try {
+    const [b, t] = await Promise.all([
+      WuboGrist.fetchRows('Blocs_temps'),
+      WuboGrist.fetchRows('Taches')
+    ]);
+    const today = WuboGrist.todayISO();
+    blocs = b.filter(x => WuboGrist.gristDateToISO(x.date) === today);
+    t.forEach(x => { tachesById[x.id] = x; });
+  } catch (e) {
+    showError(e.message);
+    return;
+  }
+
+  const now = new Date();
+  document.getElementById('date').textContent =
+    now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+
+  const fait = blocs.filter(b => b.statut === 'Fait').length;
+  const total = blocs.length;
+  document.getElementById('meta').textContent =
+    `Sprint S${weekNumber(now)} · ${fait}/${total} blocs faits`;
+
+  const driftNode = document.getElementById('drift');
+  $clear(driftNode);
+  const cur = currentTranche();
+  if (cur) {
+    const bloc = blocs.find(b => b.tranche === cur);
+    if (bloc && bloc.statut === 'Planifie') {
+      const alert = $el('div', { class: 'drift-alert' }, `${cur} actif mais toujours "Planifie". `);
+      alert.appendChild($el('button', { class: 'small', onclick: () => action(bloc.id, 'En cours') }, 'Demarrer'));
+      driftNode.appendChild(alert);
+    }
+  }
+
+  const container = document.getElementById('blocs');
+  $clear(container);
+  TRANCHES.forEach(tranche => {
+    const bloc = blocs.find(b => b.tranche === tranche);
+    container.appendChild(renderBloc(tranche, bloc, tachesById));
+  });
+}
+
+async function action(blocId, statut) {
+  const fields = { statut };
+  if (statut === 'Fait') {
+    const note = prompt('Note de fin de bloc (1 ligne) :');
+    if (note === null) return;
+    if (note) fields.note_fin_bloc = note;
   }
   try {
-    await grist.docApi.applyUserActions([['UpdateRecord', 'Blocs_temps', blocId, fields]]);
-    renderBlocs();
+    await WuboGrist.updateRecord('Blocs_temps', blocId, fields);
+    render();
   } catch (e) {
     alert('Erreur : ' + e.message);
   }
 }
 
-function buildBlocCard(tranche, bloc, tachesById) {
-  const card = $el('div', { class: `card bloc-card ${TRANCHE_COLOR[tranche]}` });
-
-  const header = $el('div', { class: 'bloc-header' },
-    $el('div', {},
-      $el('div', { class: 'bloc-title' }, tranche),
-      $el('div', { class: 'bloc-time' }, TRANCHE_TIMES[tranche])
-    )
-  );
-
-  if (!bloc) {
-    card.appendChild(header);
-    card.appendChild($el('div', { class: 'empty' }, 'Aucun bloc planifie'));
-    return card;
-  }
-
-  const tag = STATUT_TAG[bloc.statut] || 'purple';
-  header.appendChild($el('span', { class: `tag ${tag}` }, bloc.statut || 'Planifie'));
-  card.appendChild(header);
-
-  const tIds = refListIds(bloc.taches_liees);
-  if (tIds.length === 0) {
-    card.appendChild($el('div', { class: 'empty' }, 'Aucune tache liee'));
-  } else {
-    tIds.forEach(tid => {
-      const t = tachesById[tid];
-      if (!t) return;
-      const doneClass = t.statut === 'Fait' ? 'task-item done' : 'task-item';
-      card.appendChild($el('div', { class: doneClass },
-        $el('span', {}, t.titre || ''),
-        $el('span', { class: 'tag' }, t.statut || '')
-      ));
-    });
-  }
-
-  const actions = $el('div', { class: 'bloc-actions' },
-    $el('button', { class: 'btn primary', onclick: () => onActionClick(bloc.id, 'En cours') }, 'Demarrer'),
-    $el('button', { class: 'btn success', onclick: () => onActionClick(bloc.id, 'Fait') }, 'Terminer'),
-    $el('button', { class: 'btn danger', onclick: () => onActionClick(bloc.id, 'Zappe') }, 'Zapper')
-  );
-  card.appendChild(actions);
-
-  if (bloc.note_fin_bloc) {
-    card.appendChild($el('div', { class: 'bloc-note' }, bloc.note_fin_bloc));
-  }
-
-  return card;
-}
-
-async function renderBlocs() {
-  document.getElementById('today-date').textContent = formatDate(new Date());
-  const container = document.getElementById('blocs-container');
-  clearNode(container);
-
-  let blocs = [];
-  let tachesById = {};
+async function submitDump() {
+  const ctx = document.getElementById('dump-contexte').value;
+  const content = document.getElementById('dump-content').value.trim();
+  if (!content) return;
   try {
-    const [blocsTable, tachesTable] = await Promise.all([
-      grist.docApi.fetchTable('Blocs_temps'),
-      grist.docApi.fetchTable('Taches')
-    ]);
-    const today = todayISO();
-    blocs = gristTableToRows(blocsTable).filter(b => gristDateToISO(b.date) === today);
-    gristTableToRows(tachesTable).forEach(t => { tachesById[t.id] = t; });
+    await WuboGrist.addRecord('Dump_notes', {
+      timestamp: WuboGrist.nowUnix(),
+      auteur: 'Taki',
+      contenu: content,
+      contexte: ctx,
+      traite: false,
+      converti_en: ''
+    });
+    document.getElementById('dump-content').value = '';
+    closeDump();
   } catch (e) {
-    container.appendChild($el('div', { class: 'empty' }, 'Erreur : ' + e.message));
-    return;
-  }
-
-  TRANCHES.forEach(tranche => {
-    const bloc = blocs.find(b => b.tranche === tranche);
-    container.appendChild(buildBlocCard(tranche, bloc, tachesById));
-  });
-
-  // Drift check
-  const driftNode = document.getElementById('drift-alerts');
-  clearNode(driftNode);
-  const cur = currentTranche();
-  if (cur) {
-    const bloc = blocs.find(b => b.tranche === cur);
-    if (bloc && bloc.statut === 'Planifie') {
-      driftNode.appendChild($el('div', { class: 'drift-alert' },
-        `On est dans le bloc ${cur} mais il est encore "Planifie". Tu as demarre ou pas ?`
-      ));
-    }
+    alert('Erreur : ' + e.message);
   }
 }
 
-grist.ready({ requiredAccess: 'full' });
-grist.onRecords(() => renderBlocs());
-renderBlocs();
+function openDump() { document.getElementById('dump-modal').classList.remove('hidden'); }
+function closeDump() { document.getElementById('dump-modal').classList.add('hidden'); }
+function goSemaine() { window.location.href = '../semaine/'; }
+function refresh() { render(); }
+
+(async () => {
+  await WuboGrist.initGrist();
+  try { if (typeof grist !== 'undefined' && grist.onRecords) grist.onRecords(() => render()); } catch (_) {}
+  render();
+  setInterval(render, 120000);
+})();
 </script>
 
 </body>

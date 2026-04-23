@@ -1,48 +1,66 @@
 # Wubo Pilotage Widgets
 
-Widgets personnalises pour le doc Grist **Pilotage Wubo** (doc_id `cmTvfM75iZzS8eRsPAJdpy`).
+Interface pour le doc Grist **Pilotage Wubo** (`cmTvfM75iZzS8eRsPAJdpy`). Mobile-first, dense, projection d'un coup d'oeil.
 
-Chaque widget est une page HTML autonome qui se branche a une table Grist via le plugin API.
+## Widgets
 
-## Widgets disponibles
+- **aujourdhui/** : 3 blocs du jour + dump integre. Raccourci iPhone recommande.
+- **semaine/** : sprint complet en grille jours x tranches. Projection sans scroll.
+- **dashboard/** : stats + objectifs + sujets a pousser.
+- **dump/** : version longue de la capture avec historique.
 
-| Widget | Dossier | Table cible | Role |
-|---|---|---|---|
-| Aujourd'hui | `widgets/aujourdhui/` | Blocs_temps | Vue 3 blocs matin/aprem/soir du jour, avec taches liees |
-| Dump notes | `widgets/dump/` | Dump_notes | Capture rapide de pensees, traces d'RDV, idees |
-| Dashboard | `widgets/dashboard/` | Objectifs | Vue d'ensemble objectifs trimestre avec jauges progression |
+## Utilisation dans Grist
 
-## Hebergement
+Dans le doc Grist Pilotage Wubo : "Ajouter une section" > Custom > colle l'URL du widget.
 
-Trois options, a choisir selon tes preferences :
+```
+https://deuoleidelb.github.io/wubo-pilotage-widgets/widgets/aujourdhui/
+https://deuoleidelb.github.io/wubo-pilotage-widgets/widgets/semaine/
+https://deuoleidelb.github.io/wubo-pilotage-widgets/widgets/dashboard/
+https://deuoleidelb.github.io/wubo-pilotage-widgets/widgets/dump/
+```
 
-### Option A : GitHub Pages (repo public uniquement)
-Rendre ce repo public puis activer GitHub Pages. URL : `https://<user>.github.io/wubo-pilotage-widgets/widgets/<nom>/`
+**Important** : dans le panneau de configuration a droite, regle "Access level" sur **Full document access**. Sans ca, les widgets affichent une erreur.
 
-### Option B : VPS Wubo + Traefik (repo prive ok)
-Deployer sur le VPS via Traefik comme les autres services Wubo. URL : `https://pilotage-widgets.wubo.com/<nom>/`. Voir `wubo-vps` skill pour la procedure.
+## Utilisation standalone iPhone (Raccourci ecran d'accueil)
 
-### Option C : Vercel (repo prive ok, gratuit)
-Connecter le repo a Vercel, deploiement auto sur chaque push. URL : `https://wubo-pilotage-widgets.vercel.app/widgets/<nom>/`
+Les widgets marchent aussi hors Grist via l'API REST Grist + cle stockee localement.
 
-Recommandation : **Option B** pour garder le prive + controle complet de la latence.
+1. Sur ton ordi : https://grist.playwubo.com > clique ton avatar (haut droite) > Profile Settings > API Key > Create. Copie la cle.
+2. Sur ton iPhone, ouvre dans Safari : `https://deuoleidelb.github.io/wubo-pilotage-widgets/widgets/aujourdhui/`
+3. Un prompt te demande ta cle. Colle-la. Elle est stockee uniquement sur cet appareil (localStorage).
+4. Bouton partage Safari > **Ajouter a l'ecran d'accueil**. Nomme "Pilotage" ou similaire.
+5. L'icone sur ton home screen ouvre le widget en plein ecran (mode PWA, pas de barre Safari).
 
-## Installation dans Grist
+Idem pour `widgets/semaine/` si tu veux un 2e raccourci pour la projection du sprint.
 
-Dans le doc Grist "Pilotage Wubo", pour ajouter un widget :
+## Reinitialiser la cle API
 
-1. Ouvrir la page souhaitee
-2. Ajouter une nouvelle section > Custom
-3. Coller l'URL du widget
-4. Selectionner la table cible
-5. Selectionner les colonnes si demande
+Console navigateur : `localStorage.removeItem('wubo_grist_api_key')`. Ou appelle `WuboGrist.resetApiKey()`.
 
-## Convention DA
+## Structure
 
-Toutes les styles respectent la DA Wubo :
-- Palette : cream `#FAF5F2`, yellow `#FFDD0B`, purple `#5914D0`, pink `#D40272`
-- Fonts : Outfit (titres) + Satoshi (body)
-- Ombre signature : `4px 4px 0 <couleur>`
-- Pas de tiret cadratin
+```
+icon.svg                  # icone PWA
+manifest.webmanifest      # manifest PWA
+index.html                # landing page
+lib/
+  styles.css              # DA utilitaire commune
+  dom.js                  # helpers DOM ($el, $clear, $replace)
+  grist-api.js            # couche unifiee (iframe Grist OR REST standalone)
+widgets/
+  aujourdhui/             # vue du jour + dump integre
+  semaine/                # projection sprint complet
+  dashboard/              # objectifs + sujets
+  dump/                   # capture longue avec historique
+```
 
-Voir `lib/styles.css` pour la base commune.
+## DA
+
+Utilitaire, dense, pas kit enfant. Fond neutre `#F4F4F1`, surfaces blanches bordees, un seul accent jaune `#FFDD0B` pour les actions principales, violet Wubo `#5914D0` pour le bloc courant uniquement. Typo systeme (San Francisco sur iOS, Segoe UI sur Windows). Pas d'ombres offset. Radius 4-6px max.
+
+## Dev
+
+Repo public pour GitHub Pages. Aucun secret cote serveur (la cle API Grist est stockee uniquement cote client).
+
+Modifier > commit > push sur main. GitHub Pages redeploye en ~30 secondes.

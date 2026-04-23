@@ -2,174 +2,219 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Dashboard">
+<meta name="theme-color" content="#F4F4F1">
+<link rel="apple-touch-icon" href="../../icon.svg">
+<link rel="icon" type="image/svg+xml" href="../../icon.svg">
+<link rel="manifest" href="../../manifest.webmanifest">
 <title>Dashboard - Pilotage Wubo</title>
 <link rel="stylesheet" href="../../lib/styles.css">
 <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
 <script src="../../lib/dom.js"></script>
+<script src="../../lib/grist-api.js"></script>
 <style>
-  .objectif-card { margin-bottom: 12px; }
-  .objectif-title { font-weight: 700; font-size: 16px; margin-bottom: 4px; }
-  .objectif-meta { color: var(--wubo-gray); font-size: 12px; margin-bottom: 8px; }
-  .objectif-desc { font-size: 13px; color: var(--wubo-gray); margin-bottom: 6px; }
-  .progress-value { font-size: 12px; text-align: right; font-weight: 600; }
-  .kpi-block { background: var(--wubo-cream); padding: 8px; border-radius: 6px; margin-top: 6px; font-size: 12px; }
-  .kpi-block.actuel { background: #FFF9D6; }
-  .kpi-block strong { display: block; color: var(--wubo-purple); margin-bottom: 2px; }
-  .stats-bar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
-  .stat { background: white; padding: 10px 14px; border-radius: 8px; border: 2px solid var(--wubo-black); box-shadow: 3px 3px 0 var(--wubo-yellow); flex: 1; min-width: 140px; }
-  .stat-label { font-size: 11px; color: var(--wubo-gray); }
-  .stat-value { font-size: 22px; font-weight: 800; color: var(--wubo-black); }
-  .sujets-section { margin-top: 24px; }
-  .sujet-item { padding: 8px 10px; border: 1px solid var(--wubo-light-gray); border-radius: 6px; margin-bottom: 6px; background: white; font-size: 13px; }
-  .sujet-item.stagnation-haute { border-left: 4px solid var(--wubo-danger); }
-  .sujet-item.stagnation-moyenne { border-left: 4px solid var(--wubo-warning); }
-  .sujet-header { display: flex; justify-content: space-between; align-items: center; }
-  .sujet-meta { font-size: 12px; color: var(--wubo-gray); margin-top: 4px; }
-  .sujet-etape { font-size: 12px; margin-top: 4px; }
+  #app {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 12px 14px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  header { padding-bottom: 6px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-end; }
+  header h1 { font-size: 17px; }
+  header .sub { font-size: 11px; color: var(--text-dim); }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+  }
+  .stat .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); }
+  .stat .value { font-size: 20px; font-weight: 700; color: var(--text); line-height: 1.1; margin-top: 2px; }
+
+  .obj {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+  }
+  .obj .title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+  .obj .meta { font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.04em; }
+  .obj .desc { font-size: 12px; color: var(--text-dim); margin: 4px 0 6px; }
+  .obj .prog-line { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+  .obj .prog-line .progress-bar { flex: 1; height: 5px; }
+  .obj .prog-val { font-size: 11px; font-weight: 600; min-width: 32px; text-align: right; }
+  .obj .kpi { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+  .obj .kpi strong { color: var(--current); }
+
+  .sujet {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border-strong);
+    border-radius: 4px;
+    padding: 8px 10px;
+    margin-bottom: 4px;
+  }
+  .sujet.warn { border-left-color: var(--warning); }
+  .sujet.danger { border-left-color: var(--danger); }
+  .sujet-head { display: flex; justify-content: space-between; gap: 6px; font-size: 13px; font-weight: 600; }
+  .sujet-meta { font-size: 10px; color: var(--text-faint); margin-top: 2px; }
+  .sujet-step { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
+
+  #error { background: var(--danger); color: white; padding: 8px; border-radius: 4px; font-size: 12px; }
+
+  @media (max-width: 600px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+  }
 </style>
 </head>
 <body>
 
-<div class="header">
-  <h1>Dashboard Pilotage</h1>
-  <div id="last-update" style="font-size: 11px; color: var(--wubo-gray);"></div>
-</div>
+<main id="app">
+  <header>
+    <div>
+      <h1>Dashboard</h1>
+      <div class="sub" id="last-update"></div>
+    </div>
+  </header>
 
-<div class="stats-bar" id="stats"></div>
+  <div id="error" style="display:none"></div>
 
-<h2>Objectifs trimestre</h2>
-<div id="objectifs-container"></div>
+  <section>
+    <h2 style="margin-bottom:6px">Etat</h2>
+    <div class="stats" id="stats"></div>
+  </section>
 
-<div class="sujets-section">
-  <h2>Sujets a pousser (anti-evitement)</h2>
-  <div id="sujets-container"></div>
-</div>
+  <section>
+    <h2 style="margin-bottom:6px">Objectifs trimestre</h2>
+    <div id="objectifs"></div>
+  </section>
+
+  <section>
+    <h2 style="margin-bottom:6px">Sujets a pousser (anti-evitement)</h2>
+    <div id="sujets"></div>
+  </section>
+</main>
 
 <script>
-function formatDeadline(val) {
-  if (!val) return '';
-  const d = typeof val === 'number' ? new Date(val * 1000) : new Date(val);
-  return d.toLocaleDateString('fr-FR');
-}
+const { $el, $clear } = Dom;
 
-function buildStat(label, value) {
+function stat(label, value) {
   return $el('div', { class: 'stat' },
-    $el('div', { class: 'stat-label' }, label),
-    $el('div', { class: 'stat-value' }, String(value))
+    $el('div', { class: 'label' }, label),
+    $el('div', { class: 'value' }, String(value))
   );
 }
 
-function buildProgressBar(pct) {
-  const bar = $el('div', { class: 'progress-bar' });
-  const fill = $el('div', { class: 'fill' });
-  fill.style.width = `${pct}%`;
-  bar.appendChild(fill);
-  return bar;
+function progressBar(pct) {
+  return $el('div', { class: 'progress-bar' },
+    $el('div', { class: 'fill', style: { width: `${pct}%` } })
+  );
 }
 
-function buildObjectif(o) {
-  const prog = Math.round(o.progression || 0);
-  const priorite = o.priorite ? `Priorite ${o.priorite}` : '';
-  const deadline = formatDeadline(o.deadline);
+function fmtDate(v) {
+  if (!v) return '-';
+  const d = typeof v === 'number' ? new Date(v * 1000) : new Date(v);
+  return d.toLocaleDateString('fr-FR');
+}
 
-  const card = $el('div', { class: 'card objectif-card' });
-  card.appendChild($el('div', { class: 'objectif-title' }, o.titre || ''));
-  card.appendChild($el('div', { class: 'objectif-meta' },
-    `${o.trimestre || ''} | ${priorite} | Deadline ${deadline} | ${o.proprietaire || ''}`));
-  if (o.description) card.appendChild($el('div', { class: 'objectif-desc' }, o.description));
-  card.appendChild(buildProgressBar(prog));
-  card.appendChild($el('div', { class: 'progress-value' }, `${prog}%`));
-  card.appendChild($el('div', { class: 'kpi-block' },
-    $el('strong', {}, 'KPI vise :'),
-    o.kpi_vise || '-'
+function renderObj(o) {
+  const prog = Math.round(o.progression || 0);
+  const card = $el('div', { class: 'obj' });
+  card.appendChild($el('div', { class: 'title' }, o.titre || ''));
+  card.appendChild($el('div', { class: 'meta' },
+    `${o.trimestre || ''} · P${o.priorite || '-'} · ${fmtDate(o.deadline)} · ${o.proprietaire || ''}`));
+  if (o.description) card.appendChild($el('div', { class: 'desc' }, o.description));
+  card.appendChild($el('div', { class: 'prog-line' },
+    progressBar(prog),
+    $el('span', { class: 'prog-val' }, `${prog}%`)
   ));
-  card.appendChild($el('div', { class: 'kpi-block actuel' },
-    $el('strong', {}, 'KPI actuel :'),
-    o.kpi_actuel || '-'
-  ));
+  if (o.kpi_vise || o.kpi_actuel) {
+    card.appendChild($el('div', { class: 'kpi' },
+      'Vise : ', o.kpi_vise || '-', ' · Actuel : ',
+      $el('strong', {}, o.kpi_actuel || '-')
+    ));
+  }
   return card;
 }
 
-function buildSujet(s) {
-  const jours = s.jours_stagnation || 0;
-  let classe = 'sujet-item';
-  let tagClass = '';
-  if (jours > 14) { classe += ' stagnation-haute'; tagClass = 'danger'; }
-  else if (jours > 7) { classe += ' stagnation-moyenne'; tagClass = 'warning'; }
-
-  const item = $el('div', { class: classe });
-  item.appendChild($el('div', { class: 'sujet-header' },
-    $el('strong', {}, s.titre || ''),
-    $el('span', { class: `tag ${tagClass}` }, `Stagnation ${jours === 999 ? 'jamais' : jours + 'j'}`)
+function renderSujet(s) {
+  const j = s.jours_stagnation || 0;
+  let cls = 'sujet';
+  if (j > 14) cls += ' danger';
+  else if (j > 7) cls += ' warn';
+  const tag = j > 14 ? 'danger' : j > 7 ? 'warn' : '';
+  const item = $el('div', { class: cls });
+  item.appendChild($el('div', { class: 'sujet-head' },
+    $el('span', {}, s.titre || ''),
+    $el('span', { class: 'tag ' + tag }, `Stagnation ${j === 999 ? '∞' : j + 'j'}`)
   ));
-  item.appendChild($el('div', { class: 'sujet-meta' }, `${s.type || ''} | ${s.proprietaire || ''}`));
-  if (s.prochaine_etape) {
-    item.appendChild($el('div', { class: 'sujet-etape' },
-      $el('strong', {}, 'Prochaine etape : '),
-      s.prochaine_etape
-    ));
-  }
+  item.appendChild($el('div', { class: 'sujet-meta' }, `${s.type || ''} · ${s.proprietaire || ''}`));
+  if (s.prochaine_etape) item.appendChild($el('div', { class: 'sujet-step' }, '→ ' + s.prochaine_etape));
   return item;
 }
 
 async function render() {
+  const err = document.getElementById('error');
+  err.style.display = 'none';
   try {
-    const [objTable, projTable, tachesTable, sujetsTable] = await Promise.all([
-      grist.docApi.fetchTable('Objectifs'),
-      grist.docApi.fetchTable('Projets'),
-      grist.docApi.fetchTable('Taches'),
-      grist.docApi.fetchTable('Sujets_a_pousser')
+    const [objT, tachesT, sujetsT] = await Promise.all([
+      WuboGrist.fetchRows('Objectifs'),
+      WuboGrist.fetchRows('Taches'),
+      WuboGrist.fetchRows('Sujets_a_pousser')
     ]);
-    const objectifs = gristTableToRows(objTable).filter(o => o.statut === 'Actif');
-    const taches = gristTableToRows(tachesTable);
-    const sujets = gristTableToRows(sujetsTable).filter(s => s.statut === 'Actif');
 
-    // Stats
-    const total = taches.length;
-    const fait = taches.filter(t => t.statut === 'Fait').length;
-    const enCours = taches.filter(t => t.statut === 'En cours').length;
-    const bloque = taches.filter(t => t.statut === 'Bloque').length;
+    const objectifs = objT.filter(o => o.statut === 'Actif');
+    const sujets = sujetsT.filter(s => s.statut === 'Actif');
+
+    const total = tachesT.length;
+    const fait = tachesT.filter(t => t.statut === 'Fait').length;
+    const enCours = tachesT.filter(t => t.statut === 'En cours').length;
+    const bloque = tachesT.filter(t => t.statut === 'Bloque').length;
     const pct = total > 0 ? Math.round((fait / total) * 100) : 0;
 
     const statsNode = document.getElementById('stats');
-    $replace(statsNode,
-      buildStat('Taches faites', `${fait} / ${total}`),
-      buildStat('En cours', enCours),
-      buildStat('Bloquees', bloque),
-      buildStat('Avancement', `${pct}%`)
-    );
+    $clear(statsNode);
+    statsNode.appendChild(stat('Faites', `${fait}/${total}`));
+    statsNode.appendChild(stat('En cours', enCours));
+    statsNode.appendChild(stat('Bloquees', bloque));
+    statsNode.appendChild(stat('Avancement', `${pct}%`));
 
-    // Objectifs
-    const objContainer = document.getElementById('objectifs-container');
-    clearNode(objContainer);
-    if (objectifs.length === 0) {
-      objContainer.appendChild($el('div', { class: 'empty' }, 'Aucun objectif actif'));
-    } else {
-      objectifs.forEach(o => objContainer.appendChild(buildObjectif(o)));
-    }
+    const oNode = document.getElementById('objectifs');
+    $clear(oNode);
+    if (objectifs.length === 0) oNode.appendChild($el('div', { class: 'empty' }, 'Aucun objectif actif'));
+    else objectifs.forEach(o => oNode.appendChild(renderObj(o)));
 
-    // Sujets a pousser
-    const sujetsContainer = document.getElementById('sujets-container');
-    clearNode(sujetsContainer);
-    if (sujets.length === 0) {
-      sujetsContainer.appendChild($el('div', { class: 'empty' }, 'Aucun sujet en attente'));
-    } else {
+    const sNode = document.getElementById('sujets');
+    $clear(sNode);
+    if (sujets.length === 0) sNode.appendChild($el('div', { class: 'empty' }, 'Aucun sujet en attente'));
+    else {
       sujets.sort((a, b) => (b.jours_stagnation || 0) - (a.jours_stagnation || 0));
-      sujets.forEach(s => sujetsContainer.appendChild(buildSujet(s)));
+      sujets.forEach(s => sNode.appendChild(renderSujet(s)));
     }
 
-    document.getElementById('last-update').textContent = 'MAJ : ' + new Date().toLocaleTimeString('fr-FR');
+    document.getElementById('last-update').textContent = 'MAJ ' + new Date().toLocaleTimeString('fr-FR');
   } catch (e) {
-    const objContainer = document.getElementById('objectifs-container');
-    clearNode(objContainer);
-    objContainer.appendChild($el('div', { class: 'empty' }, 'Erreur : ' + e.message));
+    err.textContent = 'Erreur : ' + e.message;
+    err.style.display = 'block';
   }
 }
 
-grist.ready({ requiredAccess: 'full' });
-grist.onRecords(() => render());
-render();
+(async () => {
+  await WuboGrist.initGrist();
+  try { if (typeof grist !== 'undefined' && grist.onRecords) grist.onRecords(() => render()); } catch (_) {}
+  render();
+})();
 </script>
 
 </body>
