@@ -74,15 +74,16 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 5px;
-    padding: 5px 4px;
-    min-height: 68px;
-    font-size: 10px;
-    line-height: 1.25;
+    padding: 4px 3px 4px 4px;
+    min-height: 60px;
+    font-size: 9px;
+    line-height: 1.2;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 1px;
     overflow: hidden;
     position: relative;
+    padding-right: 14px;
   }
   .cell.empty { background: var(--bg); border-style: dashed; }
   .cell.done { background: #EAF4EE; }
@@ -104,16 +105,17 @@
   .status-dot.wip { background: var(--accent-strong); }
   .status-dot.planned { background: var(--border-strong); }
 
-  .cell ul { list-style: none; padding: 0; margin: 0; }
+  .cell ul { list-style: none; padding: 0; margin: 0; font-size: 9px; line-height: 1.2; }
   .cell li {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     color: var(--text);
-    padding: 1px 0;
+    padding: 0;
+    max-width: 100%;
   }
   .cell.done li, .cell.skip li { color: var(--text-faint); text-decoration: line-through; }
-  .cell .note-dot { position: absolute; bottom: 4px; right: 5px; font-size: 9px; color: var(--warning); }
+  .cell .note-dot { position: absolute; bottom: 3px; right: 4px; font-size: 8px; color: var(--warning); }
 
   .bottom {
     position: fixed;
@@ -233,13 +235,13 @@ function renderCell(bloc, tachesById, isToday, tranche) {
   }
 
   const tIds = WuboGrist.refListIds(bloc.taches_liees);
-  const ul = $el('ul', {});
   const titles = tIds.map(id => (tachesById[id] && tachesById[id].titre) || '').filter(Boolean);
   if (titles.length === 0) {
-    cell.appendChild($el('div', { class: 'empty', style: { fontSize: '9px' } }, 'Libre'));
+    cell.appendChild($el('div', { style: { fontSize: '8px', color: 'var(--text-faint)', fontStyle: 'italic' } }, 'Libre'));
   } else {
-    titles.slice(0, 2).forEach(t => ul.appendChild($el('li', {}, t)));
-    if (titles.length > 2) ul.appendChild($el('li', { style: { color: 'var(--text-faint)' } }, `+${titles.length - 2}`));
+    const ul = $el('ul', {});
+    ul.appendChild($el('li', { title: titles.join(' · ') }, titles[0]));
+    if (titles.length > 1) ul.appendChild($el('li', { style: { color: 'var(--text-faint)', fontSize: '8px' } }, `+${titles.length - 1}`));
     cell.appendChild(ul);
   }
 
@@ -249,7 +251,15 @@ function renderCell(bloc, tachesById, isToday, tranche) {
 
 function showError(msg) {
   const e = document.getElementById('error');
-  e.textContent = msg;
+  $clear(e);
+  e.appendChild($el('div', {}, msg));
+  if (!WuboGrist.inGristIframe()) {
+    e.appendChild($el('button', {
+      class: 'small',
+      style: { marginTop: '6px', background: 'white', color: 'var(--danger)', border: '1px solid white' },
+      onclick: () => { WuboGrist.resetApiKey(); location.reload(); }
+    }, 'Changer de cle API'));
+  }
   e.style.display = 'block';
 }
 
@@ -303,7 +313,7 @@ async function render() {
   const fmt = d => `${d.getDate()} ${MONTHS[d.getMonth()]}`;
   const totalFait = blocs.filter(b => b.statut === 'Fait').length;
   document.getElementById('sub').textContent =
-    `${fmt(firstDay)} — ${fmt(lastDay)} · ${totalFait}/${blocs.length} blocs faits`;
+    `${fmt(firstDay)} au ${fmt(lastDay)} · ${totalFait}/${blocs.length} blocs faits`;
 
   // top-left empty cell
   grid.appendChild($el('div', {}));
@@ -327,7 +337,16 @@ async function render() {
 }
 
 function goAujourdhui() { window.location.href = '../aujourdhui/'; }
-function refresh() { render(); }
+async function refresh() {
+  const btn = document.querySelector('nav.bottom button:last-child');
+  if (!btn) return;
+  const orig = btn.textContent;
+  btn.textContent = '⟳';
+  btn.disabled = true;
+  try { await render(); btn.textContent = '✓'; }
+  catch (e) { btn.textContent = '✕'; }
+  setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1000);
+}
 
 (async () => {
   await WuboGrist.initGrist();

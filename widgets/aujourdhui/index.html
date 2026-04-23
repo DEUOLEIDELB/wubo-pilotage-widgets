@@ -160,8 +160,8 @@
   <button class="ghost" onclick="refresh()">↻ Refresh</button>
 </nav>
 
-<div id="dump-modal" class="modal hidden">
-  <div class="modal-content">
+<div id="dump-modal" class="modal hidden" onclick="backdropClose(event)">
+  <div class="modal-content" onclick="event.stopPropagation()">
     <div class="modal-head">
       <h3>Dump rapide</h3>
       <button class="ghost small" onclick="closeDump()">Annuler</button>
@@ -200,7 +200,15 @@ function weekNumber(d) {
 
 function showError(msg) {
   const e = document.getElementById('error');
-  e.textContent = msg;
+  $clear(e);
+  e.appendChild($el('div', {}, msg));
+  if (!WuboGrist.inGristIframe()) {
+    e.appendChild($el('button', {
+      class: 'small',
+      style: { marginTop: '6px', background: 'white', color: 'var(--danger)', border: '1px solid white' },
+      onclick: () => { WuboGrist.resetApiKey(); location.reload(); }
+    }, 'Changer de cle API'));
+  }
   e.style.display = 'block';
 }
 function clearError() {
@@ -357,8 +365,18 @@ async function submitDump() {
 
 function openDump() { document.getElementById('dump-modal').classList.remove('hidden'); }
 function closeDump() { document.getElementById('dump-modal').classList.add('hidden'); }
+function backdropClose(e) { if (e.target === e.currentTarget) closeDump(); }
 function goSemaine() { window.location.href = '../semaine/'; }
-function refresh() { render(); }
+async function refresh() {
+  const btn = document.querySelector('nav.bottom button.ghost');
+  if (!btn) return;
+  const orig = btn.textContent;
+  btn.textContent = '⟳ Chargement...';
+  btn.disabled = true;
+  try { await render(); btn.textContent = '✓ A jour'; }
+  catch (e) { btn.textContent = '✕ Erreur'; }
+  setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1200);
+}
 
 (async () => {
   await WuboGrist.initGrist();
