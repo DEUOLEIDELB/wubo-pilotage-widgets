@@ -30,8 +30,12 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
-    padding: 2px 2px 6px;
+    padding: 6px 2px 6px;
     border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: var(--sub-sticky-top);
+    z-index: 20;
+    background: var(--bg);
   }
   .day-header h1 { font-size: 18px; text-transform: capitalize; line-height: 1.1; }
   .day-header .sub { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
@@ -60,6 +64,43 @@
   .bloc ul li { padding: 5px 6px; border-radius: 4px; display: flex; align-items: center; gap: 7px; cursor: pointer; }
   .bloc ul li:hover, .bloc ul li:active { background: rgba(0,0,0,0.04); }
   .bloc ul li .titre-tache { flex: 1; }
+  .bloc ul li.done .titre-tache { text-decoration: line-through; color: var(--text-faint); }
+
+  /* Chevron pour dérouler les sous-tâches */
+  .bloc ul li .toggle-subs {
+    background: transparent;
+    border: none;
+    padding: 2px 4px;
+    font-size: 11px;
+    color: var(--text-faint);
+    cursor: pointer;
+    line-height: 1;
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+  }
+  .bloc ul li .toggle-subs:hover { color: var(--current); }
+
+  .subtasks-inline {
+    padding: 2px 0 4px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    border-left: 2px solid var(--border);
+    margin-left: 6px;
+  }
+  .subtask-inline {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 6px;
+    font-size: 12px;
+    color: var(--text);
+    cursor: pointer;
+    border-radius: 3px;
+  }
+  .subtask-inline:active { background: rgba(0,0,0,0.04); }
+  .subtask-inline.done .subtask-titre { text-decoration: line-through; color: var(--text-faint); }
+  .subtask-inline .subtask-titre { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .add-tache {
     margin-top: 4px;
     padding: 5px 8px;
@@ -323,6 +364,63 @@ let tachesById = {};
 let pendingSubtasks = [];
 // ID de la tâche flashée brièvement après édition (pour l'animation .just-updated)
 let justUpdatedTaskId = null;
+// Tâches dont les sous-tâches sont dépliées en ligne (persist session)
+const expandedTaskIds = (() => {
+  try {
+    const raw = sessionStorage.getItem('wubo_jour_expanded');
+    return new Set(raw ? JSON.parse(raw) : []);
+  } catch (_) { return new Set(); }
+})();
+function persistExpanded() {
+  try { sessionStorage.setItem('wubo_jour_expanded', JSON.stringify(Array.from(expandedTaskIds))); } catch (_) {}
+}
+function toggleSubsInline(taskId) {
+  if (expandedTaskIds.has(taskId)) expandedTaskIds.delete(taskId);
+  else expandedTaskIds.add(taskId);
+  persistExpanded();
+  render();
+}
+// Toggle rapide Fait / Pas commencé d'une sous-tâche (click inline ou dans la modal)
+async function toggleSubtaskDone(sub) {
+  const next = (sub.statut === 'Fait') ? 'Pas commence' : 'Fait';
+  const fields = { statut: next };
+  if (next === 'Fait') fields.date_fait = WuboGrist.nowUnix();
+  try {
+    await WuboGrist.updateRecord('Taches', sub.id, fields);
+    justUpdatedTaskId = sub.id;
+    WuboGrist.toast(next === 'Fait' ? 'Sous-tâche faite' : 'Sous-tâche ré-ouverte', 'success', 1400);
+    await render();
+    // Si la modal tâche parent est ouverte, on redessine la liste pour refléter
+    if (currentTaskEditId && currentTaskEditId === sub.parent_tache) {
+      fillTaskEditForm(currentTaskEditId);
+    }
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
+  }
+}
+// Delete définitif d'une sous-tâche (croix dans la modal)
+async function deleteSubtaskHard(sub) {
+  if (!confirm(`Supprimer "${sub.titre || '(sans titre)'}" ?\n\nIrréversible. La sous-tâche disparaîtra partout.`)) return;
+  try {
+    // Retire du bloc si présente
+    const blocs = await WuboGrist.fetchRows('Blocs_temps');
+    for (const b of blocs) {
+      const ids = WuboGrist.refListIds(b.taches_liees);
+      if (ids.includes(sub.id)) {
+        const next = ids.filter(x => x !== sub.id);
+        try { await WuboGrist.updateRecord('Blocs_temps', b.id, { taches_liees: ['L', ...next] }); } catch (_) {}
+      }
+    }
+    await WuboGrist.deleteRecord('Taches', sub.id);
+    WuboGrist.toast('Sous-tâche supprimée', 'info');
+    await render();
+    if (currentTaskEditId && currentTaskEditId === sub.parent_tache) {
+      fillTaskEditForm(currentTaskEditId);
+    }
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
+  }
+}
 
 function statutClass(s) {
   if (!s) return 'todo';
@@ -404,15 +502,55 @@ function renderBloc(tranche, bloc) {
   tIds.forEach(tid => {
     const t = tachesById[tid];
     if (!t) return;
-    const liClass = (justUpdatedTaskId === tid) ? 'just-updated' : '';
-    const li = $el('li', { class: liClass, onclick: () => openTaskEdit(tid) },
+    const subs = Object.values(tachesById).filter(x => x.parent_tache === tid && x.statut !== 'Archive');
+    const liClassList = ['tache-row'];
+    if (justUpdatedTaskId === tid) liClassList.push('just-updated');
+    if (t.statut === 'Fait') liClassList.push('done');
+    const li = $el('li', {
+      class: liClassList.join(' '),
+      onclick: (e) => {
+        // Ne pas ouvrir la modal si on a cliqué sur le chevron
+        if (e.target.closest('.toggle-subs')) return;
+        openTaskEdit(tid);
+      }
+    },
       $el('span', { class: 'status-pill ' + statutClass(t.statut) })
     );
     if (t.est_deadline_externe) {
       li.appendChild($el('span', { class: 'ext-deadline-icon', title: 'Deadline externe dure' }, '⏰'));
     }
     li.appendChild($el('span', { class: 'titre-tache' }, t.titre));
+    // Chevron pour dérouler les sous-tâches
+    if (subs.length > 0) {
+      const isOpen = expandedTaskIds.has(tid);
+      const chevronLabel = isOpen ? `▾ ${subs.length}` : `▸ ${subs.length}`;
+      li.appendChild($el('button', {
+        class: 'toggle-subs',
+        onclick: (e) => {
+          e.stopPropagation();
+          toggleSubsInline(tid);
+        }
+      }, chevronLabel));
+    }
     ul.appendChild(li);
+    // Liste inline des sous-tâches si ouvert
+    if (subs.length > 0 && expandedTaskIds.has(tid)) {
+      const subsContainer = $el('div', { class: 'subtasks-inline' });
+      subs.forEach(s => {
+        const row = $el('div', {
+          class: 'subtask-inline' + (s.statut === 'Fait' ? ' done' : ''),
+          onclick: async (e) => {
+            e.stopPropagation();
+            await toggleSubtaskDone(s);
+          }
+        },
+          $el('span', { class: 'status-pill ' + statutClass(s.statut) }),
+          $el('span', { class: 'subtask-titre', title: s.titre }, s.titre || '(sans titre)')
+        );
+        subsContainer.appendChild(row);
+      });
+      ul.appendChild(subsContainer);
+    }
   });
   el.appendChild(ul);
   el.appendChild($el('button', { class: 'add-tache', onclick: () => openTaskNew(bloc.id) }, '+ Ajouter une tâche'));
@@ -785,11 +923,31 @@ function renderSubtasks(subs) {
     return;
   }
   subs.forEach(s => {
-    // Click = replaceTaskEdit : swap in-place, pas de close/open (évite effet de disparition)
-    node.appendChild($el('div', { class: 'subtask', onclick: () => replaceTaskEdit(s.id) },
-      $el('span', { class: 'status-pill ' + statutClass(s.statut) }),
-      $el('span', { style: { flex: '1' } }, s.titre)
-    ));
+    const isDone = s.statut === 'Fait';
+    const row = $el('div', {
+      class: 'subtask' + (isDone ? ' done' : ''),
+      onclick: async (e) => {
+        // Ignorer si click sur la croix
+        if (e.target.closest('.sub-del')) return;
+        await toggleSubtaskDone(s);
+      }
+    });
+    row.appendChild($el('span', { class: 'status-pill ' + statutClass(s.statut) }));
+    row.appendChild($el('span', {
+      class: 'sub-label',
+      style: { flex: '1', textDecoration: isDone ? 'line-through' : 'none', color: isDone ? 'var(--text-faint)' : 'var(--text)' }
+    }, s.titre || '(sans titre)'));
+    row.appendChild($el('button', {
+      type: 'button',
+      class: 'sub-del ghost small',
+      title: 'Supprimer définitivement',
+      style: { padding: '2px 8px', fontSize: '12px', color: 'var(--danger)', border: '1px solid var(--border)' },
+      onclick: async (e) => {
+        e.stopPropagation();
+        await deleteSubtaskHard(s);
+      }
+    }, '✕'));
+    node.appendChild(row);
   });
 }
 
@@ -1017,6 +1175,8 @@ document.addEventListener('keydown', e => {
 (async () => {
   await WuboGrist.initGrist();
   try { if (typeof grist !== 'undefined' && grist.onRecords) grist.onRecords(() => render()); } catch (_) {}
+  // Cache SWR : re-render si une table est rafraîchie en arrière-plan
+  window.addEventListener('wubo-data-fresh', () => render());
   // Bind draft persist sur le textarea du dump rapide
   dumpBinding = WuboGrist.bindDumpTextarea(
     document.getElementById('dump-content'),

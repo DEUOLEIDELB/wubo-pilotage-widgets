@@ -420,6 +420,7 @@ window.addEventListener('storage', (e) => {
   loadDraft();
   updateCounter();
   try { if (typeof grist !== 'undefined' && grist.onRecords) grist.onRecords(() => load()); } catch (_) {}
+  window.addEventListener('wubo-data-fresh', () => load());
   load();
 })();
 </script>

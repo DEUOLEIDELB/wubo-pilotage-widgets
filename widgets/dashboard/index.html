@@ -25,7 +25,14 @@
     flex-direction: column;
     gap: 10px;
   }
-  .page-title { padding: 2px 2px 6px; border-bottom: 1px solid var(--border); }
+  .page-title {
+    padding: 6px 2px 6px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: var(--sub-sticky-top);
+    z-index: 22;
+    background: var(--bg);
+  }
   .page-title h1 { font-size: 17px; }
   .page-title .sub { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
 
@@ -175,12 +182,28 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 6px;
-    padding: 12px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    position: relative;
+    margin-bottom: 8px;
+    overflow: visible;
   }
-  .obj-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .obj-body { padding: 0 12px 12px; display: flex; flex-direction: column; gap: 10px; }
+  /* Le titre de chaque objectif reste collé en haut pendant qu'on scroll dans sa zone.
+     Quand on sort de la zone (fin du .objectif), le prochain obj-head prend la place. */
+  .obj-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px 8px;
+    position: sticky;
+    top: calc(var(--sub-sticky-top) + 48px);
+    z-index: 15;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    border-radius: 6px 6px 0 0;
+  }
   .obj-title {
     font-size: 15px;
     font-weight: 700;
@@ -871,6 +894,7 @@ function renderObjectif(o) {
   if (o.deadline) metaBits.push('éch ' + fmtDate(o.deadline));
   if (o.proprietaire) metaBits.push(o.proprietaire);
 
+  // Header sticky : reste collé pendant le scroll de sa section
   const head = $el('div', { class: 'obj-head' });
   const headLeft = $el('div', { style: { flex: '1', minWidth: '0' } });
   headLeft.appendChild($el('div', { class: 'obj-title', title: o.titre || '' }, o.titre || ''));
@@ -884,9 +908,11 @@ function renderObjectif(o) {
   head.appendChild($el('span', { class: 'tag ' + (prog >= 75 ? 'done' : prog >= 25 ? 'wip' : '') }, `${prog}%`));
   el.appendChild(head);
 
-  if (o.description) el.appendChild($el('div', { style: { fontSize: '11px', color: 'var(--text-dim)' } }, o.description));
+  // Corps NON sticky : contient la progression + projets + tâches
+  const body = $el('div', { class: 'obj-body' });
+  if (o.description) body.appendChild($el('div', { style: { fontSize: '11px', color: 'var(--text-dim)' } }, o.description));
 
-  el.appendChild($el('div', { class: 'obj-prog-row' },
+  body.appendChild($el('div', { class: 'obj-prog-row' },
     $el('div', { class: 'progress-bar ' + (prog >= 50 ? 'high' : 'low') },
       $el('div', { class: 'fill', style: { width: prog + '%' } })
     ),
@@ -894,13 +920,14 @@ function renderObjectif(o) {
   ));
 
   if (o.kpi_vise || o.kpi_actuel) {
-    el.appendChild($el('div', { class: 'obj-kpi' },
+    body.appendChild($el('div', { class: 'obj-kpi' },
       'KPI visé : ', o.kpi_vise || '-', ' · actuel : ',
       $el('strong', {}, o.kpi_actuel || '-')
     ));
   }
-  projetsOfObj.forEach(p => el.appendChild(renderProjet(p)));
-  if (projetsOfObj.length === 0) el.appendChild($el('div', { class: 'empty', style: { fontSize: '11px' } }, 'Aucun projet rattaché'));
+  projetsOfObj.forEach(p => body.appendChild(renderProjet(p)));
+  if (projetsOfObj.length === 0) body.appendChild($el('div', { class: 'empty', style: { fontSize: '11px' } }, 'Aucun projet rattaché'));
+  el.appendChild(body);
   return el;
 }
 
@@ -1260,6 +1287,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeTaskE
 (async () => {
   await WuboGrist.initGrist();
   try { if (typeof grist !== 'undefined' && grist.onRecords) grist.onRecords(() => render()); } catch (_) {}
+  window.addEventListener('wubo-data-fresh', () => render());
   dumpBinding = WuboGrist.bindDumpTextarea(
     document.getElementById('dump-content'),
     document.getElementById('dump-contexte')

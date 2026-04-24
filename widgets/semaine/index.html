@@ -26,6 +26,15 @@
     flex-direction: column;
     gap: 8px;
   }
+  /* Sprint-header + view-toggle regroupés en un sticky block sous la navbar */
+  .semaine-sticky-block {
+    position: sticky;
+    top: var(--sub-sticky-top);
+    z-index: 20;
+    background: var(--bg);
+    padding-top: 4px;
+    margin-top: -4px;
+  }
   .sprint-header {
     display: flex;
     justify-content: space-between;
@@ -33,10 +42,7 @@
     gap: 8px;
     padding: 2px 4px 6px;
     border-bottom: 1px solid var(--border);
-    position: sticky;
-    top: env(safe-area-inset-top);
     background: var(--bg);
-    z-index: 20;
   }
   .sprint-header .title-block { flex: 1; min-width: 0; }
   .sprint-header h1 { font-size: 16px; line-height: 1.1; }
@@ -135,21 +141,33 @@
   .agenda-day.today .agenda-day-num { color: var(--current); }
   .agenda-day-dots {
     display: flex;
-    gap: 2px;
+    gap: 3px;
     justify-content: center;
+    align-items: center;
     margin-top: auto;
+    height: 8px;
   }
   .agenda-dot {
+    flex: 0 0 6px;
     width: 6px;
     height: 6px;
     border-radius: 50%;
     background: var(--border-strong);
+    display: inline-block;
+    box-sizing: border-box;
   }
   .agenda-dot.done { background: var(--success); }
   .agenda-dot.wip { background: var(--accent-strong); }
   .agenda-dot.skip { background: var(--text-faint); opacity: 0.5; }
   .agenda-dot.current { background: var(--current); }
-  .agenda-dot.empty { background: transparent; border: 1px solid var(--border); }
+  /* Case sans bloc : trait horizontal discret plutôt que cercle "creux" */
+  .agenda-dot.empty {
+    background: var(--border);
+    border-radius: 1px;
+    width: 5px;
+    height: 2px;
+    flex: 0 0 5px;
+  }
   .agenda-day-extra {
     font-size: 8px;
     color: var(--text-faint);
@@ -324,7 +342,13 @@
   }
   .slot:first-child { border-top: none; }
   .slot:active { opacity: 0.7; }
-  .slot.empty { background: var(--bg); cursor: default; }
+  .slot.empty { background: var(--bg); cursor: pointer; }
+  .slot.empty:active { background: var(--done-bg); }
+  .slot.empty .slot-plan {
+    font-size: 11px;
+    color: var(--current);
+    font-weight: 600;
+  }
   .slot.done { background: #EAF4EE; }
   .slot.current { background: var(--current-soft); border-left: 3px solid var(--current); padding-left: 7px; }
   .slot.skip { background: var(--done-bg); }
@@ -535,21 +559,23 @@
     <a href="../deadlines/" class="tab">Échéances</a>
   </nav>
 
-  <div class="sprint-header">
-    <div class="title-block">
-      <h1 id="title">Sprint</h1>
-      <div class="sub" id="sub"></div>
+  <div class="semaine-sticky-block">
+    <div class="sprint-header">
+      <div class="title-block">
+        <h1 id="title">Sprint</h1>
+        <div class="sub" id="sub"></div>
+      </div>
+      <div class="sprint-nav">
+        <button type="button" class="nav-chev" onclick="shiftWindow(-1)" aria-label="Période précédente" title="Période précédente">‹</button>
+        <button type="button" class="nav-today" onclick="resetWindow()" title="Revenir à aujourd'hui">Aujourd'hui</button>
+        <button type="button" class="nav-chev" onclick="shiftWindow(1)" aria-label="Période suivante" title="Période suivante">›</button>
+      </div>
     </div>
-    <div class="sprint-nav">
-      <button type="button" class="nav-chev" onclick="shiftWindow(-1)" aria-label="Période précédente" title="Période précédente">‹</button>
-      <button type="button" class="nav-today" onclick="resetWindow()" title="Revenir à aujourd'hui">Aujourd'hui</button>
-      <button type="button" class="nav-chev" onclick="shiftWindow(1)" aria-label="Période suivante" title="Période suivante">›</button>
-    </div>
-  </div>
 
-  <div class="view-toggle" id="view-toggle">
-    <button id="btn-liste" class="active" onclick="setView('liste')">Liste</button>
-    <button id="btn-agenda" onclick="setView('agenda')">Agenda (4 semaines)</button>
+    <div class="view-toggle" id="view-toggle">
+      <button id="btn-liste" class="active" onclick="setView('liste')">Liste</button>
+      <button id="btn-agenda" onclick="setView('agenda')">Agenda (4 semaines)</button>
+    </div>
   </div>
 
   <div id="error"></div>
@@ -580,6 +606,36 @@
   <button class="accent" onclick="openDump()">+ Dump</button>
   <button class="ghost" onclick="refresh()">↻ Refresh</button>
 </nav>
+
+<!-- Créer un bloc : date + tranche -->
+<div id="create-bloc-modal" class="modal hidden" onclick="backdropClose(event, 'create-bloc-modal')">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <h3>Planifier un bloc</h3>
+      <button class="ghost small" onclick="closeCreateBlocModal()">Annuler</button>
+    </div>
+    <div class="field"><label>Date</label><input id="create-bloc-date" type="date"></div>
+    <div class="field"><label>Tranche</label>
+      <select id="create-bloc-tranche">
+        <option value="Matin">Matin (8-12h)</option>
+        <option value="Aprem">Aprem (13-17h)</option>
+        <option value="Soir">Soir (18-22h)</option>
+      </select>
+    </div>
+    <div class="field"><label>Propriétaire</label>
+      <select id="create-bloc-proprio">
+        <option value="Taki" selected>Taki</option>
+        <option value="Numa">Numa</option>
+        <option value="Lyes">Lyes</option>
+      </select>
+    </div>
+    <div style="font-size:11px;color:var(--text-dim);font-style:italic">Le bloc sera créé en "Planifié". Tu pourras y ajouter des tâches après.</div>
+    <div class="sticky-save">
+      <button class="ghost small" onclick="closeCreateBlocModal()">Annuler</button>
+      <button class="primary" onclick="submitCreateBloc()">Créer le bloc</button>
+    </div>
+  </div>
+</div>
 
 <!-- Bloc detail modal -->
 <div id="bloc-modal" class="modal hidden" onclick="backdropClose(event, 'bloc-modal')">
@@ -837,7 +893,7 @@ function isBlocCurrent(bloc, isToday, tranche) {
   return isToday && curT === tranche && bloc && !blocStatut.includes('fait') && !blocStatut.includes('zapp');
 }
 
-function renderCell(bloc, isToday, tranche) {
+function renderCell(bloc, isToday, tranche, iso) {
   const isCurrent = isBlocCurrent(bloc, isToday, tranche);
   let cls = cellClass(bloc);
   if (isCurrent) cls = 'cell current';
@@ -845,10 +901,14 @@ function renderCell(bloc, isToday, tranche) {
 
   const cell = $el('div', { class: cls });
   if (bloc) cell.onclick = () => openBloc(bloc.id);
+  else if (iso) {
+    cell.style.cursor = 'pointer';
+    cell.onclick = () => createBlocAt(iso, tranche);
+  }
   cell.appendChild($el('span', { class: dotClass(bloc, isCurrent) }));
 
   if (!bloc) {
-    cell.appendChild($el('div', { style: { fontSize: '8px', color: 'var(--text-faint)' } }, '·'));
+    cell.appendChild($el('div', { style: { fontSize: '8px', color: 'var(--current)', textAlign: 'center' } }, '+'));
     return cell;
   }
 
@@ -868,7 +928,7 @@ function renderCell(bloc, isToday, tranche) {
   return cell;
 }
 
-function renderSlot(bloc, isToday, tranche) {
+function renderSlot(bloc, isToday, tranche, iso) {
   const isCurrent = isBlocCurrent(bloc, isToday, tranche);
   let cls = slotClass(bloc);
   if (isCurrent) cls = 'slot current';
@@ -876,12 +936,13 @@ function renderSlot(bloc, isToday, tranche) {
 
   const slot = $el('div', { class: cls });
   if (bloc) slot.onclick = () => openBloc(bloc.id);
+  else if (iso) slot.onclick = () => createBlocAt(iso, tranche);
 
   slot.appendChild($el('div', { class: 'slot-tranche' }, tranche));
 
   const body = $el('div', { class: 'slot-body' });
   if (!bloc) {
-    body.appendChild($el('div', { class: 'slot-empty-label' }, 'Pas de bloc'));
+    body.appendChild($el('div', { class: 'slot-plan' }, '+ Planifier ce bloc'));
     slot.appendChild(body);
     slot.appendChild($el('span', {}));
     return slot;
@@ -951,15 +1012,21 @@ function renderEmptyWindow(grid, daysISO) {
   });
   const empty = $el('div', { class: 'empty-window' },
     $el('div', {}, 'Aucun bloc planifié pour cette période.'),
-    $el('button', { class: 'ghost small', onclick: () => resetWindow() }, 'Revenir à aujourd\'hui')
+    $el('div', { style: { display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'center' } },
+      $el('button', { class: 'primary small', onclick: () => openCreateBlocModal(daysISO[0]) }, '+ Planifier un bloc'),
+      $el('button', { class: 'ghost small', onclick: () => resetWindow() }, 'Aujourd\'hui')
+    )
   );
   grid.appendChild(empty);
 }
 
-function renderEmptyWindowList(list) {
+function renderEmptyWindowList(list, daysISO) {
   const empty = $el('div', { class: 'empty-window-mobile' },
     $el('div', {}, 'Aucun bloc planifié pour cette période.'),
-    $el('button', { class: 'ghost small', onclick: () => resetWindow() }, 'Revenir à aujourd\'hui')
+    $el('div', { style: { display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'center' } },
+      $el('button', { class: 'primary small', onclick: () => openCreateBlocModal(daysISO && daysISO[0]) }, '+ Planifier un bloc'),
+      $el('button', { class: 'ghost small', onclick: () => resetWindow() }, 'Aujourd\'hui')
+    )
   );
   list.appendChild(empty);
 }
@@ -988,7 +1055,7 @@ function renderGrid(daysISO, byDay, todayISO) {
     grid.appendChild($el('div', { class: 'row-head' }, tranche));
     daysISO.forEach(iso => {
       const blocsOfDay = byDay[iso] || {};
-      grid.appendChild(renderCell(blocsOfDay[tranche], iso === todayISO, tranche));
+      grid.appendChild(renderCell(blocsOfDay[tranche], iso === todayISO, tranche, iso));
     });
   });
 }
@@ -1000,7 +1067,7 @@ function renderList(daysISO, byDay, todayISO) {
   let countInWindow = 0;
   daysISO.forEach(iso => { if (byDay[iso]) countInWindow += Object.keys(byDay[iso]).length; });
   if (countInWindow === 0) {
-    renderEmptyWindowList(list);
+    renderEmptyWindowList(list, daysISO);
     return;
   }
 
@@ -1028,7 +1095,7 @@ function renderList(daysISO, byDay, todayISO) {
 
     const slots = $el('div', { class: 'slots' });
     TRANCHES.forEach(tranche => {
-      slots.appendChild(renderSlot(blocsOfDay[tranche], isToday, tranche));
+      slots.appendChild(renderSlot(blocsOfDay[tranche], isToday, tranche, iso));
     });
     dayCard.appendChild(slots);
     list.appendChild(dayCard);
@@ -1260,6 +1327,78 @@ function setupSwipe() {
     }, { passive: true });
     node.addEventListener('touchcancel', () => { touchActive = false; });
   });
+}
+
+// Crée un bloc Planifie pour date/tranche donnés et ouvre immédiatement la modal édition
+async function createBlocAt(iso, tranche) {
+  if (!iso) { openCreateBlocModal(); return; }
+  // Vérifie s'il existe déjà pour éviter doublon
+  const existing = allBlocs.find(b => WuboGrist.gristDateToISO(b.date) === iso && b.tranche === tranche);
+  if (existing) { openBloc(existing.id); return; }
+  try {
+    const dateUnix = WuboGrist.dateToISO ? null : null;
+    // Convert iso (YYYY-MM-DD) → unix timestamp UTC minuit
+    const [y, m, d] = iso.split('-').map(Number);
+    const ts = Math.floor(Date.UTC(y, m-1, d) / 1000);
+    const { id } = await WuboGrist.addRecord('Blocs_temps', {
+      date: ts,
+      tranche,
+      statut: 'Planifie',
+      proprietaire: 'Taki'
+    });
+    WuboGrist.toast('Bloc créé. Ajoute des tâches.', 'success');
+    pendingFlashBlocId = id;
+    await render();
+    if (id) openBloc(id);
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
+  }
+}
+
+// Modal de création manuelle (quand on a pas de date évidente)
+function openCreateBlocModal(preferredISO) {
+  const iso = preferredISO || WuboGrist.todayISO();
+  document.getElementById('create-bloc-date').value = iso;
+  // Pré-selectionne la tranche en fonction de l'heure courante
+  const h = new Date().getHours();
+  const tranche = (h >= 13 && h < 18) ? 'Aprem' : (h >= 18 ? 'Soir' : 'Matin');
+  document.getElementById('create-bloc-tranche').value = tranche;
+  openModal('create-bloc-modal');
+}
+function closeCreateBlocModal() { closeModal('create-bloc-modal'); }
+async function submitCreateBloc() {
+  const dateStr = document.getElementById('create-bloc-date').value;
+  const tranche = document.getElementById('create-bloc-tranche').value;
+  const proprio = document.getElementById('create-bloc-proprio').value;
+  if (!dateStr) { WuboGrist.toast('Choisis une date', 'warn'); return; }
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const ts = Math.floor(Date.UTC(y, m-1, d) / 1000);
+  // Anti-doublon
+  const existing = allBlocs.find(b => WuboGrist.gristDateToISO(b.date) === dateStr && b.tranche === tranche);
+  if (existing) {
+    WuboGrist.toast('Ce bloc existe déjà', 'warn');
+    closeCreateBlocModal();
+    openBloc(existing.id);
+    return;
+  }
+  try {
+    const { id } = await WuboGrist.addRecord('Blocs_temps', {
+      date: ts, tranche, statut: 'Planifie', proprietaire: proprio
+    });
+    closeCreateBlocModal();
+    WuboGrist.toast('Bloc créé', 'success');
+    pendingFlashBlocId = id;
+    // Reposition la fenêtre liste pour voir le bloc
+    const todayISOVal = WuboGrist.todayISO();
+    const target = new Date(dateStr);
+    const today = new Date(todayISOVal);
+    const diffDays = Math.round((target - today) / 86400000);
+    dayOffset = diffDays;
+    setView('liste');
+    if (id) openBloc(id);
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
+  }
 }
 
 function openBloc(blocId) {
@@ -1578,6 +1717,7 @@ window.addEventListener('resize', () => {
 (async () => {
   await WuboGrist.initGrist();
   try { if (typeof grist !== 'undefined' && grist.onRecords) grist.onRecords(() => render()); } catch (_) {}
+  window.addEventListener('wubo-data-fresh', () => render());
   dumpBinding = WuboGrist.bindDumpTextarea(
     document.getElementById('dump-content'),
     document.getElementById('dump-contexte')
@@ -1586,6 +1726,7 @@ window.addEventListener('resize', () => {
     ModalSwipe.enable('bloc-modal', closeBloc);
     ModalSwipe.enable('dump-modal', closeDump);
     ModalSwipe.enable('task-modal', closeTaskEdit);
+    ModalSwipe.enable('create-bloc-modal', closeCreateBlocModal);
   }
   // Applique la vue restaurée depuis localStorage (fait le render une fois)
   setView(currentView);

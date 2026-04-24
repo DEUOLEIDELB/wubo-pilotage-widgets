@@ -29,7 +29,7 @@
   .page-title h1 { font-size: 17px; }
   .page-title .sub { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
 
-  /* Toggle Externes / Internes / Tout */
+  /* Toggle Externes / Internes / Tout - sticky sous la navbar */
   .tab-toggle {
     display: flex;
     gap: 2px;
@@ -37,6 +37,10 @@
     border: 1px solid var(--border);
     border-radius: 6px;
     padding: 2px;
+    position: sticky;
+    top: var(--sub-sticky-top);
+    z-index: 22;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
   }
   .tab-toggle button {
     flex: 1;
@@ -807,6 +811,7 @@ document.addEventListener('keydown', e => {
 (async () => {
   await WuboGrist.initGrist();
   try { if (typeof grist !== 'undefined' && grist.onRecords) grist.onRecords(() => render()); } catch (_) {}
+  window.addEventListener('wubo-data-fresh', () => render());
   dumpBinding = WuboGrist.bindDumpTextarea(
     document.getElementById('dump-content'),
     document.getElementById('dump-contexte')

@@ -16,6 +16,10 @@
   --success: #188038;
   --warning: #B06000;
   --done-bg: #EDEDE8;
+  /* Offsets sticky : navbar (4 top + ~44 height + 6 gap) + safe-area-inset-top */
+  --nav-height: 44px;
+  --nav-top: calc(env(safe-area-inset-top) + 4px);
+  --sub-sticky-top: calc(var(--nav-top) + var(--nav-height) + 6px);
 }
 
 * {
@@ -201,9 +205,20 @@ label { font-size: 12px; font-weight: 600; color: var(--text-dim); text-transfor
   border-radius: 8px;
   margin-bottom: 10px;
   position: sticky;
-  top: calc(env(safe-area-inset-top) + 4px);
+  top: var(--nav-top);
   z-index: 30;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* Sous-header de page : utilitaire pour coller n'importe quel bloc sous la navbar. */
+.sticky-sub {
+  position: sticky;
+  top: var(--sub-sticky-top);
+  z-index: 25;
+  background: var(--bg);
+  padding-top: 4px;
+  padding-bottom: 4px;
+  margin-top: -4px;
 }
 .app-nav a.tab {
   flex: 1;
