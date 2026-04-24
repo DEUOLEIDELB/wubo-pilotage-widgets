@@ -233,6 +233,107 @@
     100% { background: transparent; }
   }
   .just-updated { animation: flashUpdate 2s ease-out; }
+
+  /* Panneau "Rattrapage" : blocs passés sans statut Fait.
+     Signal visuel fort : ce qui bloque ta progression. */
+  .rattrapage {
+    background: #FFF6E5;
+    border: 1px solid #E87722;
+    border-left: 4px solid #E87722;
+    border-radius: 6px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .rattrapage-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .rattrapage-head .titre {
+    font-size: 13px;
+    font-weight: 700;
+    color: #B06000;
+  }
+  .rattrapage-head .hint {
+    font-size: 10px;
+    color: var(--text-dim);
+    font-style: italic;
+  }
+  .ratt-bloc {
+    background: var(--surface);
+    border: 1px solid #F3C48A;
+    border-radius: 4px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .ratt-bloc-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 11px;
+  }
+  .ratt-bloc-head .when {
+    font-weight: 700;
+    color: var(--text);
+  }
+  .ratt-bloc-head .statut {
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 9px;
+    color: var(--text-dim);
+  }
+  .ratt-tasks {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 12px;
+  }
+  .ratt-task {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text);
+  }
+  .ratt-missed-badge {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--danger);
+    background: #FEE9E7;
+    border: 1px solid var(--danger);
+    padding: 0 4px;
+    border-radius: 2px;
+    line-height: 1.4;
+  }
+  .ratt-actions {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-top: 2px;
+  }
+  .ratt-actions button {
+    flex: 1;
+    min-width: 80px;
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+  .missed-indicator {
+    display: inline-flex;
+    align-items: center;
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--danger);
+    margin-left: 2px;
+    padding: 0 3px;
+    background: #FEE9E7;
+    border: 1px solid var(--danger);
+    border-radius: 2px;
+    line-height: 1.3;
+  }
 </style>
 </head>
 <body>
@@ -252,6 +353,7 @@
     </div>
   </div>
 
+  <div id="rattrapage"></div>
   <div id="drift"></div>
   <div id="error"></div>
   <div id="blocs"></div>
@@ -520,6 +622,12 @@ function renderBloc(tranche, bloc) {
       li.appendChild($el('span', { class: 'ext-deadline-icon', title: 'Deadline externe dure' }, '⏰'));
     }
     li.appendChild($el('span', { class: 'titre-tache' }, t.titre));
+    if (t.times_missed && t.times_missed > 0) {
+      li.appendChild($el('span', {
+        class: 'missed-indicator',
+        title: `Cette tâche a été ratée ${t.times_missed} fois (bloc passé non-fait)`
+      }, `× ${t.times_missed}`));
+    }
     // Chevron pour dérouler les sous-tâches
     if (subs.length > 0) {
       const isOpen = expandedTaskIds.has(tid);
@@ -577,6 +685,7 @@ async function render() {
     now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
 
   let blocs = [];
+  let allBlocsFetched = [];
   tachesById = {};
   let fetchOk = true;
   try {
@@ -584,10 +693,11 @@ async function render() {
       WuboGrist.fetchRows('Blocs_temps'),
       WuboGrist.fetchRows('Taches')
     ]);
+    allBlocsFetched = b;
     const today = WuboGrist.todayISO();
     blocs = b.filter(x => WuboGrist.gristDateToISO(x.date) === today);
     blocsByIdCache = {};
-    blocs.forEach(x => { blocsByIdCache[x.id] = x; });
+    b.forEach(x => { blocsByIdCache[x.id] = x; });
     t.forEach(x => { tachesById[x.id] = x; });
   } catch (e) {
     showError(e.message);
@@ -601,6 +711,9 @@ async function render() {
     : `Sprint S${weekNumber(now)} · hors ligne`;
 
   if (!fetchOk) return;
+
+  // Panneau rattrapage : blocs passés sans "Fait"
+  renderRattrapage(allBlocsFetched);
 
   const driftNode = document.getElementById('drift');
   $clear(driftNode);
@@ -644,6 +757,229 @@ function scrollToCurrentTranche() {
       catch (_) { el.scrollIntoView(); }
     }
   });
+}
+
+// ============ Rattrapage : blocs passés non-faits ============
+// Un bloc avec date < today ET statut != Fait/Zappe/Archive = signal d'alerte.
+// "Je n'ai pas avancé comme prévu, il faut comprendre et replanifier."
+const MONTHS_FR = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+const DAY_NAMES_FR = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
+
+function fmtPastDate(dateUnix) {
+  const d = new Date(dateUnix * 1000);
+  const todayMs = new Date();
+  todayMs.setHours(0,0,0,0);
+  const diffDays = Math.round((todayMs.getTime() - d.getTime()) / 86400000);
+  if (diffDays === 1) return 'Hier';
+  if (diffDays === 2) return 'Avant-hier';
+  if (diffDays <= 6) return `Il y a ${diffDays}j`;
+  return `${DAY_NAMES_FR[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS_FR[d.getUTCMonth()]}`;
+}
+
+function renderRattrapage(allBlocs) {
+  const node = document.getElementById('rattrapage');
+  $clear(node);
+  const todayISO = WuboGrist.todayISO();
+  // Filtre : date antérieure + statut pas Fait/Zappe/Archive
+  // (Planifie, En cours, Bloqué → à rattraper)
+  const missed = allBlocs.filter(b => {
+    const iso = WuboGrist.gristDateToISO(b.date);
+    if (!iso || iso >= todayISO) return false;
+    const s = (b.statut || '').toLowerCase();
+    if (s.includes('fait')) return false;
+    if (s.includes('zapp')) return false;
+    if (s.includes('archive')) return false;
+    return true;
+  }).sort((a, b) => (a.date || 0) - (b.date || 0));
+
+  if (missed.length === 0) return;
+
+  // Limite : les 5 premiers pour ne pas surcharger
+  const toShow = missed.slice(0, 5);
+  const block = $el('div', { class: 'rattrapage' });
+  block.appendChild($el('div', { class: 'rattrapage-head' },
+    $el('span', { class: 'titre' }, `${missed.length} bloc${missed.length > 1 ? 's' : ''} à rattraper`),
+    $el('span', { class: 'hint' }, 'Non marqué Fait')
+  ));
+
+  toShow.forEach(bloc => block.appendChild(renderRattBloc(bloc)));
+
+  if (missed.length > toShow.length) {
+    block.appendChild($el('div', {
+      style: { fontSize: '10px', color: 'var(--text-dim)', textAlign: 'center', fontStyle: 'italic' }
+    }, `+ ${missed.length - toShow.length} autre${missed.length - toShow.length > 1 ? 's' : ''} (traite ceux-ci d'abord)`));
+  }
+
+  node.appendChild(block);
+}
+
+function renderRattBloc(bloc) {
+  const wrap = $el('div', { class: 'ratt-bloc' });
+  wrap.appendChild($el('div', { class: 'ratt-bloc-head' },
+    $el('span', { class: 'when' }, `${fmtPastDate(bloc.date)} · ${bloc.tranche}`),
+    $el('span', { class: 'statut' }, bloc.statut || '-')
+  ));
+
+  const tIds = WuboGrist.refListIds(bloc.taches_liees);
+  if (tIds.length > 0) {
+    const tasksNode = $el('div', { class: 'ratt-tasks' });
+    tIds.forEach(tid => {
+      const t = tachesById[tid];
+      if (!t) return;
+      const row = $el('div', { class: 'ratt-task' });
+      row.appendChild($el('span', { class: 'status-pill ' + statutClass(t.statut) }));
+      row.appendChild($el('span', { style: { flex: '1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, t.titre || '(sans titre)'));
+      if (t.times_missed && t.times_missed > 0) {
+        row.appendChild($el('span', { class: 'ratt-missed-badge', title: 'Ratée ' + t.times_missed + ' fois' }, `× ${t.times_missed}`));
+      }
+      tasksNode.appendChild(row);
+    });
+    wrap.appendChild(tasksNode);
+  } else {
+    wrap.appendChild($el('div', { style: { fontSize: '11px', color: 'var(--text-faint)', fontStyle: 'italic' } }, 'Aucune tâche liée'));
+  }
+
+  const actions = $el('div', { class: 'ratt-actions' });
+  actions.appendChild($el('button', {
+    class: 'success small',
+    onclick: () => rattrapageFait(bloc)
+  }, '✓ J\'ai fait'));
+  actions.appendChild($el('button', {
+    class: 'ghost small',
+    onclick: () => rattrapageZappe(bloc)
+  }, 'Pas fait'));
+  actions.appendChild($el('button', {
+    class: 'primary small',
+    onclick: () => rattrapageReplan(bloc)
+  }, 'Replanifier'));
+  wrap.appendChild(actions);
+  return wrap;
+}
+
+async function rattrapageFait(bloc) {
+  try {
+    await WuboGrist.updateRecord('Blocs_temps', bloc.id, { statut: 'Fait' });
+    // Marque les tâches Fait aussi si user confirme
+    const tIds = WuboGrist.refListIds(bloc.taches_liees);
+    const active = tIds.map(id => tachesById[id]).filter(t => t && t.statut !== 'Fait' && t.statut !== 'Archive');
+    if (active.length > 0 && confirm(`Marquer aussi les ${active.length} tâche(s) de ce bloc comme Fait ?`)) {
+      for (const t of active) {
+        try { await WuboGrist.updateRecord('Taches', t.id, { statut: 'Fait', date_fait: WuboGrist.nowUnix() }); } catch (_) {}
+      }
+    }
+    WuboGrist.toast('Bloc rattrapé en Fait', 'success');
+    await render();
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
+  }
+}
+
+async function rattrapageZappe(bloc) {
+  const raison = prompt(
+    'Pourquoi ce bloc n\'a pas été fait ?\n(cette raison sera stockée dans la note du bloc pour analyse)',
+    bloc.note_fin_bloc || ''
+  );
+  if (raison === null) return;
+  try {
+    const fields = { statut: 'Zappe' };
+    if (raison.trim()) fields.note_fin_bloc = raison.trim();
+    await WuboGrist.updateRecord('Blocs_temps', bloc.id, fields);
+    // Incrémenter times_missed + push_count sur chaque tâche liée encore active
+    const tIds = WuboGrist.refListIds(bloc.taches_liees);
+    for (const tid of tIds) {
+      const t = tachesById[tid];
+      if (!t) continue;
+      if (t.statut === 'Fait' || t.statut === 'Archive') continue;
+      try {
+        await WuboGrist.updateRecord('Taches', tid, {
+          times_missed: (t.times_missed || 0) + 1,
+          push_count: (t.push_count || 0) + 1
+        });
+      } catch (_) {}
+    }
+    WuboGrist.toast(`Bloc zappé (${tIds.length} tâche(s) marquée(s) ratée)`, 'warn', 3500);
+    await render();
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
+  }
+}
+
+async function rattrapageReplan(bloc) {
+  // UX simple : demande date+tranche via 2 prompts, crée un nouveau bloc Planifie avec les mêmes tâches,
+  // marque l'ancien bloc Zappe avec note explicite.
+  const todayStr = WuboGrist.todayISO();
+  const dateStr = prompt(
+    `Nouvelle date (YYYY-MM-DD) pour replanifier les tâches ?\n(ex: ${todayStr}, demain : laisse vide pour défaut)`,
+    todayStr
+  );
+  if (dateStr === null) return;
+  const targetISO = dateStr.trim() || todayStr;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(targetISO)) {
+    WuboGrist.toast('Format date invalide (YYYY-MM-DD attendu)', 'error');
+    return;
+  }
+  const tranche = prompt('Tranche ? (Matin / Aprem / Soir)', bloc.tranche || 'Matin');
+  if (tranche === null) return;
+  const cleanTranche = tranche.trim();
+  if (!['Matin', 'Aprem', 'Soir'].includes(cleanTranche)) {
+    WuboGrist.toast('Tranche invalide (Matin/Aprem/Soir)', 'error');
+    return;
+  }
+  const raison = prompt('Raison du report (optionnel, stocké pour analyse)', bloc.note_fin_bloc || '');
+  if (raison === null) return;
+
+  try {
+    // 1. Trouve ou crée le bloc cible
+    const allBlocs = await WuboGrist.fetchRows('Blocs_temps', { force: true });
+    let targetBloc = allBlocs.find(b => WuboGrist.gristDateToISO(b.date) === targetISO && b.tranche === cleanTranche);
+    const [y, m, d] = targetISO.split('-').map(Number);
+    const targetDateUnix = Math.floor(Date.UTC(y, m-1, d) / 1000);
+    if (!targetBloc) {
+      const { id } = await WuboGrist.addRecord('Blocs_temps', {
+        date: targetDateUnix,
+        tranche: cleanTranche,
+        statut: 'Planifie',
+        proprietaire: 'Taki'
+      });
+      targetBloc = { id, taches_liees: null };
+    }
+    // 2. Fusionne les tâches non-faites du bloc passé dans le bloc cible
+    const tIds = WuboGrist.refListIds(bloc.taches_liees);
+    const movable = tIds.filter(id => {
+      const t = tachesById[id];
+      return t && t.statut !== 'Fait' && t.statut !== 'Archive';
+    });
+    if (movable.length > 0) {
+      const existingIds = WuboGrist.refListIds(targetBloc.taches_liees);
+      const merged = Array.from(new Set([...existingIds, ...movable]));
+      await WuboGrist.updateRecord('Blocs_temps', targetBloc.id, { taches_liees: ['L', ...merged] });
+      // Incrémente push_count + times_missed sur chacune
+      for (const id of movable) {
+        const t = tachesById[id];
+        if (!t) continue;
+        try {
+          await WuboGrist.updateRecord('Taches', id, {
+            push_count: (t.push_count || 0) + 1,
+            times_missed: (t.times_missed || 0) + 1,
+            date_cible: targetDateUnix
+          });
+        } catch (_) {}
+      }
+    }
+    // 3. Marque l'ancien bloc Zappe avec la raison
+    const noteFields = { statut: 'Zappe' };
+    if (raison.trim()) noteFields.note_fin_bloc = `Replanifié vers ${targetISO} ${cleanTranche}. ${raison.trim()}`;
+    else noteFields.note_fin_bloc = `Replanifié vers ${targetISO} ${cleanTranche}.`;
+    // Retire les tâches movable du bloc passé
+    const remainingTaskIds = tIds.filter(id => !movable.includes(id));
+    noteFields.taches_liees = ['L', ...remainingTaskIds];
+    await WuboGrist.updateRecord('Blocs_temps', bloc.id, noteFields);
+
+    WuboGrist.toast(`${movable.length} tâche(s) replanifiée(s) au ${targetISO} ${cleanTranche}`, 'success', 3500);
+    await render();
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
+  }
 }
 
 // Timers actifs d'undo (par bloc) + statut precedent memorise
