@@ -22,23 +22,28 @@
   #app {
     max-width: 720px;
     margin: 0 auto;
-    padding: 6px 10px calc(116px + env(safe-area-inset-bottom));
+    padding: calc(env(safe-area-inset-top) + 120px) 10px calc(150px + env(safe-area-inset-bottom));
     display: flex;
     flex-direction: column;
     gap: 8px;
   }
-  /* Sprint-header + view-toggle regroupés en un sticky block en haut */
+  /* Sprint-header + view-toggle = header fixé en haut (ne bouge pas au bounce) */
   .semaine-sticky-block {
-    position: sticky;
-    top: calc(env(safe-area-inset-top) + 4px);
-    z-index: 25;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: calc(env(safe-area-inset-top) + 8px) 10px 8px;
+    z-index: 45;
     background: var(--bg);
-    padding-top: 4px;
-    margin-top: -4px;
-    box-shadow:
-      0 10px 0 var(--bg),
-      0 calc(-1 * env(safe-area-inset-top) - 12px) 0 var(--bg),
-      0 12px 6px -4px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 2px 0 var(--border);
+  }
+  @media (min-width: 600px) {
+    .semaine-sticky-block {
+      max-width: 720px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
   }
   .sprint-header {
     display: flex;

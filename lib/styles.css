@@ -1,27 +1,27 @@
 /* Wubo Pilotage - DA utilitaire dense */
 
 :root {
-  --bg: #F4F4F1;
+  /* Palette Wubo officielle (Guidelines colors) */
+  --bg: #FAF5F2;
   --surface: #FFFFFF;
-  --border: #D8D8D3;
-  --border-strong: #B8B8B2;
-  --text: #0C0C0E;
-  /* Contraste renforcé : text-dim passe AAA sur surface, text-faint passe AA */
+  --border: #E5DFD9;
+  --border-strong: #B8B0A8;
+  --text: #191919;
   --text-dim: #4A4A4A;
   --text-faint: #6B6B6B;
   --accent: #FFDD0B;
   --accent-strong: #E6C400;
-  --current: #4A0FB3;
-  --current-soft: #E4D4FA;
-  --danger: #C1281D;
-  --success: #1A6B30;
-  --warning: #8A4800;
-  --done-bg: #E8E8E2;
-  /* Sticky : navbar étend son fond 12px vers le bas via box-shadow --bg color */
-  --nav-height: 44px;
-  --nav-top: calc(env(safe-area-inset-top) + 4px);
-  --nav-extension: 12px;
-  --sub-sticky-top: calc(var(--nav-top) + var(--nav-height) + var(--nav-extension));
+  --current: #5914D0;
+  --current-soft: #EEE2FB;
+  --pink: #D40272;
+  --blue: #1DC1F9;
+  --danger: #D40272;
+  --success: #5914D0;
+  --warning: #E6C400;
+  --done-bg: #F2EDE8;
+  /* Hauteurs des fixed : chaque widget override --header-h selon son header */
+  --header-h: 68px;
+  --footer-h: 112px;
 }
 
 * {
@@ -52,8 +52,9 @@ body {
   font-size: 15px;
   line-height: 1.4;
   overflow-x: hidden;
-  padding-bottom: env(safe-area-inset-bottom);
-  padding-top: env(safe-area-inset-top);
+  /* Pas de padding safe-area sur le body : les éléments fixed top/bottom gèrent eux-mêmes. */
+  padding-bottom: 0;
+  padding-top: 0;
 }
 
 h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
@@ -66,19 +67,19 @@ button {
   font-weight: 700;
   background: var(--text);
   color: white;
-  border: none;
-  padding: 11px 14px;
+  border: 2px solid var(--text);
+  padding: 10px 14px;
   border-radius: 6px;
   cursor: pointer;
   line-height: 1;
 }
-button:active { opacity: 0.7; }
-button.primary { background: var(--current); color: white; }
-button.accent { background: var(--accent); color: var(--text); }
-button.ghost { background: transparent; color: var(--text); border: 1px solid var(--border-strong); }
-button.success { background: var(--success); color: white; }
-button.danger { background: var(--danger); color: white; }
-button.small { padding: 7px 11px; font-size: 13px; }
+button:active { transform: translate(1px, 1px); box-shadow: none !important; }
+button.primary { background: var(--current); color: white; border-color: var(--text); }
+button.accent { background: var(--accent); color: var(--text); border-color: var(--text); }
+button.ghost { background: var(--surface); color: var(--text); border: 2px solid var(--text); }
+button.success { background: var(--current); color: white; border-color: var(--text); }
+button.danger { background: var(--pink); color: white; border-color: var(--text); }
+button.small { padding: 7px 11px; font-size: 13px; border-width: 2px; }
 button:disabled { opacity: 0.4; cursor: not-allowed; }
 
 input, select, textarea {
@@ -199,53 +200,52 @@ label { font-size: 13px; font-weight: 700; color: var(--text-dim); text-transfor
 html { background: var(--bg); }
 
 /* ============ BOTTOM NAV (tabs + actions) ============
-   Tout est en bas pour accès pouce facile. Plus de nav top sticky,
-   donc plus de problème de gap visuel lors du scroll. */
+   Position fixed, reste en bas pendant le scroll. Padding généreux pour respirer. */
 .bottom-nav {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 6px 10px calc(6px + env(safe-area-inset-bottom));
+  padding: 10px 12px calc(12px + env(safe-area-inset-bottom));
   background: var(--surface);
   border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
   z-index: 50;
   box-shadow: 0 -4px 14px rgba(0, 0, 0, 0.08);
 }
 .bottom-nav .nav-tabs {
   display: flex;
-  gap: 2px;
-  padding: 2px;
+  gap: 3px;
+  padding: 3px;
   background: var(--done-bg);
-  border-radius: 7px;
+  border-radius: 8px;
 }
 .bottom-nav .nav-tabs a.tab {
   flex: 1;
   text-align: center;
-  padding: 9px 4px;
+  padding: 10px 4px;
   font-size: 13px;
   font-weight: 700;
   color: var(--text-dim);
   text-decoration: none;
-  border-radius: 5px;
+  border-radius: 6px;
   line-height: 1.15;
   white-space: nowrap;
 }
 .bottom-nav .nav-tabs a.tab.active {
   background: var(--surface);
   color: var(--text);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 1px 2px 0 var(--border-strong);
 }
 .bottom-nav .nav-tabs a.tab:active { opacity: 0.6; }
 .bottom-nav .nav-actions {
   display: flex;
-  gap: 6px;
+  gap: 8px;
 }
 .bottom-nav .nav-actions button {
-  padding: 11px 14px;
+  padding: 12px 14px;
   font-size: 14px;
 }
 .bottom-nav .nav-actions .nav-dump { flex: 1; }
@@ -260,22 +260,21 @@ html { background: var(--bg); }
 }
 
 /* ============ PAGE HEADER (top) ============
-   Header simple sticky avec titre + profil. Couvre toujours la zone safe-area
-   via box-shadow --bg pour éviter tout contenu visible au-dessus pendant le scroll. */
+   Position FIXED pour qu'il ne bouge jamais, même en bounce scroll iOS.
+   Couvre aussi la safe-area-inset-top via padding-top. */
 .page-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: calc(env(safe-area-inset-top) + 10px) 14px 10px;
+  background: var(--bg);
+  z-index: 45;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 10px;
-  padding: 8px 2px 10px;
-  position: sticky;
-  top: calc(env(safe-area-inset-top) + 4px);
-  z-index: 25;
-  background: var(--bg);
-  box-shadow:
-    0 10px 0 var(--bg),
-    0 calc(-1 * env(safe-area-inset-top) - 12px) 0 var(--bg),
-    0 12px 6px -4px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 0 var(--border);
 }
 .page-header-title {
   flex: 1;
@@ -287,11 +286,19 @@ html { background: var(--bg); }
   text-transform: capitalize;
   line-height: 1.15;
   letter-spacing: -0.01em;
+  color: var(--text);
 }
 .page-header-title .sub {
   font-size: 12px;
   color: var(--text-dim);
   margin-top: 2px;
+}
+@media (min-width: 600px) {
+  .page-header {
+    max-width: 560px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
 }
 
 /* ============ PROFILE BUTTON ============
@@ -314,10 +321,43 @@ html { background: var(--bg); }
   justify-content: center;
 }
 .profile-btn:active { opacity: 0.7; }
-.profile-btn.taki  { background: var(--accent); color: var(--text); border-color: var(--accent-strong); }
-.profile-btn.numa  { background: var(--current); color: white; border-color: var(--current); }
-.profile-btn.lyes  { background: var(--success); color: white; border-color: var(--success); }
-.profile-btn.team  { background: var(--surface); color: var(--text); }
+/* Couleurs DA Wubo : Taki=jaune, Numa=violet, Lyes=bleu, Shared=pink */
+.profile-btn.taki  { background: var(--accent); color: var(--text); border-color: var(--text); }
+.profile-btn.numa  { background: var(--current); color: white; border-color: var(--text); }
+.profile-btn.lyes  { background: var(--blue); color: var(--text); border-color: var(--text); }
+.profile-btn.team  { background: var(--pink); color: white; border-color: var(--text); }
+
+/* Tile utilisateur (onboarding + menu profil) */
+.user-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 16px 10px;
+  background: var(--surface);
+  border: 2px solid var(--text);
+  border-radius: 10px;
+  cursor: pointer;
+  color: var(--text);
+  transition: transform 0.08s;
+}
+.user-tile:active { transform: translate(1px, 1px); }
+.user-tile.selected { box-shadow: 3px 3px 0 var(--text); }
+.user-tile.taki { background: var(--accent); color: var(--text); }
+.user-tile.numa { background: var(--current); color: white; }
+.user-tile.lyes { background: var(--blue); color: var(--text); }
+.user-tile-letter {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1;
+}
+.user-tile-name {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
 .profile-btn .view-dot {
   position: absolute;
   width: 10px; height: 10px;
@@ -331,31 +371,6 @@ html { background: var(--bg); }
 
 /* Conteneur relatif pour positionner le view-dot sur profile-btn */
 .profile-wrap { position: relative; display: inline-flex; }
-
-/* Sub-header utilitaire pour les pages où on colle un élément sous le page-header */
-.sticky-sub {
-  position: sticky;
-  top: var(--sub-sticky-top);
-  z-index: 22;
-  background: var(--bg);
-}
-.app-nav a.tab {
-  flex: 1;
-  text-align: center;
-  padding: 10px 4px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-dim);
-  text-decoration: none;
-  border-radius: 5px;
-  line-height: 1.2;
-  white-space: nowrap;
-}
-.app-nav a.tab.active {
-  background: var(--text);
-  color: white;
-}
-.app-nav a.tab:active { opacity: 0.6; }
 
 /* Status pills plus lisibles - couleurs corrigées */
 .status-pill {
