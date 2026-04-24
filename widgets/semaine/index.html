@@ -89,6 +89,12 @@
     box-shadow: 0 1px 2px rgba(0,0,0,0.06);
   }
 
+  /* Containers swipables : will-change pour perf animation */
+  #liste-view, #agenda-view {
+    will-change: transform;
+    touch-action: pan-y;
+  }
+
   /* Vue agenda : calendrier mensuel compact multi-semaines */
   .agenda-wrap {
     display: flex;
@@ -1303,29 +1309,79 @@ function onAgendaDayClick(iso) {
   setView('liste');
 }
 
-// Swipe sur la grille ET la liste (mobile)
-let touchStartX = 0, touchStartY = 0, touchActive = false;
+// Swipe horizontal avec animation visuelle (Liste + Agenda).
+// Drag-suit-doigt puis slide-out + slide-in lors du changement de période.
+const SWIPE_TRIGGER = 70; // px minimum pour valider un slide
 function setupSwipe() {
-  const targets = [document.getElementById('grid'), document.getElementById('list')].filter(Boolean);
-  targets.forEach(node => {
-    node.addEventListener('touchstart', (e) => {
-      if (e.touches.length !== 1) { touchActive = false; return; }
-      touchStartX = e.touches[0].clientX;
-      touchStartY = e.touches[0].clientY;
-      touchActive = true;
-    }, { passive: true });
-    node.addEventListener('touchend', (e) => {
-      if (!touchActive) return;
-      touchActive = false;
-      const t = e.changedTouches[0];
-      const dx = t.clientX - touchStartX;
-      const dy = t.clientY - touchStartY;
-      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 2) {
-        if (dx < 0) shiftWindow(1);
-        else shiftWindow(-1);
+  // On swipe sur les 2 conteneurs principaux : liste-view (contient grid + list) et agenda-view
+  const containers = [
+    document.getElementById('liste-view'),
+    document.getElementById('agenda-view')
+  ].filter(Boolean);
+
+  containers.forEach(container => {
+    let startX = 0, startY = 0, dx = 0, dragging = false, captured = false;
+
+    function onStart(e) {
+      if (e.touches.length !== 1) { dragging = false; return; }
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      dx = 0;
+      dragging = true;
+      captured = false;
+      container.style.transition = 'none';
+    }
+    function onMove(e) {
+      if (!dragging) return;
+      const cx = e.touches[0].clientX, cy = e.touches[0].clientY;
+      const rdx = cx - startX, rdy = cy - startY;
+      if (!captured) {
+        if (Math.abs(rdx) < 10 && Math.abs(rdy) < 10) return;
+        // Si le geste est plus vertical, on laisse le scroll natif
+        if (Math.abs(rdy) > Math.abs(rdx)) { dragging = false; return; }
+        captured = true;
       }
-    }, { passive: true });
-    node.addEventListener('touchcancel', () => { touchActive = false; });
+      dx = rdx;
+      // Résistance légère au-delà d'un certain seuil pour feedback tactile
+      const cappedDx = Math.sign(dx) * Math.min(Math.abs(dx), window.innerWidth * 0.9);
+      container.style.transform = `translateX(${cappedDx}px)`;
+      if (e.cancelable) e.preventDefault();
+    }
+    function onEnd() {
+      if (!dragging) return;
+      dragging = false;
+      const absDx = Math.abs(dx);
+      const direction = dx < 0 ? 1 : -1;
+      container.style.transition = 'transform 0.22s ease-out';
+      if (absDx > SWIPE_TRIGGER) {
+        // 1) animate out dans la même direction
+        container.style.transform = `translateX(${dx < 0 ? -100 : 100}%)`;
+        // 2) après l'animation, shift + reset depuis l'autre côté puis slide back à 0
+        setTimeout(() => {
+          container.style.transition = 'none';
+          container.style.transform = `translateX(${dx < 0 ? 100 : -100}%)`;
+          shiftWindow(direction);
+          // force reflow avant de démarrer la 2e anim
+          void container.offsetWidth;
+          requestAnimationFrame(() => {
+            container.style.transition = 'transform 0.22s ease-out';
+            container.style.transform = '';
+          });
+        }, 220);
+      } else {
+        container.style.transform = '';
+      }
+    }
+    function onCancel() {
+      dragging = false;
+      container.style.transition = 'transform 0.2s ease-out';
+      container.style.transform = '';
+    }
+
+    container.addEventListener('touchstart', onStart, { passive: true });
+    container.addEventListener('touchmove', onMove, { passive: false });
+    container.addEventListener('touchend', onEnd, { passive: true });
+    container.addEventListener('touchcancel', onCancel, { passive: true });
   });
 }
 

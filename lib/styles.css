@@ -16,10 +16,10 @@
   --success: #188038;
   --warning: #B06000;
   --done-bg: #EDEDE8;
-  /* Offsets sticky : navbar (4 top + ~44 height + 6 gap) + safe-area-inset-top */
+  /* Offsets sticky : navbar + safe-area-inset-top. Sub-header colle pile sous la navbar (pas de gap bg visible pendant le scroll). */
   --nav-height: 44px;
   --nav-top: calc(env(safe-area-inset-top) + 4px);
-  --sub-sticky-top: calc(var(--nav-top) + var(--nav-height) + 6px);
+  --sub-sticky-top: calc(var(--nav-top) + var(--nav-height));
 }
 
 * {
