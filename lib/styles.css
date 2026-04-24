@@ -28,6 +28,15 @@ html, body {
   height: 100%;
   -webkit-tap-highlight-color: transparent;
   -webkit-text-size-adjust: 100%;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: pan-x pan-y; /* Désactive pinch zoom, autorise scroll */
+}
+/* Permettre sélection/édition dans inputs et zones d'édition */
+input, textarea, select, [contenteditable="true"], pre, code {
+  -webkit-user-select: auto;
+  user-select: auto;
+  touch-action: auto;
 }
 
 body {
@@ -269,6 +278,17 @@ html, body {
   overflow-x: hidden !important;
   overscroll-behavior-x: none;
   touch-action: pan-y;
+  will-change: transform;
+}
+/* Poignée de swipe visuelle en haut du modal-content */
+.modal-grip {
+  width: 42px;
+  height: 4px;
+  background: var(--border-strong);
+  border-radius: 2px;
+  margin: -6px auto 8px;
+  flex-shrink: 0;
+  pointer-events: none;
 }
 
 .drift-alert {

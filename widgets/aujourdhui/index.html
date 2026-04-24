@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Pilotage">
@@ -16,6 +16,7 @@
 <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
 <script src="../../lib/dom.js"></script>
 <script src="../../lib/grist-api.js"></script>
+<script src="lib/modal-swipe.js"></script>
 <style>
   #app {
     max-width: 480px;
@@ -254,6 +255,12 @@
       <textarea id="task-desc" placeholder="- sous-détail 1&#10;- sous-détail 2"></textarea>
     </div>
     <div class="field"><label>Livrable</label><input id="task-livrable"></div>
+    <div class="field">
+      <label>Projet (catégorie)</label>
+      <select id="task-projet">
+        <option value="">Aucun projet</option>
+      </select>
+    </div>
     <div class="field">
       <label>Statut</label>
       <select id="task-statut">
@@ -657,6 +664,9 @@ function fillTaskEditForm(taskId) {
   document.getElementById('task-date').value = unixToInputDate(t.date_cible);
   const extCb = document.getElementById('task-ext-deadline');
   if (extCb) extCb.checked = !!t.est_deadline_externe;
+  // Remplit le dropdown projet (async, non bloquant) et pré-sélectionne le projet courant
+  const projetSel = document.getElementById('task-projet');
+  if (projetSel) WuboGrist.populateProjetSelect(projetSel, t.projet).catch(() => {});
   const meta = [];
   if (t.score) meta.push(`score ${t.score}`);
   if (currentPushCount > 0) meta.push(`reportée ${currentPushCount}x`);
@@ -716,6 +726,9 @@ function openTaskNew(blocId, parentTaskId) {
   const d = new Date(); d.setHours(12,0,0,0);
   document.getElementById('task-date').value = unixToInputDate(Math.floor(d.getTime()/1000));
   document.getElementById('task-meta').textContent = parentTaskId ? 'Sous-tâche' : 'Nouvelle tâche';
+  // Dropdown projet (pas de sélection par défaut pour une nouvelle tâche)
+  const projetSel = document.getElementById('task-projet');
+  if (projetSel) WuboGrist.populateProjetSelect(projetSel, null).catch(() => {});
   document.getElementById('task-reporter').style.display = 'none';
   // Nouvelle tache parent : on affiche la section sous-taches pour remplir pendingSubtasks.
   // Nouvelle sous-tache : on la cache (pas de sous-sous-tache ici).
@@ -822,6 +835,8 @@ async function saveTaskEdit() {
   const dateStr = document.getElementById('task-date').value;
   const dateUnix = inputDateToUnix(dateStr);
   const extCb = document.getElementById('task-ext-deadline');
+  const projetSel = document.getElementById('task-projet');
+  const projetVal = projetSel && projetSel.value ? parseInt(projetSel.value, 10) : null;
   const fields = {
     titre,
     description: document.getElementById('task-desc').value,
@@ -830,6 +845,7 @@ async function saveTaskEdit() {
     estim_heures: heures,
     est_deadline_externe: extCb ? !!extCb.checked : false
   };
+  if (projetVal) fields.projet = projetVal;
   if (dateUnix) fields.date_cible = dateUnix;
 
   try {
@@ -968,6 +984,11 @@ document.addEventListener('keydown', e => {
 (async () => {
   await WuboGrist.initGrist();
   try { if (typeof grist !== 'undefined' && grist.onRecords) grist.onRecords(() => render()); } catch (_) {}
+  // Swipe-to-close sur les modals bottom-sheet
+  if (window.ModalSwipe) {
+    ModalSwipe.enable('task-modal', closeTaskEdit);
+    ModalSwipe.enable('dump-modal', closeDump);
+  }
   render();
   setInterval(render, 120000);
 })();
