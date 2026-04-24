@@ -17,6 +17,7 @@
 <script src="../../lib/dom.js"></script>
 <script src="../../lib/grist-api.js"></script>
 <script src="../../lib/modal-swipe.js"></script>
+<script src="../../lib/wubo-ui.js"></script>
 <style>
   #app {
     max-width: 480px;
@@ -234,12 +235,12 @@
   }
   .just-updated { animation: flashUpdate 2s ease-out; }
 
-  /* Panneau "Rattrapage" : blocs passés sans statut Fait.
-     Signal visuel fort : ce qui bloque ta progression. */
+  /* Panneau "À rattraper" : DA Wubo, sobre. Bordure jaune pour signaler l'attention
+     sans alarme. Chaque bloc = ligne minimaliste avec actions inline. */
   .rattrapage {
-    background: #FFF6E5;
-    border: 1px solid #E87722;
-    border-left: 4px solid #E87722;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
     border-radius: 6px;
     padding: 10px 12px;
     display: flex;
@@ -250,20 +251,31 @@
     display: flex;
     justify-content: space-between;
     align-items: baseline;
+    gap: 8px;
   }
   .rattrapage-head .titre {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
-    color: #B06000;
+    color: var(--text);
   }
   .rattrapage-head .hint {
-    font-size: 10px;
+    font-size: 11px;
     color: var(--text-dim);
-    font-style: italic;
   }
+  .ratt-bulk {
+    align-self: flex-start;
+    font-size: 12px;
+    padding: 6px 10px;
+    background: transparent;
+    border: 1px solid var(--border-strong);
+    color: var(--text);
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .ratt-bulk:active { background: var(--done-bg); }
   .ratt-bloc {
-    background: var(--surface);
-    border: 1px solid #F3C48A;
+    background: var(--bg);
     border-radius: 4px;
     padding: 8px 10px;
     display: flex;
@@ -275,7 +287,7 @@
     justify-content: space-between;
     align-items: baseline;
     gap: 6px;
-    font-size: 11px;
+    font-size: 12px;
   }
   .ratt-bloc-head .when {
     font-weight: 700;
@@ -284,14 +296,15 @@
   .ratt-bloc-head .statut {
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    font-size: 9px;
+    font-size: 10px;
     color: var(--text-dim);
+    font-weight: 600;
   }
   .ratt-tasks {
     display: flex;
     flex-direction: column;
     gap: 3px;
-    font-size: 12px;
+    font-size: 13px;
   }
   .ratt-task {
     display: flex;
@@ -300,10 +313,10 @@
     color: var(--text);
   }
   .ratt-missed-badge {
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 700;
     color: var(--danger);
-    background: #FEE9E7;
+    background: transparent;
     border: 1px solid var(--danger);
     padding: 0 4px;
     border-radius: 2px;
@@ -311,25 +324,25 @@
   }
   .ratt-actions {
     display: flex;
-    gap: 4px;
+    gap: 6px;
     flex-wrap: wrap;
     margin-top: 2px;
   }
   .ratt-actions button {
     flex: 1;
     min-width: 80px;
-    padding: 5px 8px;
-    font-size: 11px;
+    padding: 7px 8px;
+    font-size: 12px;
   }
   .missed-indicator {
     display: inline-flex;
     align-items: center;
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 700;
     color: var(--danger);
-    margin-left: 2px;
-    padding: 0 3px;
-    background: #FEE9E7;
+    margin-left: 4px;
+    padding: 0 4px;
+    background: transparent;
     border: 1px solid var(--danger);
     border-radius: 2px;
     line-height: 1.3;
@@ -502,7 +515,13 @@ async function toggleSubtaskDone(sub) {
 }
 // Delete définitif d'une sous-tâche (croix dans la modal)
 async function deleteSubtaskHard(sub) {
-  if (!confirm(`Supprimer "${sub.titre || '(sans titre)'}" ?\n\nIrréversible. La sous-tâche disparaîtra partout.`)) return;
+  const ok = await WuboUI.confirm({
+    title: 'Supprimer la sous-tâche ?',
+    message: `"${sub.titre || '(sans titre)'}"`,
+    yesLabel: 'Supprimer',
+    danger: true
+  });
+  if (!ok) return;
   try {
     // Retire du bloc si présente
     const blocs = await WuboGrist.fetchRows('Blocs_temps');
@@ -776,12 +795,11 @@ function fmtPastDate(dateUnix) {
   return `${DAY_NAMES_FR[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS_FR[d.getUTCMonth()]}`;
 }
 
+let missedBlocsCache = [];
 function renderRattrapage(allBlocs) {
   const node = document.getElementById('rattrapage');
   $clear(node);
   const todayISO = WuboGrist.todayISO();
-  // Filtre : date antérieure + statut pas Fait/Zappe/Archive
-  // (Planifie, En cours, Bloqué → à rattraper)
   const missed = allBlocs.filter(b => {
     const iso = WuboGrist.gristDateToISO(b.date);
     if (!iso || iso >= todayISO) return false;
@@ -792,25 +810,120 @@ function renderRattrapage(allBlocs) {
     return true;
   }).sort((a, b) => (a.date || 0) - (b.date || 0));
 
+  missedBlocsCache = missed;
   if (missed.length === 0) return;
 
-  // Limite : les 5 premiers pour ne pas surcharger
   const toShow = missed.slice(0, 5);
   const block = $el('div', { class: 'rattrapage' });
   block.appendChild($el('div', { class: 'rattrapage-head' },
-    $el('span', { class: 'titre' }, `${missed.length} bloc${missed.length > 1 ? 's' : ''} à rattraper`),
-    $el('span', { class: 'hint' }, 'Non marqué Fait')
+    $el('span', { class: 'titre' }, `À rattraper · ${missed.length}`),
+    missed.length > 1
+      ? $el('button', { class: 'ratt-bulk', onclick: () => bulkRattrapage() }, 'Tout traiter')
+      : $el('span', { class: 'hint' }, 'bloc sans statut Fait')
   ));
 
   toShow.forEach(bloc => block.appendChild(renderRattBloc(bloc)));
 
   if (missed.length > toShow.length) {
     block.appendChild($el('div', {
-      style: { fontSize: '10px', color: 'var(--text-dim)', textAlign: 'center', fontStyle: 'italic' }
-    }, `+ ${missed.length - toShow.length} autre${missed.length - toShow.length > 1 ? 's' : ''} (traite ceux-ci d'abord)`));
+      style: { fontSize: '11px', color: 'var(--text-dim)', textAlign: 'center' }
+    }, `+ ${missed.length - toShow.length} autre${missed.length - toShow.length > 1 ? 's' : ''}`));
   }
 
   node.appendChild(block);
+}
+
+// Choix groupé pour tous les blocs à rattraper d'un coup
+async function bulkRattrapage() {
+  if (missedBlocsCache.length === 0) return;
+  const action = await WuboUI.choice({
+    title: `Appliquer à tous (${missedBlocsCache.length})`,
+    message: 'Action groupée sur les blocs à rattraper',
+    options: [
+      { id: 'fait', label: 'Tout marquer Fait', sub: 'Rétroactif, sans raison' },
+      { id: 'pas-fait', label: 'Tout marquer Pas fait', sub: 'Une raison commune sera demandée' },
+      { id: 'replan', label: 'Tout replanifier à demain', sub: 'Mêmes tranches, demain' }
+    ]
+  });
+  if (!action) return;
+  try {
+    if (action === 'fait') {
+      for (const b of missedBlocsCache) {
+        await WuboGrist.updateRecord('Blocs_temps', b.id, { statut: 'Fait' });
+      }
+      WuboGrist.toast(`${missedBlocsCache.length} bloc(s) marqué(s) Fait`, 'success');
+    } else if (action === 'pas-fait') {
+      const raison = await WuboUI.prompt({
+        title: 'Raison commune',
+        placeholder: 'Pourquoi tu n\'as pas fait ?',
+        multiline: true
+      });
+      if (raison === null) return;
+      for (const b of missedBlocsCache) {
+        const fields = { statut: 'Zappe' };
+        if (raison.trim()) fields.note_fin_bloc = raison.trim();
+        await WuboGrist.updateRecord('Blocs_temps', b.id, fields);
+        const tIds = WuboGrist.refListIds(b.taches_liees);
+        for (const tid of tIds) {
+          const t = tachesById[tid];
+          if (!t || t.statut === 'Fait' || t.statut === 'Archive') continue;
+          try {
+            await WuboGrist.updateRecord('Taches', tid, {
+              times_missed: (t.times_missed || 0) + 1,
+              push_count: (t.push_count || 0) + 1
+            });
+          } catch (_) {}
+        }
+      }
+      WuboGrist.toast(`${missedBlocsCache.length} bloc(s) zappé(s)`, 'warn');
+    } else if (action === 'replan') {
+      const allBlocs = await WuboGrist.fetchRows('Blocs_temps', { force: true });
+      const tomorrowISO = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return WuboGrist.dateToISO(d); })();
+      for (const b of missedBlocsCache) {
+        let target = allBlocs.find(x => WuboGrist.gristDateToISO(x.date) === tomorrowISO && x.tranche === b.tranche);
+        if (!target) {
+          const [y, m, d] = tomorrowISO.split('-').map(Number);
+          const ts = Math.floor(Date.UTC(y, m-1, d) / 1000);
+          const { id } = await WuboGrist.addRecord('Blocs_temps', {
+            date: ts, tranche: b.tranche, statut: 'Planifie', proprietaire: 'Taki'
+          });
+          target = { id, taches_liees: null };
+          allBlocs.push({ id, date: ts, tranche: b.tranche, statut: 'Planifie', taches_liees: null });
+        }
+        const tIds = WuboGrist.refListIds(b.taches_liees);
+        const movable = tIds.filter(id => {
+          const t = tachesById[id];
+          return t && t.statut !== 'Fait' && t.statut !== 'Archive';
+        });
+        if (movable.length > 0) {
+          const existing = WuboGrist.refListIds(target.taches_liees);
+          const merged = Array.from(new Set([...existing, ...movable]));
+          await WuboGrist.updateRecord('Blocs_temps', target.id, { taches_liees: ['L', ...merged] });
+          target.taches_liees = ['L', ...merged];
+          for (const id of movable) {
+            const t = tachesById[id];
+            if (!t) continue;
+            try {
+              await WuboGrist.updateRecord('Taches', id, {
+                push_count: (t.push_count || 0) + 1,
+                times_missed: (t.times_missed || 0) + 1
+              });
+            } catch (_) {}
+          }
+        }
+        const remaining = tIds.filter(id => !movable.includes(id));
+        await WuboGrist.updateRecord('Blocs_temps', b.id, {
+          statut: 'Zappe',
+          note_fin_bloc: `Replanifié ${tomorrowISO}`,
+          taches_liees: ['L', ...remaining]
+        });
+      }
+      WuboGrist.toast(`${missedBlocsCache.length} bloc(s) replanifié(s) à demain`, 'success');
+    }
+    await render();
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
+  }
 }
 
 function renderRattBloc(bloc) {
@@ -859,15 +972,22 @@ function renderRattBloc(bloc) {
 async function rattrapageFait(bloc) {
   try {
     await WuboGrist.updateRecord('Blocs_temps', bloc.id, { statut: 'Fait' });
-    // Marque les tâches Fait aussi si user confirme
     const tIds = WuboGrist.refListIds(bloc.taches_liees);
     const active = tIds.map(id => tachesById[id]).filter(t => t && t.statut !== 'Fait' && t.statut !== 'Archive');
-    if (active.length > 0 && confirm(`Marquer aussi les ${active.length} tâche(s) de ce bloc comme Fait ?`)) {
-      for (const t of active) {
-        try { await WuboGrist.updateRecord('Taches', t.id, { statut: 'Fait', date_fait: WuboGrist.nowUnix() }); } catch (_) {}
+    if (active.length > 0) {
+      const ok = await WuboUI.confirm({
+        title: 'Marquer les tâches Fait ?',
+        message: `${active.length} tâche(s) dans ce bloc.`,
+        yesLabel: 'Oui',
+        noLabel: 'Non'
+      });
+      if (ok) {
+        for (const t of active) {
+          try { await WuboGrist.updateRecord('Taches', t.id, { statut: 'Fait', date_fait: WuboGrist.nowUnix() }); } catch (_) {}
+        }
       }
     }
-    WuboGrist.toast('Bloc rattrapé en Fait', 'success');
+    WuboGrist.toast('Bloc marqué Fait', 'success');
     await render();
   } catch (e) {
     WuboGrist.toast('Erreur : ' + e.message, 'error');
@@ -875,17 +995,19 @@ async function rattrapageFait(bloc) {
 }
 
 async function rattrapageZappe(bloc) {
-  const raison = prompt(
-    'Pourquoi ce bloc n\'a pas été fait ?\n(cette raison sera stockée dans la note du bloc pour analyse)',
-    bloc.note_fin_bloc || ''
-  );
+  const raison = await WuboUI.prompt({
+    title: 'Pourquoi ?',
+    placeholder: 'Raison courte',
+    defaultValue: bloc.note_fin_bloc || '',
+    multiline: true
+  });
   if (raison === null) return;
   try {
     const fields = { statut: 'Zappe' };
     if (raison.trim()) fields.note_fin_bloc = raison.trim();
     await WuboGrist.updateRecord('Blocs_temps', bloc.id, fields);
-    // Incrémenter times_missed + push_count sur chaque tâche liée encore active
     const tIds = WuboGrist.refListIds(bloc.taches_liees);
+    let counted = 0;
     for (const tid of tIds) {
       const t = tachesById[tid];
       if (!t) continue;
@@ -895,9 +1017,10 @@ async function rattrapageZappe(bloc) {
           times_missed: (t.times_missed || 0) + 1,
           push_count: (t.push_count || 0) + 1
         });
+        counted++;
       } catch (_) {}
     }
-    WuboGrist.toast(`Bloc zappé (${tIds.length} tâche(s) marquée(s) ratée)`, 'warn', 3500);
+    WuboGrist.toast(`Bloc zappé, ${counted} tâche(s) marquée(s)`, 'warn');
     await render();
   } catch (e) {
     WuboGrist.toast('Erreur : ' + e.message, 'error');
@@ -905,45 +1028,56 @@ async function rattrapageZappe(bloc) {
 }
 
 async function rattrapageReplan(bloc) {
-  // UX simple : demande date+tranche via 2 prompts, crée un nouveau bloc Planifie avec les mêmes tâches,
-  // marque l'ancien bloc Zappe avec note explicite.
   const todayStr = WuboGrist.todayISO();
-  const dateStr = prompt(
-    `Nouvelle date (YYYY-MM-DD) pour replanifier les tâches ?\n(ex: ${todayStr}, demain : laisse vide pour défaut)`,
-    todayStr
-  );
-  if (dateStr === null) return;
-  const targetISO = dateStr.trim() || todayStr;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(targetISO)) {
-    WuboGrist.toast('Format date invalide (YYYY-MM-DD attendu)', 'error');
-    return;
+  const tomorrow = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return WuboGrist.dateToISO(d); })();
+  const dayIn3 = (() => { const d = new Date(); d.setDate(d.getDate() + 3); return WuboGrist.dateToISO(d); })();
+  const weekIn = (() => { const d = new Date(); d.setDate(d.getDate() + 7); return WuboGrist.dateToISO(d); })();
+
+  const when = await WuboUI.choice({
+    title: 'Replanifier quand ?',
+    options: [
+      { id: todayStr, label: "Aujourd'hui", sub: todayStr },
+      { id: tomorrow, label: 'Demain', sub: tomorrow },
+      { id: dayIn3, label: 'Dans 3 jours', sub: dayIn3 },
+      { id: weekIn, label: 'Dans 1 semaine', sub: weekIn },
+      { id: 'custom', label: 'Autre date…' }
+    ]
+  });
+  if (!when) return;
+
+  let targetISO = when;
+  if (when === 'custom') {
+    targetISO = await WuboUI.prompt({
+      title: 'Date',
+      placeholder: 'YYYY-MM-DD',
+      defaultValue: tomorrow,
+      validate: v => /^\d{4}-\d{2}-\d{2}$/.test(v.trim()) ? null : 'Format YYYY-MM-DD'
+    });
+    if (!targetISO) return;
+    targetISO = targetISO.trim();
   }
-  const tranche = prompt('Tranche ? (Matin / Aprem / Soir)', bloc.tranche || 'Matin');
-  if (tranche === null) return;
-  const cleanTranche = tranche.trim();
-  if (!['Matin', 'Aprem', 'Soir'].includes(cleanTranche)) {
-    WuboGrist.toast('Tranche invalide (Matin/Aprem/Soir)', 'error');
-    return;
-  }
-  const raison = prompt('Raison du report (optionnel, stocké pour analyse)', bloc.note_fin_bloc || '');
-  if (raison === null) return;
+
+  const tranche = await WuboUI.choice({
+    title: 'Quelle tranche ?',
+    options: [
+      { id: 'Matin', label: 'Matin', sub: '8-12h' },
+      { id: 'Aprem', label: 'Aprem', sub: '13-17h' },
+      { id: 'Soir', label: 'Soir', sub: '18-22h' }
+    ]
+  });
+  if (!tranche) return;
 
   try {
-    // 1. Trouve ou crée le bloc cible
     const allBlocs = await WuboGrist.fetchRows('Blocs_temps', { force: true });
-    let targetBloc = allBlocs.find(b => WuboGrist.gristDateToISO(b.date) === targetISO && b.tranche === cleanTranche);
+    let targetBloc = allBlocs.find(b => WuboGrist.gristDateToISO(b.date) === targetISO && b.tranche === tranche);
     const [y, m, d] = targetISO.split('-').map(Number);
     const targetDateUnix = Math.floor(Date.UTC(y, m-1, d) / 1000);
     if (!targetBloc) {
       const { id } = await WuboGrist.addRecord('Blocs_temps', {
-        date: targetDateUnix,
-        tranche: cleanTranche,
-        statut: 'Planifie',
-        proprietaire: 'Taki'
+        date: targetDateUnix, tranche, statut: 'Planifie', proprietaire: 'Taki'
       });
       targetBloc = { id, taches_liees: null };
     }
-    // 2. Fusionne les tâches non-faites du bloc passé dans le bloc cible
     const tIds = WuboGrist.refListIds(bloc.taches_liees);
     const movable = tIds.filter(id => {
       const t = tachesById[id];
@@ -953,7 +1087,6 @@ async function rattrapageReplan(bloc) {
       const existingIds = WuboGrist.refListIds(targetBloc.taches_liees);
       const merged = Array.from(new Set([...existingIds, ...movable]));
       await WuboGrist.updateRecord('Blocs_temps', targetBloc.id, { taches_liees: ['L', ...merged] });
-      // Incrémente push_count + times_missed sur chacune
       for (const id of movable) {
         const t = tachesById[id];
         if (!t) continue;
@@ -966,16 +1099,13 @@ async function rattrapageReplan(bloc) {
         } catch (_) {}
       }
     }
-    // 3. Marque l'ancien bloc Zappe avec la raison
-    const noteFields = { statut: 'Zappe' };
-    if (raison.trim()) noteFields.note_fin_bloc = `Replanifié vers ${targetISO} ${cleanTranche}. ${raison.trim()}`;
-    else noteFields.note_fin_bloc = `Replanifié vers ${targetISO} ${cleanTranche}.`;
-    // Retire les tâches movable du bloc passé
     const remainingTaskIds = tIds.filter(id => !movable.includes(id));
-    noteFields.taches_liees = ['L', ...remainingTaskIds];
-    await WuboGrist.updateRecord('Blocs_temps', bloc.id, noteFields);
-
-    WuboGrist.toast(`${movable.length} tâche(s) replanifiée(s) au ${targetISO} ${cleanTranche}`, 'success', 3500);
+    await WuboGrist.updateRecord('Blocs_temps', bloc.id, {
+      statut: 'Zappe',
+      note_fin_bloc: `Replanifié ${targetISO} ${tranche}`,
+      taches_liees: ['L', ...remainingTaskIds]
+    });
+    WuboGrist.toast(`${movable.length} tâche(s) → ${targetISO} ${tranche}`, 'success');
     await render();
   } catch (e) {
     WuboGrist.toast('Erreur : ' + e.message, 'error');
@@ -990,7 +1120,10 @@ let blocsByIdCache = {};
 async function blocAction(blocId, statut) {
   const fields = { statut };
   if (statut === 'Fait') {
-    const note = prompt('Note de fin de bloc (1 ligne) :');
+    const note = await WuboUI.prompt({
+      title: 'Note de fin de bloc',
+      placeholder: 'Ce que tu as fait (optionnel)'
+    });
     if (note === null) return;
     if (note) fields.note_fin_bloc = note;
   }
@@ -1176,7 +1309,8 @@ function replaceTaskEdit(taskId) {
 
 async function archiveCurrentTask() {
   if (!currentTaskEditId) return;
-  if (!confirm('Archiver cette tâche ?')) return;
+  const ok = await WuboUI.confirm({ title: 'Archiver la tâche ?', yesLabel: 'Archiver' });
+  if (!ok) return;
   try {
     await WuboGrist.archiveTask(currentTaskEditId);
     closeTaskEdit();
@@ -1191,7 +1325,13 @@ async function deleteCurrentTask() {
   if (!currentTaskEditId) return;
   const t = tachesById[currentTaskEditId];
   const titre = t ? (t.titre || '(sans titre)') : '';
-  if (!confirm(`Supprimer définitivement "${titre}" ?\n\nCette action est irréversible. Préfère "Archiver" si tu veux juste la cacher.`)) return;
+  const ok = await WuboUI.confirm({
+    title: 'Supprimer ?',
+    message: `"${titre}" — irréversible`,
+    yesLabel: 'Supprimer',
+    danger: true
+  });
+  if (!ok) return;
   try {
     const id = currentTaskEditId;
     // Retirer la tâche des blocs qui la référencent

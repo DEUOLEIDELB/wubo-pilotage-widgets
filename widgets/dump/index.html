@@ -16,6 +16,7 @@
 <script src="../../lib/dom.js"></script>
 <script src="../../lib/grist-api.js"></script>
 <script src="../../lib/modal-swipe.js"></script>
+<script src="../../lib/wubo-ui.js"></script>
 <style>
   #app {
     max-width: 560px;
@@ -271,8 +272,9 @@ function loadDraft() {
   }
 }
 
-function clearDraftManual() {
-  if (!confirm('Effacer le brouillon en cours ?')) return;
+async function clearDraftManual() {
+  const ok = await WuboUI.confirm({ title: 'Effacer le brouillon ?', yesLabel: 'Effacer', danger: true });
+  if (!ok) return;
   WuboGrist.clearDumpDraft();
   $contenu.value = '';
   updateCounter();

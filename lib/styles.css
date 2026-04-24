@@ -3,21 +3,21 @@
 :root {
   --bg: #F4F4F1;
   --surface: #FFFFFF;
-  --border: #E0E0DC;
-  --border-strong: #C8C8C3;
-  --text: #111113;
-  --text-dim: #6B6B6B;
-  --text-faint: #9A9A95;
+  --border: #D8D8D3;
+  --border-strong: #B8B8B2;
+  --text: #0C0C0E;
+  /* Contraste renforcé : text-dim passe AAA sur surface, text-faint passe AA */
+  --text-dim: #4A4A4A;
+  --text-faint: #6B6B6B;
   --accent: #FFDD0B;
-  --accent-strong: #F0CC00;
-  --current: #5914D0;
-  --current-soft: #EEE2FB;
-  --danger: #D93025;
-  --success: #188038;
-  --warning: #B06000;
-  --done-bg: #EDEDE8;
-  /* Sticky : la navbar étend son fond 12px vers le bas via box-shadow --bg color,
-     masquant tout contenu qui défilerait entre elle et le sub-header sticky. */
+  --accent-strong: #E6C400;
+  --current: #4A0FB3;
+  --current-soft: #E4D4FA;
+  --danger: #C1281D;
+  --success: #1A6B30;
+  --warning: #8A4800;
+  --done-bg: #E8E8E2;
+  /* Sticky : navbar étend son fond 12px vers le bas via box-shadow --bg color */
   --nav-height: 44px;
   --nav-top: calc(env(safe-area-inset-top) + 4px);
   --nav-extension: 12px;
@@ -49,25 +49,25 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
   background: var(--bg);
   color: var(--text);
-  font-size: 14px;
-  line-height: 1.35;
+  font-size: 15px;
+  line-height: 1.4;
   overflow-x: hidden;
   padding-bottom: env(safe-area-inset-bottom);
   padding-top: env(safe-area-inset-top);
 }
 
-h1 { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
-h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); }
-h3 { font-size: 14px; font-weight: 600; }
+h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); }
+h3 { font-size: 15px; font-weight: 700; }
 
 button {
   font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
   background: var(--text);
   color: white;
   border: none;
-  padding: 10px 14px;
+  padding: 11px 14px;
   border-radius: 6px;
   cursor: pointer;
   line-height: 1;
@@ -78,7 +78,7 @@ button.accent { background: var(--accent); color: var(--text); }
 button.ghost { background: transparent; color: var(--text); border: 1px solid var(--border-strong); }
 button.success { background: var(--success); color: white; }
 button.danger { background: var(--danger); color: white; }
-button.small { padding: 6px 10px; font-size: 12px; }
+button.small { padding: 7px 11px; font-size: 13px; }
 button:disabled { opacity: 0.4; cursor: not-allowed; }
 
 input, select, textarea {
@@ -104,7 +104,7 @@ select {
   background-position: right 12px center;
   padding-right: 32px;
 }
-label { font-size: 12px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; }
+label { font-size: 13px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; }
 
 .surface {
   background: var(--surface);
@@ -197,8 +197,8 @@ label { font-size: 12px; font-weight: 600; color: var(--text-dim); text-transfor
 }
 
 /* Navigation tabs - present sur chaque widget, sticky en haut.
-   Le box-shadow solide (--bg color) étend la surface "gelée" 12px vers le bas
-   pour que le sub-header sticky colle dans la continuité sans gap visible. */
+   Box-shadow étend son fond --bg haut ET bas pour bloquer tout élément qui défilerait
+   autour d'elle pendant le scroll (aussi bien au-dessus qu'en-dessous). */
 .app-nav {
   display: flex;
   align-items: center;
@@ -213,8 +213,13 @@ label { font-size: 12px; font-weight: 600; color: var(--text-dim); text-transfor
   z-index: 30;
   box-shadow:
     0 var(--nav-extension) 0 var(--bg),
+    0 calc(-1 * var(--nav-top) - 4px) 0 var(--bg),
     0 calc(var(--nav-extension) + 2px) 6px -2px rgba(0, 0, 0, 0.05);
 }
+
+/* Couvre le fond au-dessus de la navbar (zone safe-area) pour éviter que
+   les éléments défilant passent visibles au-dessus du pill sticky. */
+html { background: var(--bg); }
 
 /* Sous-header de page : utilitaire pour coller n'importe quel bloc sous la navbar. */
 .sticky-sub {

@@ -16,6 +16,7 @@
 <script src="../../lib/dom.js"></script>
 <script src="../../lib/grist-api.js"></script>
 <script src="../../lib/modal-swipe.js"></script>
+<script src="../../lib/wubo-ui.js"></script>
 <style>
   #app {
     max-width: 560px;
@@ -703,7 +704,13 @@ async function deleteCurrentTask() {
   if (!currentTaskEditId) return;
   const t = taches.find(x => x.id === currentTaskEditId);
   const titre = t ? (t.titre || '(sans titre)') : '';
-  if (!confirm(`Supprimer définitivement "${titre}" ? Irréversible.`)) return;
+  const ok = await WuboUI.confirm({
+    title: 'Supprimer ?',
+    message: `"${titre}" — irréversible`,
+    yesLabel: 'Supprimer',
+    danger: true
+  });
+  if (!ok) return;
   try {
     const id = currentTaskEditId;
     const blocs = await WuboGrist.fetchRows('Blocs_temps');
@@ -749,13 +756,14 @@ async function saveTaskEdit() {
 
 async function archiveCurrentTask() {
   if (!currentTaskEditId) return;
-  if (!confirm('Archiver cette tâche ?')) return;
+  const ok = await WuboUI.confirm({ title: 'Archiver la tâche ?', yesLabel: 'Archiver' });
+  if (!ok) return;
   try {
     await WuboGrist.archiveTask(currentTaskEditId);
     closeTaskEdit();
     render();
   } catch (e) {
-    alert('Erreur : ' + e.message);
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
   }
 }
 
