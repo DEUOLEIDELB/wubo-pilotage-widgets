@@ -196,40 +196,148 @@ label { font-size: 13px; font-weight: 700; color: var(--text-dim); text-transfor
   color: var(--text-faint);
 }
 
-/* Navigation tabs - present sur chaque widget, sticky en haut.
-   Box-shadow étend son fond --bg haut ET bas pour bloquer tout élément qui défilerait
-   autour d'elle pendant le scroll (aussi bien au-dessus qu'en-dessous). */
-.app-nav {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  margin-bottom: 0;
-  position: sticky;
-  top: var(--nav-top);
-  z-index: 30;
-  box-shadow:
-    0 var(--nav-extension) 0 var(--bg),
-    0 calc(-1 * var(--nav-top) - 4px) 0 var(--bg),
-    0 calc(var(--nav-extension) + 2px) 6px -2px rgba(0, 0, 0, 0.05);
-}
-
-/* Couvre le fond au-dessus de la navbar (zone safe-area) pour éviter que
-   les éléments défilant passent visibles au-dessus du pill sticky. */
 html { background: var(--bg); }
 
-/* Sous-header de page : utilitaire pour coller n'importe quel bloc sous la navbar. */
+/* ============ BOTTOM NAV (tabs + actions) ============
+   Tout est en bas pour accès pouce facile. Plus de nav top sticky,
+   donc plus de problème de gap visuel lors du scroll. */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 6px 10px calc(6px + env(safe-area-inset-bottom));
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 50;
+  box-shadow: 0 -4px 14px rgba(0, 0, 0, 0.08);
+}
+.bottom-nav .nav-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--done-bg);
+  border-radius: 7px;
+}
+.bottom-nav .nav-tabs a.tab {
+  flex: 1;
+  text-align: center;
+  padding: 9px 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-decoration: none;
+  border-radius: 5px;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+.bottom-nav .nav-tabs a.tab.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+.bottom-nav .nav-tabs a.tab:active { opacity: 0.6; }
+.bottom-nav .nav-actions {
+  display: flex;
+  gap: 6px;
+}
+.bottom-nav .nav-actions button {
+  padding: 11px 14px;
+  font-size: 14px;
+}
+.bottom-nav .nav-actions .nav-dump { flex: 1; }
+.bottom-nav .nav-actions .nav-refresh { flex: 0 0 56px; }
+@media (min-width: 600px) {
+  .bottom-nav {
+    max-width: 560px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 12px 12px 0 0;
+  }
+}
+
+/* ============ PAGE HEADER (top) ============
+   Header simple sticky avec titre + profil. Couvre toujours la zone safe-area
+   via box-shadow --bg pour éviter tout contenu visible au-dessus pendant le scroll. */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 2px 10px;
+  position: sticky;
+  top: calc(env(safe-area-inset-top) + 4px);
+  z-index: 25;
+  background: var(--bg);
+  box-shadow:
+    0 10px 0 var(--bg),
+    0 calc(-1 * env(safe-area-inset-top) - 12px) 0 var(--bg),
+    0 12px 6px -4px rgba(0, 0, 0, 0.04);
+}
+.page-header-title {
+  flex: 1;
+  min-width: 0;
+}
+.page-header-title h1 {
+  font-size: 18px;
+  font-weight: 700;
+  text-transform: capitalize;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+.page-header-title .sub {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+/* ============ PROFILE BUTTON ============
+   Bouton circulaire en haut à droite, tap = menu profil (switch user + view mode). */
+.profile-btn {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong);
+  background: var(--accent);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 800;
+  padding: 0;
+  cursor: pointer;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.profile-btn:active { opacity: 0.7; }
+.profile-btn.taki  { background: var(--accent); color: var(--text); border-color: var(--accent-strong); }
+.profile-btn.numa  { background: var(--current); color: white; border-color: var(--current); }
+.profile-btn.lyes  { background: var(--success); color: white; border-color: var(--success); }
+.profile-btn.team  { background: var(--surface); color: var(--text); }
+.profile-btn .view-dot {
+  position: absolute;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--danger);
+  border: 2px solid var(--surface);
+  transform: translate(12px, -12px);
+  display: none;
+}
+.profile-btn.has-inbox .view-dot { display: block; }
+
+/* Conteneur relatif pour positionner le view-dot sur profile-btn */
+.profile-wrap { position: relative; display: inline-flex; }
+
+/* Sub-header utilitaire pour les pages où on colle un élément sous le page-header */
 .sticky-sub {
   position: sticky;
   top: var(--sub-sticky-top);
-  z-index: 25;
+  z-index: 22;
   background: var(--bg);
-  padding-top: 4px;
-  padding-bottom: 4px;
-  margin-top: -4px;
 }
 .app-nav a.tab {
   flex: 1;

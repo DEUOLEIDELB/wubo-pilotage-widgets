@@ -22,19 +22,23 @@
   #app {
     max-width: 720px;
     margin: 0 auto;
-    padding: 10px 10px calc(70px + env(safe-area-inset-bottom));
+    padding: 6px 10px calc(116px + env(safe-area-inset-bottom));
     display: flex;
     flex-direction: column;
     gap: 8px;
   }
-  /* Sprint-header + view-toggle regroupés en un sticky block sous la navbar */
+  /* Sprint-header + view-toggle regroupés en un sticky block en haut */
   .semaine-sticky-block {
     position: sticky;
-    top: var(--sub-sticky-top);
-    z-index: 20;
+    top: calc(env(safe-area-inset-top) + 4px);
+    z-index: 25;
     background: var(--bg);
     padding-top: 4px;
     margin-top: -4px;
+    box-shadow:
+      0 10px 0 var(--bg),
+      0 calc(-1 * env(safe-area-inset-top) - 12px) 0 var(--bg),
+      0 12px 6px -4px rgba(0, 0, 0, 0.04);
   }
   .sprint-header {
     display: flex;
@@ -463,22 +467,6 @@
     gap: 10px;
   }
 
-  .bottom {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
-    display: flex;
-    gap: 8px;
-    background: rgba(244, 244, 241, 0.95);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
-    border-top: 1px solid var(--border);
-    z-index: 50;
-  }
-  .bottom button { flex: 1; padding: 13px; font-size: 14px; }
-
   .legend {
     display: flex;
     gap: 8px;
@@ -553,7 +541,6 @@
   @media (min-width: 600px) {
     .grid-week { display: grid; }
     .list-days { display: none; }
-    .bottom { max-width: 720px; left: 50%; transform: translateX(-50%); border-radius: 12px 12px 0 0; }
     .cell { font-size: 10px; min-height: 72px; }
     .cell .task-main { font-size: 10px; max-height: 40px; }
   }
@@ -562,13 +549,6 @@
 <body>
 
 <main id="app">
-  <nav class="app-nav">
-    <a href="../aujourdhui/" class="tab">Jour</a>
-    <a href="../semaine/" class="tab active">Semaine</a>
-    <a href="../dashboard/" class="tab">Objectifs</a>
-    <a href="../deadlines/" class="tab">Échéances</a>
-  </nav>
-
   <div class="semaine-sticky-block">
     <div class="sprint-header">
       <div class="title-block">
@@ -580,6 +560,7 @@
         <button type="button" class="nav-today" onclick="resetWindow()" title="Revenir à aujourd'hui">Aujourd'hui</button>
         <button type="button" class="nav-chev" onclick="shiftWindow(1)" aria-label="Période suivante" title="Période suivante">›</button>
       </div>
+      <div id="profile-slot" class="profile-wrap" style="margin-left:6px"></div>
     </div>
 
     <div class="view-toggle" id="view-toggle">
@@ -612,9 +593,17 @@
   </div>
 </main>
 
-<nav class="bottom">
-  <button class="accent" onclick="openDump()">+ Dump</button>
-  <button class="ghost" onclick="refresh()">↻ Refresh</button>
+<nav class="bottom-nav">
+  <div class="nav-tabs">
+    <a href="../aujourdhui/" class="tab">Jour</a>
+    <a href="../semaine/" class="tab active">Semaine</a>
+    <a href="../dashboard/" class="tab">Objectifs</a>
+    <a href="../deadlines/" class="tab">Échéances</a>
+  </div>
+  <div class="nav-actions">
+    <button class="accent nav-dump" onclick="openDump()">+ Dump</button>
+    <button class="ghost nav-refresh" onclick="refresh()" title="Rafraîchir">↻</button>
+  </div>
 </nav>
 
 <!-- Créer un bloc : date + tranche -->
@@ -1118,8 +1107,9 @@ async function render() {
 
   allBlocs = []; tachesById = {};
   try {
-    const [b, t] = await Promise.all([WuboGrist.fetchRows('Blocs_temps'), WuboGrist.fetchRows('Taches')]);
-    allBlocs = b;
+    const [bRaw, tRaw] = await Promise.all([WuboGrist.fetchRows('Blocs_temps'), WuboGrist.fetchRows('Taches')]);
+    allBlocs = WuboGrist.filterByOwner(bRaw);
+    const t = WuboGrist.filterByOwner(tRaw);
     t.forEach(x => { tachesById[x.id] = x; });
   } catch (e) {
     showError(e.message);
@@ -1404,7 +1394,7 @@ async function createBlocAt(iso, tranche) {
       date: ts,
       tranche,
       statut: 'Planifie',
-      proprietaire: 'Taki'
+      proprietaire: (WuboGrist.getUser() || 'Taki')
     });
     WuboGrist.toast('Bloc créé. Ajoute des tâches.', 'success');
     pendingFlashBlocId = id;
@@ -1704,7 +1694,7 @@ async function saveTaskEdit() {
     } else {
       fields.date_creation = WuboGrist.daysFromToday(0);
       fields.push_count = 0;
-      fields.proprietaire = 'Taki';
+      fields.proprietaire = WuboGrist.getUser() || 'Taki';
       fields.cash_impact = 2;
       fields.urgency = 2;
       fields.strategic_value = 2;
@@ -1739,7 +1729,7 @@ async function submitDump() {
     return;
   }
   try {
-    await WuboGrist.addRecord('Dump_notes', { timestamp: WuboGrist.nowUnix(), auteur: 'Taki', contenu: content, contexte: ctx, traite: false, converti_en: '' });
+    await WuboGrist.addRecord('Dump_notes', { timestamp: WuboGrist.nowUnix(), auteur: WuboGrist.getUser() || 'Taki', contenu: content, contexte: ctx, traite: false, converti_en: '' });
     if (dumpBinding) dumpBinding.reset();
     else document.getElementById('dump-content').value = '';
     closeDump();
@@ -1753,7 +1743,7 @@ function closeDump() { closeModal('dump-modal'); }
 function backdropClose(e, id) { if (e.target === e.currentTarget) closeModal(id); }
 
 async function refresh() {
-  const btn = document.querySelector('nav.bottom button.ghost');
+  const btn = document.querySelector('.nav-refresh');
   if (!btn) return;
   const orig = btn.textContent;
   btn.textContent = '⟳';
@@ -1782,6 +1772,9 @@ window.addEventListener('resize', () => {
 
 (async () => {
   await WuboGrist.initGrist();
+  if (window.WuboUI) {
+    await WuboUI.ensureUser(document.getElementById('profile-slot'));
+  }
   try { if (typeof grist !== 'undefined' && grist.onRecords) grist.onRecords(() => render()); } catch (_) {}
   window.addEventListener('wubo-data-fresh', () => render());
   dumpBinding = WuboGrist.bindDumpTextarea(

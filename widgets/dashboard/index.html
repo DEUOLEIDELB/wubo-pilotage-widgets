@@ -21,21 +21,30 @@
   #app {
     max-width: 800px;
     margin: 0 auto;
-    padding: 10px 14px calc(80px + env(safe-area-inset-bottom));
+    padding: 6px 14px calc(116px + env(safe-area-inset-bottom));
     display: flex;
     flex-direction: column;
     gap: 10px;
   }
+  /* Le page-title sert ici de page-header : inclut le profile-btn à droite */
   .page-title {
-    padding: 6px 2px 6px;
-    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 2px 10px;
     position: sticky;
-    top: var(--sub-sticky-top);
-    z-index: 22;
+    top: calc(env(safe-area-inset-top) + 4px);
+    z-index: 25;
     background: var(--bg);
+    box-shadow:
+      0 10px 0 var(--bg),
+      0 calc(-1 * env(safe-area-inset-top) - 12px) 0 var(--bg),
+      0 12px 6px -4px rgba(0, 0, 0, 0.04);
   }
+  .page-title > .page-title-main { flex: 1; min-width: 0; }
   .page-title h1 { font-size: 17px; }
-  .page-title .sub { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+  .page-title .sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
 
   .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
   .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 5px; padding: 6px 8px; }
@@ -199,7 +208,7 @@
     gap: 10px;
     padding: 10px 12px 8px;
     position: sticky;
-    top: calc(var(--sub-sticky-top) + 48px);
+    top: calc(env(safe-area-inset-top) + 4px + 56px);
     z-index: 15;
     background: var(--surface);
     border-bottom: 1px solid var(--border);
@@ -333,21 +342,6 @@
 
   h2 { font-size: 11px; margin-bottom: 4px; }
 
-  /* Bottom Dump button */
-  .bottom {
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
-    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
-    display: flex;
-    gap: 8px;
-    background: rgba(244, 244, 241, 0.95);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
-    border-top: 1px solid var(--border);
-    z-index: 50;
-  }
-  .bottom button { flex: 1; padding: 13px; font-size: 14px; }
-
   /* Modals */
   .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: flex-end; justify-content: center; z-index: 100; overscroll-behavior: contain; }
   .modal.hidden { display: none; }
@@ -368,26 +362,18 @@
 
   @media (max-width: 560px) {
     .stats { grid-template-columns: repeat(2, 1fr); }
-    .bottom { max-width: 100%; }
-  }
-  @media (min-width: 600px) {
-    .bottom { max-width: 480px; left: 50%; transform: translateX(-50%); border-radius: 12px 12px 0 0; }
   }
 </style>
 </head>
 <body>
 
 <main id="app">
-  <nav class="app-nav">
-    <a href="../aujourdhui/" class="tab">Jour</a>
-    <a href="../semaine/" class="tab">Semaine</a>
-    <a href="../dashboard/" class="tab active">Objectifs</a>
-    <a href="../deadlines/" class="tab">Échéances</a>
-  </nav>
-
   <div class="page-title">
-    <h1>Objectifs du trimestre</h1>
-    <div class="sub" id="sub"></div>
+    <div class="page-title-main">
+      <h1>Objectifs du trimestre</h1>
+      <div class="sub" id="sub"></div>
+    </div>
+    <div id="profile-slot" class="profile-wrap"></div>
   </div>
 
   <div id="error"></div>
@@ -414,9 +400,17 @@
   </section>
 </main>
 
-<nav class="bottom">
-  <button class="accent" onclick="openDump()">+ Dump</button>
-  <button class="ghost" onclick="refresh()">↻ Refresh</button>
+<nav class="bottom-nav">
+  <div class="nav-tabs">
+    <a href="../aujourdhui/" class="tab">Jour</a>
+    <a href="../semaine/" class="tab">Semaine</a>
+    <a href="../dashboard/" class="tab active">Objectifs</a>
+    <a href="../deadlines/" class="tab">Échéances</a>
+  </div>
+  <div class="nav-actions">
+    <button class="accent nav-dump" onclick="openDump()">+ Dump</button>
+    <button class="ghost nav-refresh" onclick="refresh()" title="Rafraîchir">↻</button>
+  </div>
 </nav>
 
 <!-- Dump modal -->
@@ -764,7 +758,7 @@ async function pushActionConvert() {
       urgency: 3,
       strategic_value: 2,
       push_count: 0,
-      proprietaire: 'Taki',
+      proprietaire: WuboGrist.getUser() || 'Taki',
       date_creation: WuboGrist.daysFromToday(0),
       date_cible: WuboGrist.daysFromToday(3)
     };
@@ -939,12 +933,17 @@ function renderObjectif(o) {
 async function render() {
   document.getElementById('error').style.display = 'none';
   try {
-    const [o, p, t, s] = await Promise.all([
+    const [oRaw, pRaw, tRaw, sRaw] = await Promise.all([
       WuboGrist.fetchRows('Objectifs'),
       WuboGrist.fetchRows('Projets'),
       WuboGrist.fetchRows('Taches'),
       WuboGrist.fetchRows('Sujets_a_pousser')
     ]);
+    // Filtre par propriétaire (mine + Shared, ou all en mode team)
+    const o = WuboGrist.filterByOwner(oRaw);
+    const p = WuboGrist.filterByOwner(pRaw);
+    const t = WuboGrist.filterByOwner(tRaw);
+    const s = WuboGrist.filterByOwner(sRaw);
     objectifs = o.filter(x => x.statut === 'Actif');
     projets = p.filter(x => x.statut !== 'Archive' && x.statut !== 'Abandonne');
     taches = t;
@@ -1221,7 +1220,7 @@ async function saveTaskEdit() {
     } else {
       fields.date_creation = WuboGrist.daysFromToday(0);
       fields.push_count = 0;
-      fields.proprietaire = 'Taki';
+      fields.proprietaire = WuboGrist.getUser() || 'Taki';
       if (currentTaskProjetId) fields.projet = currentTaskProjetId;
       if (currentTaskParent) fields.parent_tache = currentTaskParent;
 
@@ -1242,7 +1241,7 @@ async function saveTaskEdit() {
           projet: currentTaskProjetId || null,
           statut: 'Pas commence',
           date_creation: WuboGrist.daysFromToday(0),
-          proprietaire: 'Taki',
+          proprietaire: WuboGrist.getUser() || 'Taki',
           cash_impact: 1,
           urgency: 1,
           strategic_value: 1,
@@ -1269,7 +1268,7 @@ async function submitDump() {
   const content = document.getElementById('dump-content').value.trim();
   if (!content) { WuboGrist.toast('Note vide', 'warn'); return; }
   try {
-    await WuboGrist.addRecord('Dump_notes', { timestamp: WuboGrist.nowUnix(), auteur: 'Taki', contenu: content, contexte: ctx, traite: false, converti_en: '' });
+    await WuboGrist.addRecord('Dump_notes', { timestamp: WuboGrist.nowUnix(), auteur: WuboGrist.getUser() || 'Taki', contenu: content, contexte: ctx, traite: false, converti_en: '' });
     if (dumpBinding) dumpBinding.reset();
     else document.getElementById('dump-content').value = '';
     closeDump();
@@ -1284,7 +1283,7 @@ function closeDump() { closeModal('dump-modal'); }
 function backdropClose(e, id) { if (e.target === e.currentTarget) closeModal(id); }
 
 async function refresh() {
-  const btn = document.querySelector('nav.bottom button.ghost');
+  const btn = document.querySelector('.nav-refresh');
   if (!btn) return;
   const orig = btn.textContent;
   btn.textContent = '⟳';
@@ -1298,6 +1297,9 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeTaskE
 
 (async () => {
   await WuboGrist.initGrist();
+  if (window.WuboUI) {
+    await WuboUI.ensureUser(document.getElementById('profile-slot'));
+  }
   try { if (typeof grist !== 'undefined' && grist.onRecords) grist.onRecords(() => render()); } catch (_) {}
   window.addEventListener('wubo-data-fresh', () => render());
   dumpBinding = WuboGrist.bindDumpTextarea(

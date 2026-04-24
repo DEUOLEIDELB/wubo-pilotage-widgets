@@ -22,24 +22,11 @@
   #app {
     max-width: 480px;
     margin: 0 auto;
-    padding: 10px 14px calc(80px + env(safe-area-inset-bottom));
+    padding: 6px 14px calc(116px + env(safe-area-inset-bottom));
     display: flex;
     flex-direction: column;
     gap: 8px;
   }
-  .day-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    padding: 6px 2px 6px;
-    border-bottom: 1px solid var(--border);
-    position: sticky;
-    top: var(--sub-sticky-top);
-    z-index: 20;
-    background: var(--bg);
-  }
-  .day-header h1 { font-size: 18px; text-transform: capitalize; line-height: 1.1; }
-  .day-header .sub { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
 
   .bloc {
     background: var(--surface);
@@ -126,22 +113,6 @@
   .bloc-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
   .bloc-actions button { flex: 1; min-width: 88px; }
 
-  .bottom {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
-    display: flex;
-    gap: 8px;
-    background: rgba(244, 244, 241, 0.95);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
-    border-top: 1px solid var(--border);
-    z-index: 50;
-  }
-  .bottom button { flex: 1; padding: 13px; font-size: 14px; }
-
   .modal {
     position: fixed; inset: 0;
     background: rgba(0, 0, 0, 0.4);
@@ -179,10 +150,6 @@
 
   #error { background: var(--danger); color: white; padding: 10px; border-radius: 6px; font-size: 12px; display: none; }
   #error button { margin-top: 6px; background: white; color: var(--danger); border: 1px solid white; }
-
-  @media (min-width: 600px) {
-    .bottom { max-width: 480px; left: 50%; transform: translateX(-50%); border-radius: 12px 12px 0 0; }
-  }
 
   /* Undo toast flottant apres zap */
   .undo-toast {
@@ -352,19 +319,13 @@
 <body>
 
 <main id="app">
-  <nav class="app-nav">
-    <a href="../aujourdhui/" class="tab active">Jour</a>
-    <a href="../semaine/" class="tab">Semaine</a>
-    <a href="../dashboard/" class="tab">Objectifs</a>
-    <a href="../deadlines/" class="tab">Échéances</a>
-  </nav>
-
-  <div class="day-header">
-    <div>
+  <header class="page-header">
+    <div class="page-header-title">
       <h1 id="date">...</h1>
       <div class="sub" id="meta"></div>
     </div>
-  </div>
+    <div id="profile-slot" class="profile-wrap"></div>
+  </header>
 
   <div id="rattrapage"></div>
   <div id="drift"></div>
@@ -372,9 +333,17 @@
   <div id="blocs"></div>
 </main>
 
-<nav class="bottom">
-  <button class="accent" onclick="openDump()">+ Dump</button>
-  <button class="ghost" onclick="refresh()">↻ Refresh</button>
+<nav class="bottom-nav">
+  <div class="nav-tabs">
+    <a href="../aujourdhui/" class="tab active">Jour</a>
+    <a href="../semaine/" class="tab">Semaine</a>
+    <a href="../dashboard/" class="tab">Objectifs</a>
+    <a href="../deadlines/" class="tab">Échéances</a>
+  </div>
+  <div class="nav-actions">
+    <button class="accent nav-dump" onclick="openDump()">+ Dump</button>
+    <button class="ghost nav-refresh" onclick="refresh()" title="Rafraîchir">↻</button>
+  </div>
 </nav>
 
 <div id="dump-modal" class="modal hidden" onclick="backdropClose(event, 'dump-modal')">
@@ -708,10 +677,13 @@ async function render() {
   tachesById = {};
   let fetchOk = true;
   try {
-    const [b, t] = await Promise.all([
+    const [bRaw, tRaw] = await Promise.all([
       WuboGrist.fetchRows('Blocs_temps'),
       WuboGrist.fetchRows('Taches')
     ]);
+    // Filtre multi-user : en mode 'mine', on garde proprietaire === user ou Shared
+    const b = WuboGrist.filterByOwner(bRaw);
+    const t = WuboGrist.filterByOwner(tRaw);
     allBlocsFetched = b;
     const today = WuboGrist.todayISO();
     blocs = b.filter(x => WuboGrist.gristDateToISO(x.date) === today);
@@ -885,7 +857,7 @@ async function bulkRattrapage() {
           const [y, m, d] = tomorrowISO.split('-').map(Number);
           const ts = Math.floor(Date.UTC(y, m-1, d) / 1000);
           const { id } = await WuboGrist.addRecord('Blocs_temps', {
-            date: ts, tranche: b.tranche, statut: 'Planifie', proprietaire: 'Taki'
+            date: ts, tranche: b.tranche, statut: 'Planifie', proprietaire: (WuboGrist.getUser() || 'Taki')
           });
           target = { id, taches_liees: null };
           allBlocs.push({ id, date: ts, tranche: b.tranche, statut: 'Planifie', taches_liees: null });
@@ -1074,7 +1046,7 @@ async function rattrapageReplan(bloc) {
     const targetDateUnix = Math.floor(Date.UTC(y, m-1, d) / 1000);
     if (!targetBloc) {
       const { id } = await WuboGrist.addRecord('Blocs_temps', {
-        date: targetDateUnix, tranche, statut: 'Planifie', proprietaire: 'Taki'
+        date: targetDateUnix, tranche, statut: 'Planifie', proprietaire: (WuboGrist.getUser() || 'Taki')
       });
       targetBloc = { id, taches_liees: null };
     }
@@ -1534,7 +1506,7 @@ async function saveTaskEdit() {
     } else {
       fields.date_creation = WuboGrist.daysFromToday(0);
       fields.push_count = 0;
-      fields.proprietaire = 'Taki';
+      fields.proprietaire = WuboGrist.getUser() || 'Taki';
       fields.cash_impact = 2;
       fields.urgency = 2;
       fields.strategic_value = 2;
@@ -1568,7 +1540,7 @@ async function saveTaskEdit() {
               urgency: 1,
               strategic_value: 1,
               push_count: 0,
-              proprietaire: 'Taki',
+              proprietaire: (WuboGrist.getUser() || 'Taki'),
               date_creation: WuboGrist.daysFromToday(0),
               parent_tache: newId
             });
@@ -1610,7 +1582,7 @@ async function submitDump() {
   try {
     await WuboGrist.addRecord('Dump_notes', {
       timestamp: WuboGrist.nowUnix(),
-      auteur: 'Taki',
+      auteur: WuboGrist.getUser() || 'Taki',
       contenu: content,
       contexte: ctx,
       traite: false,
@@ -1631,13 +1603,13 @@ function backdropClose(e, id) {
   if (e.target === e.currentTarget) closeModal(id);
 }
 async function refresh() {
-  const btn = document.querySelector('nav.bottom button.ghost');
+  const btn = document.querySelector('.nav-refresh');
   if (!btn) return;
   const orig = btn.textContent;
-  btn.textContent = '⟳ Chargement...';
+  btn.textContent = '⟳';
   btn.disabled = true;
-  try { await render(); btn.textContent = '✓ À jour'; }
-  catch (e) { btn.textContent = '✕ Erreur'; }
+  try { await render(); btn.textContent = '✓'; }
+  catch (e) { btn.textContent = '✕'; }
   setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1200);
 }
 
@@ -1650,15 +1622,16 @@ document.addEventListener('keydown', e => {
 
 (async () => {
   await WuboGrist.initGrist();
+  // Onboarding si pas encore d'user, puis pose le bouton profil
+  if (window.WuboUI) {
+    await WuboUI.ensureUser(document.getElementById('profile-slot'));
+  }
   try { if (typeof grist !== 'undefined' && grist.onRecords) grist.onRecords(() => render()); } catch (_) {}
-  // Cache SWR : re-render si une table est rafraîchie en arrière-plan
   window.addEventListener('wubo-data-fresh', () => render());
-  // Bind draft persist sur le textarea du dump rapide
   dumpBinding = WuboGrist.bindDumpTextarea(
     document.getElementById('dump-content'),
     document.getElementById('dump-contexte')
   );
-  // Swipe-to-close sur les modals bottom-sheet
   if (window.ModalSwipe) {
     ModalSwipe.enable('task-modal', closeTaskEdit);
     ModalSwipe.enable('dump-modal', closeDump);
