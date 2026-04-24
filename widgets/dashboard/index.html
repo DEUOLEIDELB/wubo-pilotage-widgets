@@ -15,7 +15,7 @@
 <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
 <script src="../../lib/dom.js"></script>
 <script src="../../lib/grist-api.js"></script>
-<script src="lib/modal-swipe.js"></script>
+<script src="../../lib/modal-swipe.js"></script>
 <style>
   #app {
     max-width: 800px;
@@ -34,92 +34,123 @@
   .stat .label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); }
   .stat .value { font-size: 18px; font-weight: 700; color: var(--text); line-height: 1.1; margin-top: 2px; }
 
-  /* Sujets a pousser : refonte carte individuelle mobile-first */
-  .sujets-wrap {
+  /* ============ SUJETS À POUSSER (zone de conscientisation) ============ */
+  /* Design utilitaire, sans emoji décoratif. Swipe pour archiver / supprimer.
+     Le titre "Sujets à pousser" est assumé : c'est la zone anti-évitement. */
+  .sujets-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
     display: flex;
     flex-direction: column;
     gap: 8px;
   }
-  .sujets-header {
+  .sujets-head {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    font-size: 10px;
+    align-items: baseline;
+  }
+  .sujets-head .titre {
+    font-size: 13px;
     font-weight: 700;
-    color: var(--warning);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-bottom: 2px;
+    color: var(--text);
   }
-  .sujet-card {
-    background: #fff;
-    border: 1px solid var(--border);
-    border-left: 4px solid var(--border-strong);
-    border-radius: 6px;
-    overflow: hidden;
-  }
-  .sujet-card.stagn-haute { border-left-color: var(--danger); }
-  .sujet-card.stagn-moyenne { border-left-color: var(--warning); }
-  .sujet-card.stagn-faible { border-left-color: var(--border-strong); }
-  .sujet-banner {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 10px;
+  .sujets-head .hint {
     font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    border-bottom: 1px solid var(--border);
+    color: var(--text-faint);
+    font-style: italic;
   }
-  .sujet-card.stagn-haute .sujet-banner { background: #FEE9E7; color: var(--danger); }
-  .sujet-card.stagn-moyenne .sujet-banner { background: #FFF0E1; color: var(--warning); }
-  .sujet-card.stagn-faible .sujet-banner { background: #F4F4F1; color: var(--text-dim); }
-  .sujet-banner .push-btn {
-    background: rgba(255,255,255,0.85);
-    border: 1px solid currentColor;
-    color: inherit;
-    padding: 3px 8px;
-    border-radius: 4px;
-    font-size: 10px;
-    font-weight: 700;
-    cursor: pointer;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-  .sujet-banner .push-btn:active { opacity: 0.7; }
-  .sujet-body {
-    padding: 10px;
+  .sujets-list {
     display: flex;
     flex-direction: column;
     gap: 4px;
   }
-  .sujet-titre {
-    font-size: 14px;
+  .sujet-row {
+    position: relative;
+    overflow: hidden;
+    border-radius: 4px;
+    background: var(--bg);
+  }
+  .sujet-actions {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    font-size: 11px;
     font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #fff;
+    pointer-events: none;
+  }
+  .sujet-actions.left { left: 0; background: var(--success); }
+  .sujet-actions.right { right: 0; background: var(--danger); }
+  .sujet-card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border-strong);
+    border-radius: 4px;
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    touch-action: pan-y;
+    will-change: transform;
+    transition: transform 0.22s ease-out;
+    cursor: pointer;
+  }
+  .sujet-card.long { border-left-color: var(--danger); }
+  .sujet-card.moyen { border-left-color: var(--warning); }
+  .sujet-card.court { border-left-color: var(--border-strong); }
+  .sujet-card.dragging { transition: none; }
+  .sujet-body { flex: 1; min-width: 0; }
+  .sujet-titre {
+    font-size: 13px;
+    font-weight: 600;
     line-height: 1.3;
     color: var(--text);
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
     overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .sujet-etape {
-    font-size: 12px;
-    font-style: italic;
+    font-size: 11px;
     color: var(--text-dim);
-    line-height: 1.35;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
+    line-height: 1.3;
     overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-top: 2px;
   }
+  .sujet-age {
+    font-size: 11px;
+    color: var(--text-dim);
+    flex-shrink: 0;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .sujet-card.long .sujet-age { color: var(--danger); font-weight: 600; }
+  .sujet-card.moyen .sujet-age { color: var(--warning); font-weight: 600; }
+  @keyframes sujetFlash {
+    0% { background: #FFF9D6; }
+    100% { background: var(--surface); }
+  }
+  .sujet-card.just-actioned { animation: sujetFlash 1.5s ease-out; }
   .sujet-expand-btn {
     align-self: center;
     font-size: 11px;
     margin-top: 2px;
+    background: transparent;
+    color: var(--text-dim);
+    border: none;
+    padding: 4px 8px;
+    cursor: pointer;
   }
+  .sujet-expand-btn:hover { color: var(--current); }
 
   /* Modal de choix "Pousser" */
   .push-choice-list { display: flex; flex-direction: column; gap: 6px; }
@@ -139,16 +170,17 @@
   .push-choice-btn .pc-titre { font-weight: 700; color: var(--text); }
   .push-choice-btn .pc-sub { font-size: 11px; color: var(--text-dim); }
 
+  /* ============ OBJECTIFS aplatis : pas de conteneurs imbriqués ============ */
   .objectif {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 6px;
-    padding: 10px 12px;
+    padding: 12px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 10px;
   }
-  .obj-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .obj-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
   .obj-title {
     font-size: 15px;
     font-weight: 700;
@@ -174,24 +206,31 @@
     text-transform: uppercase;
     letter-spacing: 0.03em;
   }
-  .obj-prog { display: flex; gap: 6px; align-items: center; }
-  .obj-prog .progress-bar { flex: 1; height: 7px; border-radius: 4px; overflow: hidden; background: var(--border); }
-  .obj-prog .progress-bar .fill { height: 100%; transition: width 0.3s ease; }
-  .obj-prog .progress-bar.low .fill { background: var(--accent-strong); }
-  .obj-prog .progress-bar.high .fill { background: var(--success); }
-  .obj-prog .val { font-size: 12px; font-weight: 700; min-width: 38px; text-align: right; }
+  .obj-prog-row { display: flex; gap: 8px; align-items: center; }
+  .obj-prog-row .progress-bar { flex: 1; height: 6px; border-radius: 3px; overflow: hidden; background: var(--border); }
+  .obj-prog-row .progress-bar .fill { height: 100%; transition: width 0.3s ease; }
+  .obj-prog-row .progress-bar.low .fill { background: var(--accent-strong); }
+  .obj-prog-row .progress-bar.high .fill { background: var(--success); }
+  .obj-prog-row .val { font-size: 11px; font-weight: 700; min-width: 32px; text-align: right; color: var(--text-dim); }
   .obj-kpi { font-size: 11px; color: var(--text-dim); }
   .obj-kpi strong { color: var(--current); }
 
-  .projet {
-    background: var(--bg);
-    border-radius: 5px;
-    padding: 6px 8px;
-    margin-top: 6px;
-    border-left: 3px solid var(--border-strong);
+  /* Projet : plus de conteneur bg, juste un header + tâches directement en-dessous */
+  .projet-block {
+    display: flex;
+    flex-direction: column;
+    padding: 6px 0 2px;
+    border-top: 1px solid var(--border);
   }
-  .projet-head { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
-  .projet-title { font-size: 12px; font-weight: 600; }
+  .projet-block:first-of-type { border-top: none; padding-top: 4px; }
+  .projet-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 6px;
+    padding-bottom: 4px;
+  }
+  .projet-title { font-size: 12px; font-weight: 700; color: var(--text); text-transform: uppercase; letter-spacing: 0.03em; }
   .projet-meta { font-size: 10px; color: var(--text-faint); }
 
   .gantt {
@@ -382,12 +421,15 @@
 <div id="push-modal" class="modal hidden" onclick="backdropClose(event, 'push-modal')">
   <div class="modal-content" onclick="event.stopPropagation()">
     <div class="modal-head">
-      <h3 id="push-modal-title">Pousser ce sujet</h3>
-      <button class="ghost small" onclick="closePushModal()">✕</button>
+      <h3 id="push-modal-title">Traiter ce sujet</h3>
+      <button class="ghost small" onclick="closePushModal()">Fermer</button>
     </div>
     <div id="push-modal-titre" style="font-size:13px;font-weight:700;color:var(--text)"></div>
     <div id="push-modal-etape" style="font-size:12px;color:var(--text-dim);font-style:italic"></div>
     <div class="push-choice-list" id="push-choice-list"></div>
+    <div class="sticky-save">
+      <button class="ghost small" onclick="closePushModal()">Annuler</button>
+    </div>
   </div>
 </div>
 
@@ -438,6 +480,7 @@
     </div>
     <div class="sticky-save">
       <button class="ghost small" onclick="closeTaskEdit()">Annuler</button>
+      <button id="task-delete-btn" class="danger small" style="display:none" onclick="deleteCurrentTask()">Supprimer</button>
       <button id="task-archive-btn" class="ghost small" style="display:none" onclick="archiveCurrentTask()">Archiver</button>
       <button class="primary" onclick="saveTaskEdit()">Enregistrer</button>
     </div>
@@ -490,64 +533,148 @@ function stat(label, value) {
   );
 }
 
-function stagnationLevel(j) {
-  if (j >= 999 || j > 14) return 'haute';
-  if (j > 7) return 'moyenne';
-  return 'faible';
+// Niveau de "vieillissement" d'un sujet (jours sans action)
+// court : < 7j, moyen : 7-14j, long : > 14j OU jamais touché (999)
+function sujetAgeLevel(j) {
+  if (j >= 999 || j > 14) return 'long';
+  if (j > 7) return 'moyen';
+  return 'court';
 }
-function stagnationLabel(j, level) {
-  const txt = j === 999 ? 'Jamais touché' : `Stagnant ${j}j`;
-  if (level === 'haute') return '🔴 ' + txt.toUpperCase();
-  if (level === 'moyenne') return '🟠 ' + txt.toUpperCase();
-  return '⚪ ' + txt.toUpperCase();
+function sujetAgeLabel(j) {
+  // Jours_stagnation = 999 quand aucune action enregistrée
+  if (j >= 999) return 'pas lancé';
+  if (j === 0) return "aujourd'hui";
+  if (j === 1) return 'hier';
+  return j + 'j';
 }
 
 function renderSujetCard(s) {
   const j = s.jours_stagnation || 0;
-  const level = stagnationLevel(j);
-  const card = $el('div', { class: 'sujet-card stagn-' + level });
+  const level = sujetAgeLevel(j);
+  const row = $el('div', { class: 'sujet-row', 'data-sujet-id': String(s.id) });
 
-  const banner = $el('div', { class: 'sujet-banner' });
-  banner.appendChild($el('span', {}, stagnationLabel(j, level)));
-  banner.appendChild($el('button', {
-    class: 'push-btn',
-    onclick: (e) => { e.stopPropagation(); openPushModal(s); }
-  }, 'Pousser →'));
-  card.appendChild(banner);
+  // Zones d'actions derrière la carte (révélées par swipe)
+  row.appendChild($el('div', { class: 'sujet-actions left' }, 'Archiver'));
+  row.appendChild($el('div', { class: 'sujet-actions right' }, 'Supprimer'));
+
+  const card = $el('div', {
+    class: 'sujet-card ' + level,
+    onclick: () => openPushModal(s)
+  });
 
   const body = $el('div', { class: 'sujet-body' });
-  body.appendChild($el('div', { class: 'sujet-titre', title: s.titre || '' }, s.titre || ''));
+  body.appendChild($el('div', { class: 'sujet-titre', title: s.titre || '' }, s.titre || '(sans titre)'));
   if (s.prochaine_etape) {
-    body.appendChild($el('div', { class: 'sujet-etape' }, '→ ' + s.prochaine_etape));
+    body.appendChild($el('div', { class: 'sujet-etape', title: s.prochaine_etape }, s.prochaine_etape));
   }
   card.appendChild(body);
-  return card;
+
+  card.appendChild($el('span', { class: 'sujet-age' }, sujetAgeLabel(j)));
+
+  row.appendChild(card);
+
+  // Swipe : droite = Archiver (révèle zone left), gauche = Supprimer (révèle zone right)
+  attachSujetSwipe(card, s);
+
+  return row;
+}
+
+function attachSujetSwipe(card, sujet) {
+  const TRIGGER = 80;
+  let startX = 0, startY = 0, dx = 0, dragging = false, captured = false;
+  function reset() { card.style.transform = ''; }
+  card.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) return;
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    dx = 0;
+    dragging = true;
+    captured = false;
+    card.classList.add('dragging');
+  }, { passive: true });
+  card.addEventListener('touchmove', (e) => {
+    if (!dragging) return;
+    const cx = e.touches[0].clientX, cy = e.touches[0].clientY;
+    const rawDx = cx - startX, rawDy = cy - startY;
+    if (!captured) {
+      if (Math.abs(rawDx) < 6 && Math.abs(rawDy) < 6) return;
+      if (Math.abs(rawDy) > Math.abs(rawDx)) { dragging = false; return; }
+      captured = true;
+    }
+    dx = rawDx;
+    card.style.transform = `translateX(${dx}px)`;
+    if (e.cancelable) e.preventDefault();
+  }, { passive: false });
+  card.addEventListener('touchend', async () => {
+    if (!dragging) return;
+    dragging = false;
+    card.classList.remove('dragging');
+    if (dx > TRIGGER) {
+      // Swipe droite → Archiver
+      card.style.transform = `translateX(100%)`;
+      setTimeout(() => archiveSujet(sujet), 150);
+    } else if (dx < -TRIGGER) {
+      // Swipe gauche → Supprimer
+      card.style.transform = `translateX(-100%)`;
+      setTimeout(() => deleteSujet(sujet), 150);
+    } else {
+      reset();
+    }
+  }, { passive: true });
+  card.addEventListener('touchcancel', () => { dragging = false; reset(); }, { passive: true });
+}
+
+async function archiveSujet(sujet) {
+  try {
+    await WuboGrist.updateRecord('Sujets_a_pousser', sujet.id, { statut: 'Archive' });
+    WuboGrist.toast('Sujet archivé', 'info');
+    await render();
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
+  }
+}
+async function deleteSujet(sujet) {
+  // Demander confirmation avant suppression (irréversible)
+  if (!confirm(`Supprimer "${sujet.titre || '(sans titre)'}" ?\n\nIrréversible. Préfère archiver pour garder une trace.`)) {
+    // Re-render pour remettre la carte
+    await render();
+    return;
+  }
+  try {
+    await WuboGrist.deleteRecord('Sujets_a_pousser', sujet.id);
+    WuboGrist.toast('Sujet supprimé', 'info');
+    await render();
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
+  }
 }
 
 function renderSujetsTop(sujets) {
   const section = document.getElementById('sujets-top-section');
   $clear(section);
   if (sujets.length === 0) return;
-  // Trier par jours_stagnation desc
+  // Tri : plus ancien (pas touché) d'abord
   const sorted = [...sujets].sort((a, b) => (b.jours_stagnation || 0) - (a.jours_stagnation || 0));
   const visible = sujetsExpanded ? sorted : sorted.slice(0, 3);
 
-  const wrap = $el('div', { class: 'sujets-wrap' });
-  wrap.appendChild($el('div', { class: 'sujets-header' },
-    $el('span', {}, `⚠ Sujets à pousser (${sujets.length})`),
-    $el('span', { style: { fontWeight: '500', color: 'var(--text-dim)', textTransform: 'none', letterSpacing: '0' } }, 'Stagnation décroissante')
+  const block = $el('div', { class: 'sujets-block' });
+  block.appendChild($el('div', { class: 'sujets-head' },
+    $el('span', { class: 'titre' }, `Sujets à pousser (${sujets.length})`),
+    $el('span', { class: 'hint' }, 'Glisse pour archiver ou supprimer')
   ));
-  visible.forEach(s => wrap.appendChild(renderSujetCard(s)));
+  const list = $el('div', { class: 'sujets-list' });
+  visible.forEach(s => list.appendChild(renderSujetCard(s)));
+  block.appendChild(list);
   if (sorted.length > 3) {
     const hiddenCount = sorted.length - 3;
-    const btnLabel = sujetsExpanded ? 'Réduire' : `Voir les ${hiddenCount} autres`;
+    const btnLabel = sujetsExpanded ? 'Réduire' : `+ ${hiddenCount} autres`;
     const toggleBtn = $el('button', {
-      class: 'ghost small sujet-expand-btn',
+      class: 'sujet-expand-btn',
       onclick: () => { sujetsExpanded = !sujetsExpanded; renderSujetsTop(sujets); }
     }, btnLabel);
-    wrap.appendChild(toggleBtn);
+    block.appendChild(toggleBtn);
   }
-  section.appendChild(wrap);
+  section.appendChild(block);
 }
 
 // --- Push modal : choix d'action sur un sujet stagnant ---
@@ -560,18 +687,18 @@ function openPushModal(sujet) {
   $clear(list);
 
   const btnContact = $el('button', { class: 'push-choice-btn', onclick: () => pushActionContact() });
-  btnContact.appendChild($el('span', { class: 'pc-titre' }, '📞 Contacter maintenant'));
-  btnContact.appendChild($el('span', { class: 'pc-sub' }, 'Marque comme touché aujourd\'hui, puis agis'));
+  btnContact.appendChild($el('span', { class: 'pc-titre' }, 'Je le contacte maintenant'));
+  btnContact.appendChild($el('span', { class: 'pc-sub' }, 'Marque comme traité aujourd\'hui'));
   list.appendChild(btnContact);
 
   const btnConvert = $el('button', { class: 'push-choice-btn', onclick: () => pushActionConvert() });
-  btnConvert.appendChild($el('span', { class: 'pc-titre' }, '✓ Convertir en tâche'));
-  btnConvert.appendChild($el('span', { class: 'pc-sub' }, 'Crée une tâche liée à ce sujet'));
+  btnConvert.appendChild($el('span', { class: 'pc-titre' }, 'Créer une tâche'));
+  btnConvert.appendChild($el('span', { class: 'pc-sub' }, 'Convertit en tâche concrète avec échéance'));
   list.appendChild(btnConvert);
 
   const btnReport = $el('button', { class: 'push-choice-btn', onclick: () => pushActionReport(3) });
-  btnReport.appendChild($el('span', { class: 'pc-titre' }, '⏱ Reporter de 3 jours'));
-  btnReport.appendChild($el('span', { class: 'pc-sub' }, 'Décale la stagnation de 3 jours'));
+  btnReport.appendChild($el('span', { class: 'pc-titre' }, 'Repousser 3 jours'));
+  btnReport.appendChild($el('span', { class: 'pc-sub' }, 'Je regarde dans 3 jours'));
   list.appendChild(btnReport);
 
   openModal('push-modal');
@@ -700,11 +827,12 @@ function renderProjet(p) {
   const done = tachesRoot.filter(t => t.statut === 'Fait').length;
   const totalH = tachesRoot.reduce((s, t) => s + (t.estim_heures || 0), 0);
 
-  const wrap = $el('div', { class: 'projet' });
+  // Plus de conteneur "projet bg" imbriqué : juste un header + les tâches directement
+  const wrap = $el('div', { class: 'projet-block' });
   const metaParts = [`${done}/${total} faites`];
-  if (archivedCount > 0) metaParts.push(`${archivedCount} archivées`);
-  metaParts.push(`${totalH}h`);
-  metaParts.push(`éch ${fmtDate(p.date_cible)}`);
+  if (archivedCount > 0) metaParts.push(`${archivedCount} arch`);
+  if (totalH > 0) metaParts.push(`${totalH}h`);
+  if (p.date_cible) metaParts.push(`éch ${fmtDate(p.date_cible)}`);
   wrap.appendChild($el('div', { class: 'projet-head' },
     $el('span', { class: 'projet-title' }, p.titre || ''),
     $el('span', { class: 'projet-meta' }, metaParts.join(' · '))
@@ -722,13 +850,10 @@ function renderProjet(p) {
       .sort((a, b) => (a.ordre || 99) - (b.ordre || 99))
       .forEach(t => {
         tachesNode.appendChild(renderTache(t, false));
-        // Sous-tâches (exclut archivées)
         const subs = taches.filter(s => s.parent_tache === t.id && s.statut !== 'Archive');
         subs.forEach(s => tachesNode.appendChild(renderTache(s, true)));
       });
     wrap.appendChild(tachesNode);
-  } else {
-    wrap.appendChild($el('div', { class: 'empty', style: { fontSize: '11px' } }, 'Aucune tâche'));
   }
 
   wrap.appendChild($el('button', { class: 'add-tache-projet', onclick: (e) => { e.stopPropagation(); openTaskNew(p.id); } }, '+ Ajouter une tâche'));
@@ -761,7 +886,7 @@ function renderObjectif(o) {
 
   if (o.description) el.appendChild($el('div', { style: { fontSize: '11px', color: 'var(--text-dim)' } }, o.description));
 
-  el.appendChild($el('div', { class: 'obj-prog' },
+  el.appendChild($el('div', { class: 'obj-prog-row' },
     $el('div', { class: 'progress-bar ' + (prog >= 50 ? 'high' : 'low') },
       $el('div', { class: 'fill', style: { width: prog + '%' } })
     ),
@@ -966,9 +1091,35 @@ function onAddSubtaskClick() {
 
 function updateArchiveBtnVisibility() {
   const btn = document.getElementById('task-archive-btn');
+  const delBtn = document.getElementById('task-delete-btn');
   if (!btn) return;
   const statut = document.getElementById('task-statut').value;
   btn.style.display = (currentTaskEditId && statut === 'Fait') ? '' : 'none';
+  if (delBtn) delBtn.style.display = currentTaskEditId ? '' : 'none';
+}
+
+async function deleteCurrentTask() {
+  if (!currentTaskEditId) return;
+  const t = tachesById[currentTaskEditId];
+  const titre = t ? (t.titre || '(sans titre)') : '';
+  if (!confirm(`Supprimer définitivement "${titre}" ? Irréversible. Préfère "Archiver" pour cacher sans perdre.`)) return;
+  try {
+    const id = currentTaskEditId;
+    const blocs = await WuboGrist.fetchRows('Blocs_temps');
+    for (const b of blocs) {
+      const ids = WuboGrist.refListIds(b.taches_liees);
+      if (ids.includes(id)) {
+        const next = ids.filter(x => x !== id);
+        try { await WuboGrist.updateRecord('Blocs_temps', b.id, { taches_liees: ['L', ...next] }); } catch (_) {}
+      }
+    }
+    await WuboGrist.deleteRecord('Taches', id);
+    closeTaskEdit();
+    WuboGrist.toast('Tâche supprimée', 'info');
+    await render();
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
+  }
 }
 
 async function archiveCurrentTask() {
@@ -1073,13 +1224,15 @@ async function saveTaskEdit() {
   }
 }
 
+let dumpBinding = null;
 async function submitDump() {
   const ctx = document.getElementById('dump-contexte').value;
   const content = document.getElementById('dump-content').value.trim();
   if (!content) { WuboGrist.toast('Note vide', 'warn'); return; }
   try {
     await WuboGrist.addRecord('Dump_notes', { timestamp: WuboGrist.nowUnix(), auteur: 'Taki', contenu: content, contexte: ctx, traite: false, converti_en: '' });
-    document.getElementById('dump-content').value = '';
+    if (dumpBinding) dumpBinding.reset();
+    else document.getElementById('dump-content').value = '';
     closeDump();
     WuboGrist.toast('Dump envoyé', 'success');
   } catch (e) {
@@ -1107,6 +1260,15 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeTaskE
 (async () => {
   await WuboGrist.initGrist();
   try { if (typeof grist !== 'undefined' && grist.onRecords) grist.onRecords(() => render()); } catch (_) {}
+  dumpBinding = WuboGrist.bindDumpTextarea(
+    document.getElementById('dump-content'),
+    document.getElementById('dump-contexte')
+  );
+  if (window.ModalSwipe) {
+    ModalSwipe.enable('task-modal', closeTaskEdit);
+    ModalSwipe.enable('dump-modal', closeDump);
+    ModalSwipe.enable('push-modal', closePushModal);
+  }
   render();
 })();
 </script>

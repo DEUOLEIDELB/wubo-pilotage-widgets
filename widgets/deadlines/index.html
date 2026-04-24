@@ -15,7 +15,7 @@
 <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
 <script src="../../lib/dom.js"></script>
 <script src="../../lib/grist-api.js"></script>
-<script src="lib/modal-swipe.js"></script>
+<script src="../../lib/modal-swipe.js"></script>
 <style>
   #app {
     max-width: 560px;
@@ -29,43 +29,85 @@
   .page-title h1 { font-size: 17px; }
   .page-title .sub { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
 
-  .filters {
+  /* Toggle Externes / Internes / Tout */
+  .tab-toggle {
     display: flex;
-    gap: 6px;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    padding: 2px 0;
-    scrollbar-width: none;
+    gap: 2px;
+    background: var(--done-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 2px;
   }
-  .filters::-webkit-scrollbar { display: none; }
-  .filter-chip {
-    flex-shrink: 0;
-    padding: 6px 12px;
-    border-radius: 14px;
-    border: 1px solid var(--border-strong);
+  .tab-toggle button {
+    flex: 1;
+    padding: 7px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    background: transparent;
+    color: var(--text-dim);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    line-height: 1.1;
+  }
+  .tab-toggle button.active {
     background: var(--surface);
     color: var(--text);
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    line-height: 1;
-    white-space: nowrap;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
   }
-  .filter-chip.active {
-    background: var(--text);
-    color: white;
-    border-color: var(--text);
+  .tab-toggle button .badge-count {
+    display: inline-block;
+    min-width: 16px;
+    padding: 0 4px;
+    margin-left: 4px;
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--text-dim);
+    background: var(--border);
+    border-radius: 8px;
   }
-  .filter-chip:active { opacity: 0.7; }
+  .tab-toggle button.active .badge-count { background: var(--current); color: white; }
+
+  /* Section externes dure vs internes */
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 8px 2px 4px;
+  }
+  .section-title.externes { color: var(--danger); }
+  .section-title.internes { color: var(--text-dim); }
+  .section-title .pastille {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  .section-title.externes .pastille { background: var(--danger); }
+  .section-title.internes .pastille { background: var(--text-dim); }
+  .section-sub {
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--text-faint);
+    margin-left: auto;
+    font-style: italic;
+  }
 
   .group-head {
     font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
     color: var(--text-dim);
-    padding: 10px 2px 4px;
+    padding: 6px 2px 2px;
   }
+  .group-head.retard { color: var(--danger); }
 
   .deadline-item {
     background: var(--surface);
@@ -73,49 +115,67 @@
     border-left: 3px solid var(--border-strong);
     border-radius: 5px;
     padding: 8px 10px;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     display: flex;
-    flex-direction: column;
-    gap: 3px;
+    align-items: center;
+    gap: 10px;
     cursor: pointer;
   }
   .deadline-item:active { opacity: 0.7; }
-  .deadline-item.late { border-left-color: var(--danger); background: #FDECEB; }
+  .deadline-item.externe { border-left-color: var(--danger); border-left-width: 4px; }
+  .deadline-item.externe.late { background: #FDECEB; }
+  .deadline-item.late { border-left-color: var(--danger); }
   .deadline-item.soon { border-left-color: #E87722; }
   .deadline-item.ok { border-left-color: var(--success); }
 
-  .dl-line1 {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 6px;
+  .dl-when {
+    flex-shrink: 0;
+    text-align: center;
+    width: 56px;
+    border-right: 1px solid var(--border);
+    padding-right: 8px;
+  }
+  .dl-when .jours-label {
     font-size: 11px;
-  }
-  .dl-date { font-weight: 700; color: var(--text); }
-  .dl-jours { font-weight: 700; }
-  .deadline-item.late .dl-jours { color: var(--danger); }
-  .deadline-item.soon .dl-jours { color: #E87722; }
-  .deadline-item.ok .dl-jours { color: var(--success); }
-  .dl-type {
-    font-size: 9px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--text-dim);
-    padding: 2px 6px;
-    background: var(--done-bg);
-    border-radius: 3px;
     font-weight: 700;
+    line-height: 1.1;
   }
-  .dl-type.projet { background: #E2F0FB; color: #0B63A8; }
-  .dl-type.objectif { background: var(--current-soft); color: var(--current); }
+  .dl-when .jours-date {
+    font-size: 10px;
+    color: var(--text-faint);
+    margin-top: 2px;
+  }
+  .deadline-item.late .dl-when .jours-label { color: var(--danger); }
+  .deadline-item.soon .dl-when .jours-label { color: #E87722; }
+  .deadline-item.ok .dl-when .jours-label { color: var(--success); }
+  .deadline-item.externe.late .dl-when .jours-label { color: var(--danger); }
 
+  .dl-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .dl-titre-row { display: flex; align-items: center; gap: 6px; }
   .dl-titre {
+    flex: 1;
     font-size: 13px;
     font-weight: 600;
     line-height: 1.25;
     color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
-  .dl-line3 {
+  .dl-type {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+    padding: 1px 5px;
+    background: var(--done-bg);
+    border-radius: 3px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .dl-type.projet { background: #E2F0FB; color: #0B63A8; }
+  .dl-type.objectif { background: var(--current-soft); color: var(--current); }
+  .dl-meta {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -124,6 +184,21 @@
     color: var(--text-dim);
   }
   .dl-contexte { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ext-badge-mini {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--danger);
+    padding: 1px 4px;
+    border: 1px solid var(--danger);
+    border-radius: 2px;
+    background: #FFF;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
 
   #error {
     background: var(--danger);
@@ -191,13 +266,13 @@
   </nav>
 
   <div class="page-title">
-    <h1>Échéances à venir</h1>
+    <h1>Échéances</h1>
     <div class="sub" id="sub">Chargement…</div>
   </div>
 
   <div id="error"></div>
 
-  <div class="filters" id="filters"></div>
+  <div class="tab-toggle" id="tab-toggle"></div>
 
   <section id="deadlines-list"></section>
 </main>
@@ -222,7 +297,10 @@
       <option value="Decision">Décision</option>
     </select>
     <textarea id="dump-content" placeholder="Écris sans filtre. Claude rangera."></textarea>
-    <button class="primary" onclick="submitDump()">Envoyer au dump</button>
+    <div class="sticky-save">
+      <button class="ghost small" onclick="closeDump()">Annuler</button>
+      <button class="primary" onclick="submitDump()">Envoyer au dump</button>
+    </div>
   </div>
 </div>
 
@@ -246,9 +324,17 @@
       </select>
     </div>
     <div class="field"><label>Échéance</label><input id="task-date" type="date"></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
-      <button class="primary" style="flex:1" onclick="saveTaskEdit()">Enregistrer</button>
-      <button id="task-archive-btn" class="ghost" style="display:none" onclick="archiveCurrentTask()">Archiver</button>
+    <div class="field">
+      <label style="display:flex;gap:6px;align-items:center;font-size:12px;text-transform:none;letter-spacing:0;color:var(--text);cursor:pointer">
+        <input type="checkbox" id="task-ext-deadline" style="width:auto;margin:0">
+        <span>Deadline externe dure (non repoussable)</span>
+      </label>
+    </div>
+    <div class="sticky-save">
+      <button class="ghost small" onclick="closeTaskEdit()">Annuler</button>
+      <button id="task-delete-btn" class="danger small" onclick="deleteCurrentTask()" style="display:none">Supprimer</button>
+      <button id="task-archive-btn" class="ghost small" onclick="archiveCurrentTask()" style="display:none">Archiver</button>
+      <button class="primary" onclick="saveTaskEdit()">Enregistrer</button>
     </div>
   </div>
 </div>
@@ -259,16 +345,9 @@ const { $el, $clear } = Dom;
 let taches = [], projets = [], objectifs = [];
 let projetsById = {}, objectifsById = {};
 let allDeadlines = [];
-let currentFilter = '7';
+// Onglet courant : 'externes' (dures, non repoussables), 'internes', 'all'
+let currentTab = 'externes';
 let currentTaskEditId = null;
-
-const FILTERS = [
-  { id: '7',  label: '7 jours' },
-  { id: '14', label: '14 jours' },
-  { id: '30', label: '30 jours' },
-  { id: 'q',  label: 'Ce trimestre' },
-  { id: 'all', label: 'Tout' }
-];
 
 function showError(msg) {
   const e = document.getElementById('error');
@@ -328,27 +407,6 @@ function urgenceClass(n) {
   return 'ok';
 }
 
-function trimestreEndUnix() {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  const month = d.getMonth();
-  const qEndMonth = month - (month % 3) + 2;
-  const end = new Date(d.getFullYear(), qEndMonth + 1, 0);
-  end.setHours(23, 59, 59, 999);
-  return Math.floor(end.getTime() / 1000);
-}
-
-function applyFilter(items, filter) {
-  const today = todayUnix();
-  if (filter === 'all') return items;
-  if (filter === 'q') {
-    const end = trimestreEndUnix();
-    return items.filter(x => x.ts <= end);
-  }
-  const days = parseInt(filter, 10);
-  const cutoff = today + days * 86400;
-  return items.filter(x => x.ts <= cutoff);
-}
 
 function isTaskActive(t) {
   const s = (t.statut || '').toLowerCase();
@@ -387,7 +445,8 @@ function buildDeadlines() {
       titre: t.titre || '(sans titre)',
       ts: t.date_cible,
       statut: t.statut || 'Pas commencé',
-      contexte: projet ? ('Projet : ' + (projet.titre || '')) : 'Hors projet',
+      contexte: projet ? (projet.titre || '') : 'Hors projet',
+      externe: !!t.est_deadline_externe,
       raw: t
     });
   });
@@ -403,7 +462,8 @@ function buildDeadlines() {
       titre: p.titre || '(sans titre)',
       ts: p.date_cible,
       statut: p.statut || '',
-      contexte: obj ? ('Objectif : ' + (obj.titre || '')) : 'Hors objectif',
+      contexte: obj ? (obj.titre || '') : 'Hors objectif',
+      externe: !!p.est_deadline_externe,
       raw: p
     });
   });
@@ -418,7 +478,8 @@ function buildDeadlines() {
       titre: o.titre || '(sans titre)',
       ts: o.deadline,
       statut: o.statut || '',
-      contexte: o.trimestre ? ('Trimestre : ' + o.trimestre) : (o.priorite ? ('Priorité ' + o.priorite) : ''),
+      contexte: o.trimestre || '',
+      externe: !!o.est_deadline_externe,
       raw: o
     });
   });
@@ -441,65 +502,97 @@ function statutPillClass(s) {
 function renderDeadlineItem(item) {
   const jours = joursRestants(item.ts);
   const cls = urgenceClass(jours);
+  const extClass = item.externe ? ' externe' : '';
   const el = $el('div', {
-    class: 'deadline-item ' + cls,
+    class: 'deadline-item ' + cls + extClass,
     onclick: () => openItem(item)
   });
 
-  el.appendChild($el('div', { class: 'dl-line1' },
-    $el('span', { class: 'dl-date' }, fmtDate(item.ts)),
-    $el('span', { class: 'dl-jours' }, labelJours(jours)),
-    $el('span', { class: 'dl-type ' + item.typeKey }, item.type)
+  // Colonne gauche : jours restants + date
+  el.appendChild($el('div', { class: 'dl-when' },
+    $el('div', { class: 'jours-label' }, labelJoursShort(jours)),
+    $el('div', { class: 'jours-date' }, fmtDate(item.ts))
   ));
 
-  el.appendChild($el('div', { class: 'dl-titre' }, item.titre));
+  // Corps : titre + type + contexte
+  const body = $el('div', { class: 'dl-body' });
+  const titreRow = $el('div', { class: 'dl-titre-row' });
+  titreRow.appendChild($el('span', { class: 'dl-titre', title: item.titre }, item.titre));
+  if (item.externe) {
+    titreRow.appendChild($el('span', { class: 'ext-badge-mini', title: 'Deadline externe non repoussable' }, 'Dure'));
+  }
+  titreRow.appendChild($el('span', { class: 'dl-type ' + item.typeKey }, item.type));
+  body.appendChild(titreRow);
 
-  el.appendChild($el('div', { class: 'dl-line3' },
-    $el('span', { class: 'dl-contexte' }, item.contexte || ''),
+  const metaParts = [];
+  if (item.contexte) metaParts.push(item.contexte);
+  const metaRow = $el('div', { class: 'dl-meta' },
+    $el('span', { class: 'dl-contexte' }, metaParts.join(' · ')),
     $el('span', { class: 'status-pill ' + statutPillClass(item.statut), title: item.statut || '' })
-  ));
+  );
+  body.appendChild(metaRow);
+  el.appendChild(body);
 
   return el;
 }
 
-function groupByWeek(items) {
+// Label court pour colonne gauche
+function labelJoursShort(n) {
+  if (n === null) return '—';
+  if (n < 0) return `+${Math.abs(n)}j`;
+  if (n === 0) return "Auj.";
+  if (n === 1) return 'Demain';
+  if (n <= 30) return `${n}j`;
+  // Au-delà, en semaines
+  return `${Math.round(n/7)}s`;
+}
+
+function groupByUrgency(items) {
   const today = todayUnix();
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  const dow = (d.getDay() + 6) % 7; // lundi = 0
-  const startOfWeek = today - dow * 86400;
-
-  const groups = new Map();
+  const groups = {
+    retard: [],
+    cette_sem: [],
+    sem_pro: [],
+    mois: [],
+    plus_tard: []
+  };
   items.forEach(item => {
-    const deltaDays = Math.floor((item.ts - startOfWeek) / 86400);
-    const weekIdx = Math.floor(deltaDays / 7);
-    if (!groups.has(weekIdx)) groups.set(weekIdx, []);
-    groups.get(weekIdx).push(item);
+    const j = Math.round((item.ts - today) / 86400);
+    if (j < 0) groups.retard.push(item);
+    else if (j <= 7) groups.cette_sem.push(item);
+    else if (j <= 14) groups.sem_pro.push(item);
+    else if (j <= 31) groups.mois.push(item);
+    else groups.plus_tard.push(item);
   });
-
-  return Array.from(groups.entries()).sort((a, b) => a[0] - b[0]).map(([idx, list]) => ({
-    idx,
-    label: weekLabel(idx),
-    items: list
-  }));
+  return groups;
 }
 
-function weekLabel(idx) {
-  if (idx < 0) return 'En retard';
-  if (idx === 0) return 'Cette semaine';
-  if (idx === 1) return 'Semaine prochaine';
-  if (idx < 5) return `Dans ${idx} semaines`;
-  return `Plus tard (semaine ${idx})`;
-}
+const GROUP_LABELS = {
+  retard: 'En retard',
+  cette_sem: '7 jours',
+  sem_pro: '8 à 14 jours',
+  mois: '15 à 31 jours',
+  plus_tard: 'Plus tard'
+};
 
-function renderFilters() {
-  const node = document.getElementById('filters');
+function renderTabToggle() {
+  const externes = allDeadlines.filter(x => x.externe).length;
+  const internes = allDeadlines.filter(x => !x.externe).length;
+  const total = allDeadlines.length;
+  const node = document.getElementById('tab-toggle');
   $clear(node);
-  FILTERS.forEach(f => {
-    node.appendChild($el('button', {
-      class: 'filter-chip' + (currentFilter === f.id ? ' active' : ''),
-      onclick: () => { currentFilter = f.id; renderList(); renderFilters(); }
-    }, f.label));
+  const tabs = [
+    { id: 'externes', label: 'Dures (non repoussables)', count: externes },
+    { id: 'internes', label: 'Cibles internes', count: internes },
+    { id: 'all', label: 'Tout', count: total }
+  ];
+  tabs.forEach(t => {
+    const btn = $el('button', {
+      class: currentTab === t.id ? 'active' : '',
+      onclick: () => { currentTab = t.id; renderList(); renderTabToggle(); }
+    }, t.label);
+    btn.appendChild($el('span', { class: 'badge-count' }, String(t.count)));
+    node.appendChild(btn);
   });
 }
 
@@ -507,27 +600,45 @@ function renderList() {
   const list = document.getElementById('deadlines-list');
   $clear(list);
 
-  const filtered = applyFilter(allDeadlines, currentFilter);
+  let filtered;
+  if (currentTab === 'externes') filtered = allDeadlines.filter(x => x.externe);
+  else if (currentTab === 'internes') filtered = allDeadlines.filter(x => !x.externe);
+  else filtered = allDeadlines.slice();
 
-  const nbTaches = filtered.filter(x => x.typeKey === 'tache').length;
-  const nbProjets = filtered.filter(x => x.typeKey === 'projet').length;
-  const nbObjectifs = filtered.filter(x => x.typeKey === 'objectif').length;
-  document.getElementById('sub').textContent = `${nbTaches} tâches, ${nbProjets} projets, ${nbObjectifs} objectifs avec échéance`;
+  const nbRetard = filtered.filter(x => joursRestants(x.ts) < 0).length;
+  document.getElementById('sub').textContent = filtered.length === 0
+    ? 'Aucune échéance dans cette catégorie'
+    : `${filtered.length} échéance${filtered.length > 1 ? 's' : ''}${nbRetard > 0 ? ` · ${nbRetard} en retard` : ''}`;
 
   if (filtered.length === 0) {
-    list.appendChild($el('div', { class: 'empty' }, 'Aucune échéance dans cette période.'));
+    const hint = currentTab === 'externes'
+      ? "Pas de deadline dure à venir. Profite-en pour avancer sur les sujets stratégiques."
+      : currentTab === 'internes'
+        ? "Aucune cible interne datée."
+        : "Aucune échéance.";
+    list.appendChild($el('div', { class: 'empty' }, hint));
     return;
   }
 
-  if (filtered.length > 20) {
-    const groups = groupByWeek(filtered);
-    groups.forEach(g => {
-      list.appendChild($el('div', { class: 'group-head' }, `${g.label} (${g.items.length})`));
-      g.items.forEach(item => list.appendChild(renderDeadlineItem(item)));
-    });
-  } else {
-    filtered.forEach(item => list.appendChild(renderDeadlineItem(item)));
+  // Explication en tête si onglet externes/internes
+  if (currentTab === 'externes') {
+    list.appendChild($el('div', {
+      style: 'font-size:11px;color:var(--text-dim);padding:4px 2px 8px;font-style:italic;line-height:1.4'
+    }, "Ce sont les dates que tu ne peux pas bouger (AAP, events, ateliers scolaires). Priorité absolue."));
+  } else if (currentTab === 'internes') {
+    list.appendChild($el('div', {
+      style: 'font-size:11px;color:var(--text-dim);padding:4px 2px 8px;font-style:italic;line-height:1.4'
+    }, "Dates-cibles internes que tu peux repousser si besoin. Elles donnent le rythme, pas la loi."));
   }
+
+  const groups = groupByUrgency(filtered);
+  ['retard', 'cette_sem', 'sem_pro', 'mois', 'plus_tard'].forEach(key => {
+    const items = groups[key];
+    if (!items.length) return;
+    const headClass = key === 'retard' ? 'group-head retard' : 'group-head';
+    list.appendChild($el('div', { class: headClass }, `${GROUP_LABELS[key]} (${items.length})`));
+    items.forEach(item => list.appendChild(renderDeadlineItem(item)));
+  });
 }
 
 async function render() {
@@ -551,7 +662,7 @@ async function render() {
     document.getElementById('sub').textContent = 'Hors ligne';
     return;
   }
-  renderFilters();
+  renderTabToggle();
   renderList();
 }
 
@@ -572,33 +683,63 @@ function openTaskEdit(t) {
   document.getElementById('task-desc').value = t.description || '';
   document.getElementById('task-statut').value = t.statut || 'Pas commencé';
   document.getElementById('task-date').value = unixToInputDate(t.date_cible);
+  const ext = document.getElementById('task-ext-deadline');
+  if (ext) ext.checked = !!t.est_deadline_externe;
   const meta = [];
   if (t.score) meta.push(`score ${t.score}`);
   if (t.estim_heures) meta.push(`${t.estim_heures}h`);
   if (t.push_count) meta.push(`reportée ${t.push_count}x`);
   document.getElementById('task-meta').textContent = meta.join(' · ');
   document.getElementById('task-archive-btn').style.display = (t.statut === 'Fait') ? '' : 'none';
+  document.getElementById('task-delete-btn').style.display = '';
   openModal('task-modal');
+}
+
+async function deleteCurrentTask() {
+  if (!currentTaskEditId) return;
+  const t = taches.find(x => x.id === currentTaskEditId);
+  const titre = t ? (t.titre || '(sans titre)') : '';
+  if (!confirm(`Supprimer définitivement "${titre}" ? Irréversible.`)) return;
+  try {
+    const id = currentTaskEditId;
+    const blocs = await WuboGrist.fetchRows('Blocs_temps');
+    for (const b of blocs) {
+      const ids = WuboGrist.refListIds(b.taches_liees);
+      if (ids.includes(id)) {
+        const next = ids.filter(x => x !== id);
+        try { await WuboGrist.updateRecord('Blocs_temps', b.id, { taches_liees: ['L', ...next] }); } catch (_) {}
+      }
+    }
+    await WuboGrist.deleteRecord('Taches', id);
+    closeTaskEdit();
+    WuboGrist.toast('Tâche supprimée', 'info');
+    await render();
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
+  }
 }
 
 async function saveTaskEdit() {
   if (!currentTaskEditId) return;
   const titre = document.getElementById('task-titre').value.trim();
-  if (!titre) { alert('Titre obligatoire'); return; }
+  if (!titre) { WuboGrist.toast('Titre obligatoire', 'warn'); return; }
   const dateStr = document.getElementById('task-date').value;
   const dateUnix = inputDateToUnix(dateStr);
+  const extCb = document.getElementById('task-ext-deadline');
   const fields = {
     titre,
     description: document.getElementById('task-desc').value,
-    statut: document.getElementById('task-statut').value
+    statut: document.getElementById('task-statut').value,
+    est_deadline_externe: extCb ? !!extCb.checked : false
   };
   if (dateUnix) fields.date_cible = dateUnix;
   try {
     await WuboGrist.updateRecord('Taches', currentTaskEditId, fields);
     closeTaskEdit();
+    WuboGrist.toast('Tâche mise à jour', 'success');
     render();
   } catch (e) {
-    alert('Erreur : ' + e.message);
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
   }
 }
 
@@ -625,6 +766,7 @@ function backdropClose(e, id) { if (e.target === e.currentTarget) closeModal(id)
 function openDump() { openModal('dump-modal'); }
 function closeDump() { closeModal('dump-modal'); }
 
+let dumpBinding = null;
 async function submitDump() {
   const ctx = document.getElementById('dump-contexte').value;
   const content = document.getElementById('dump-content').value.trim();
@@ -638,10 +780,12 @@ async function submitDump() {
       traite: false,
       converti_en: ''
     });
-    document.getElementById('dump-content').value = '';
+    if (dumpBinding) dumpBinding.reset();
+    else document.getElementById('dump-content').value = '';
     closeDump();
+    WuboGrist.toast('Note ajoutée au dump', 'success');
   } catch (e) {
-    alert('Erreur : ' + e.message);
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
   }
 }
 
@@ -663,6 +807,14 @@ document.addEventListener('keydown', e => {
 (async () => {
   await WuboGrist.initGrist();
   try { if (typeof grist !== 'undefined' && grist.onRecords) grist.onRecords(() => render()); } catch (_) {}
+  dumpBinding = WuboGrist.bindDumpTextarea(
+    document.getElementById('dump-content'),
+    document.getElementById('dump-contexte')
+  );
+  if (window.ModalSwipe) {
+    ModalSwipe.enable('task-modal', closeTaskEdit);
+    ModalSwipe.enable('dump-modal', closeDump);
+  }
   render();
 })();
 </script>

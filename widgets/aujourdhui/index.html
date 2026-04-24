@@ -16,7 +16,7 @@
 <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
 <script src="../../lib/dom.js"></script>
 <script src="../../lib/grist-api.js"></script>
-<script src="lib/modal-swipe.js"></script>
+<script src="../../lib/modal-swipe.js"></script>
 <style>
   #app {
     max-width: 480px;
@@ -297,6 +297,7 @@
     </div>
     <div class="sticky-save">
       <button class="ghost small" onclick="closeTaskEdit()">Annuler</button>
+      <button id="task-delete-btn" class="danger small" onclick="deleteCurrentTask()" style="display:none">Supprimer</button>
       <button id="task-archive-btn" class="ghost small" onclick="archiveCurrentTask()" style="display:none">Archiver</button>
       <button class="primary" onclick="saveTaskEdit()">Enregistrer</button>
     </div>
@@ -679,6 +680,9 @@ function fillTaskEditForm(taskId) {
   // Bouton Archiver visible seulement si la tâche est deja Fait
   const archiveBtn = document.getElementById('task-archive-btn');
   if (archiveBtn) archiveBtn.style.display = (t.statut === 'Fait') ? '' : 'none';
+  // Bouton Supprimer visible sur toute tâche existante
+  const deleteBtn = document.getElementById('task-delete-btn');
+  if (deleteBtn) deleteBtn.style.display = '';
   // Mise a jour live quand l'utilisateur change le statut dans la modal
   const statutSelect = document.getElementById('task-statut');
   if (statutSelect && archiveBtn) {
@@ -703,6 +707,31 @@ async function archiveCurrentTask() {
     await WuboGrist.archiveTask(currentTaskEditId);
     closeTaskEdit();
     WuboGrist.toast('Tâche archivée', 'info');
+    await render();
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
+  }
+}
+
+async function deleteCurrentTask() {
+  if (!currentTaskEditId) return;
+  const t = tachesById[currentTaskEditId];
+  const titre = t ? (t.titre || '(sans titre)') : '';
+  if (!confirm(`Supprimer définitivement "${titre}" ?\n\nCette action est irréversible. Préfère "Archiver" si tu veux juste la cacher.`)) return;
+  try {
+    const id = currentTaskEditId;
+    // Retirer la tâche des blocs qui la référencent
+    const blocs = await WuboGrist.fetchRows('Blocs_temps');
+    for (const b of blocs) {
+      const ids = WuboGrist.refListIds(b.taches_liees);
+      if (ids.includes(id)) {
+        const next = ids.filter(x => x !== id);
+        try { await WuboGrist.updateRecord('Blocs_temps', b.id, { taches_liees: ['L', ...next] }); } catch (_) {}
+      }
+    }
+    await WuboGrist.deleteRecord('Taches', id);
+    closeTaskEdit();
+    WuboGrist.toast('Tâche supprimée', 'info');
     await render();
   } catch (e) {
     WuboGrist.toast('Erreur : ' + e.message, 'error');
@@ -740,6 +769,8 @@ function openTaskNew(blocId, parentTaskId) {
   }
   const archiveBtn = document.getElementById('task-archive-btn');
   if (archiveBtn) archiveBtn.style.display = 'none';
+  const deleteBtn = document.getElementById('task-delete-btn');
+  if (deleteBtn) deleteBtn.style.display = 'none';
   window._newTaskParent = parentTaskId || null;
   const modalContent = document.querySelector('#task-modal .modal-content');
   if (modalContent) modalContent.scrollTop = 0;
@@ -937,6 +968,7 @@ function closeModal(id) {
   WuboGrist.unlockBody();
 }
 
+let dumpBinding = null;
 async function submitDump() {
   const ctx = document.getElementById('dump-contexte').value;
   const content = document.getElementById('dump-content').value.trim();
@@ -950,7 +982,8 @@ async function submitDump() {
       traite: false,
       converti_en: ''
     });
-    document.getElementById('dump-content').value = '';
+    if (dumpBinding) dumpBinding.reset();
+    else document.getElementById('dump-content').value = '';
     closeDump();
     WuboGrist.toast('Note enregistrée dans le dump', 'success');
   } catch (e) {
@@ -984,6 +1017,11 @@ document.addEventListener('keydown', e => {
 (async () => {
   await WuboGrist.initGrist();
   try { if (typeof grist !== 'undefined' && grist.onRecords) grist.onRecords(() => render()); } catch (_) {}
+  // Bind draft persist sur le textarea du dump rapide
+  dumpBinding = WuboGrist.bindDumpTextarea(
+    document.getElementById('dump-content'),
+    document.getElementById('dump-contexte')
+  );
   // Swipe-to-close sur les modals bottom-sheet
   if (window.ModalSwipe) {
     ModalSwipe.enable('task-modal', closeTaskEdit);

@@ -15,7 +15,7 @@
 <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
 <script src="../../lib/dom.js"></script>
 <script src="../../lib/grist-api.js"></script>
-<script src="lib/modal-swipe.js"></script>
+<script src="../../lib/modal-swipe.js"></script>
 <style>
   #app {
     max-width: 560px;
@@ -394,6 +394,25 @@ $contenu.addEventListener('input', () => {
 });
 $contexte.addEventListener('change', () => {
   scheduleDraftSave();
+});
+
+// Partage du brouillon entre onglets ouverts (ex: Aujourd'hui a une modal Dump ouverte)
+window.addEventListener('storage', (e) => {
+  if (e.key === 'wubo_dump_draft') {
+    const draft = WuboGrist.loadDumpDraft();
+    if (draft && draft.content !== $contenu.value) {
+      $contenu.value = draft.content || '';
+      if (draft.contexte) {
+        const opts = Array.from($contexte.options).map(o => o.value);
+        if (opts.includes(draft.contexte)) $contexte.value = draft.contexte;
+      }
+      updateCounter();
+      setDraftStatus('synchronisé', 'draft-ok');
+    } else if (!draft) {
+      $contenu.value = '';
+      updateCounter();
+    }
+  }
 });
 
 (async () => {

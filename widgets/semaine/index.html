@@ -16,7 +16,7 @@
 <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
 <script src="../../lib/dom.js"></script>
 <script src="../../lib/grist-api.js"></script>
-<script src="lib/modal-swipe.js"></script>
+<script src="../../lib/modal-swipe.js"></script>
 <style>
   #app {
     max-width: 720px;
@@ -55,6 +55,131 @@
     background: var(--surface); color: var(--text);
     border: 1px solid var(--border-strong); border-radius: 6px;
   }
+
+  /* Toggle Liste / Agenda */
+  .view-toggle {
+    display: flex;
+    gap: 2px;
+    background: var(--done-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 2px;
+    margin: 0 0 8px;
+  }
+  .view-toggle button {
+    flex: 1;
+    padding: 7px;
+    font-size: 11px;
+    font-weight: 600;
+    background: transparent;
+    color: var(--text-dim);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .view-toggle button.active {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  }
+
+  /* Vue agenda : calendrier mensuel compact multi-semaines */
+  .agenda-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .agenda-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    padding: 0 2px;
+  }
+  .agenda-weekdays span {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+    text-align: center;
+    padding: 2px 0;
+  }
+  .agenda-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+  }
+  .agenda-day {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    aspect-ratio: 1 / 1.1;
+    padding: 4px 4px 3px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    cursor: pointer;
+    overflow: hidden;
+    min-height: 0;
+  }
+  .agenda-day:active { opacity: 0.7; }
+  .agenda-day.other-month { background: var(--bg); opacity: 0.55; }
+  .agenda-day.today { border: 2px solid var(--current); padding: 3px; }
+  .agenda-day.weekend { background: var(--bg); }
+  .agenda-day-num {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+  }
+  .agenda-day.today .agenda-day-num { color: var(--current); }
+  .agenda-day-dots {
+    display: flex;
+    gap: 2px;
+    justify-content: center;
+    margin-top: auto;
+  }
+  .agenda-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--border-strong);
+  }
+  .agenda-dot.done { background: var(--success); }
+  .agenda-dot.wip { background: var(--accent-strong); }
+  .agenda-dot.skip { background: var(--text-faint); opacity: 0.5; }
+  .agenda-dot.current { background: var(--current); }
+  .agenda-dot.empty { background: transparent; border: 1px solid var(--border); }
+  .agenda-day-extra {
+    font-size: 8px;
+    color: var(--text-faint);
+    line-height: 1;
+    margin-top: 1px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .agenda-day.has-ext::after {
+    content: "⏰";
+    position: absolute;
+    font-size: 8px;
+    color: var(--danger);
+    line-height: 1;
+    top: 2px;
+    right: 3px;
+  }
+  .agenda-day { position: relative; }
+  .agenda-month-label {
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+    padding: 6px 2px 2px;
+    border-top: 1px dashed var(--border);
+  }
+  .agenda-month-label:first-child { border-top: none; padding-top: 0; }
 
   /* ============ GRID DESKTOP ============ */
   .grid-week {
@@ -422,13 +547,21 @@
     </div>
   </div>
 
+  <div class="view-toggle" id="view-toggle">
+    <button id="btn-liste" class="active" onclick="setView('liste')">Liste</button>
+    <button id="btn-agenda" onclick="setView('agenda')">Agenda (4 semaines)</button>
+  </div>
+
   <div id="error"></div>
 
-  <!-- Vue desktop : grille 4x3 -->
-  <div class="grid-week" id="grid"></div>
+  <!-- Vue Liste : desktop grid 4x3 + mobile liste verticale -->
+  <div id="liste-view">
+    <div class="grid-week" id="grid"></div>
+    <div class="list-days" id="list"></div>
+  </div>
 
-  <!-- Vue mobile : liste verticale de jours -->
-  <div class="list-days" id="list"></div>
+  <!-- Vue Agenda : grille calendrier 4 semaines -->
+  <div id="agenda-view" class="agenda-wrap" style="display:none"></div>
 
   <div class="legend">
     <span class="lg"><span class="dot" style="background:#188038"></span>Fait</span>
@@ -550,6 +683,7 @@
     </div>
     <div class="sticky-save">
       <button class="ghost small" onclick="closeTaskEdit()">Annuler</button>
+      <button id="task-delete-btn" class="danger small" onclick="deleteCurrentTask()" style="display:none">Supprimer</button>
       <button class="primary" onclick="saveTaskEdit()">Enregistrer</button>
     </div>
   </div>
@@ -565,9 +699,16 @@ let currentTaskEditId = null, currentTaskNewBlocId = null, currentTaskParent = n
 let currentTaskOriginalDate = null, currentPushCount = 0;
 let pendingFlashBlocId = null; // id du bloc a flasher au prochain render
 
-// Fenêtre glissante
+// Fenêtre glissante (utilisée par la vue Liste)
 let dayOffset = 0;      // offset en jours depuis today
 let windowSize = 4;     // taille de la fenêtre (4 mobile, 7 desktop large)
+
+// Vue courante ('liste' ou 'agenda') + fenêtre agenda en nombre de semaines depuis today
+let currentView = (() => {
+  try { return localStorage.getItem('wubo_semaine_view') || 'liste'; } catch (_) { return 'liste'; }
+})();
+let agendaWeekOffset = 0; // 0 = semaine courante, +1 = semaine prochaine...
+const AGENDA_WEEKS = 4;
 
 function computeWindowSize() {
   return window.innerWidth >= 900 ? 7 : 4;
@@ -898,11 +1039,6 @@ async function render() {
   document.getElementById('error').style.display = 'none';
   windowSize = computeWindowSize();
 
-  const daysISO = windowDaysISO();
-  const { label, range } = computeTitle(daysISO);
-  document.getElementById('title').textContent = label;
-  document.getElementById('sub').textContent = range;
-
   allBlocs = []; tachesById = {};
   try {
     const [b, t] = await Promise.all([WuboGrist.fetchRows('Blocs_temps'), WuboGrist.fetchRows('Taches')]);
@@ -917,39 +1053,187 @@ async function render() {
   const todayISO = WuboGrist.todayISO();
   const byDay = blocsByDayISO(allBlocs);
 
-  // Stats agregees sur la fenetre
-  let fait = 0, total = 0;
-  daysISO.forEach(iso => {
-    if (!byDay[iso]) return;
-    Object.values(byDay[iso]).forEach(bloc => {
-      total++;
-      if ((bloc.statut || '').toLowerCase().includes('fait')) fait++;
+  if (currentView === 'agenda') {
+    const daysISO = agendaDaysISO();
+    // Titre : "Du X au Y" + compteur
+    const firstISO = daysISO[0];
+    const lastISO = daysISO[daysISO.length - 1];
+    const midIdx = Math.floor(daysISO.length / 2);
+    const [ym, mm, dm] = daysISO[midIdx].split('-').map(Number);
+    const midDate = new Date(ym, mm - 1, dm);
+    const wk = weekNumberISO(midDate);
+    document.getElementById('title').textContent = `Agenda · S${wk}`;
+    // Stats sur la fenêtre agenda
+    let fait = 0, total = 0;
+    daysISO.forEach(iso => {
+      if (!byDay[iso]) return;
+      Object.values(byDay[iso]).forEach(bloc => {
+        total++;
+        if ((bloc.statut || '').toLowerCase().includes('fait')) fait++;
+      });
     });
-  });
-  if (total === 0) {
-    document.getElementById('sub').textContent = `${range} · aucun bloc`;
+    const range = formatRange(firstISO, lastISO);
+    document.getElementById('sub').textContent = total === 0
+      ? `${range} · aucun bloc`
+      : `${range} · ${fait}/${total} blocs faits`;
+    renderAgenda(byDay, todayISO);
   } else {
-    document.getElementById('sub').textContent = `${range} · ${fait}/${total} blocs faits`;
+    const daysISO = windowDaysISO();
+    const { label, range } = computeTitle(daysISO);
+    document.getElementById('title').textContent = label;
+
+    let fait = 0, total = 0;
+    daysISO.forEach(iso => {
+      if (!byDay[iso]) return;
+      Object.values(byDay[iso]).forEach(bloc => {
+        total++;
+        if ((bloc.statut || '').toLowerCase().includes('fait')) fait++;
+      });
+    });
+    document.getElementById('sub').textContent = total === 0
+      ? `${range} · aucun bloc`
+      : `${range} · ${fait}/${total} blocs faits`;
+    renderGrid(daysISO, byDay, todayISO);
+    renderList(daysISO, byDay, todayISO);
   }
 
-  // Rend les deux vues, le CSS cache celle qui ne s'affiche pas
-  renderGrid(daysISO, byDay, todayISO);
-  renderList(daysISO, byDay, todayISO);
-
-  // Reset flash apres un cycle (laisse l'animation se jouer)
   if (pendingFlashBlocId) {
     setTimeout(() => { pendingFlashBlocId = null; }, 1400);
   }
 }
 
 function shiftWindow(direction) {
-  dayOffset += direction * windowSize;
+  if (currentView === 'agenda') {
+    agendaWeekOffset += direction * AGENDA_WEEKS;
+  } else {
+    dayOffset += direction * windowSize;
+  }
   render();
 }
 
 function resetWindow() {
   dayOffset = 0;
+  agendaWeekOffset = 0;
   render();
+}
+
+function setView(v) {
+  if (v !== 'liste' && v !== 'agenda') return;
+  currentView = v;
+  try { localStorage.setItem('wubo_semaine_view', v); } catch (_) {}
+  document.getElementById('btn-liste').classList.toggle('active', v === 'liste');
+  document.getElementById('btn-agenda').classList.toggle('active', v === 'agenda');
+  document.getElementById('liste-view').style.display = (v === 'liste') ? '' : 'none';
+  document.getElementById('agenda-view').style.display = (v === 'agenda') ? 'flex' : 'none';
+  render();
+}
+
+// Début (lundi) de la semaine ISO contenant une date donnée
+function mondayOfISOWeek(d) {
+  const copy = new Date(d);
+  copy.setHours(0, 0, 0, 0);
+  const dow = (copy.getDay() + 6) % 7; // lundi = 0
+  copy.setDate(copy.getDate() - dow);
+  return copy;
+}
+
+// Calcule les jours de la vue agenda : AGENDA_WEEKS semaines à partir du lundi offset
+function agendaDaysISO() {
+  const today = new Date();
+  const monday = mondayOfISOWeek(today);
+  monday.setDate(monday.getDate() + agendaWeekOffset * 7);
+  const days = [];
+  for (let i = 0; i < AGENDA_WEEKS * 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    days.push(isoFromDate(d));
+  }
+  return days;
+}
+
+function renderAgenda(byDay, todayISO) {
+  const node = document.getElementById('agenda-view');
+  $clear(node);
+  const daysISO = agendaDaysISO();
+
+  // En-tête Lun-Dim
+  const head = $el('div', { class: 'agenda-weekdays' });
+  ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].forEach(lbl => {
+    head.appendChild($el('span', {}, lbl));
+  });
+  node.appendChild(head);
+
+  // Mois de la première semaine pour détecter "other-month"
+  const firstDate = new Date(daysISO[0]);
+  const refMonth = firstDate.getMonth();
+
+  // Optionnel : étiquette du mois courant de chaque semaine
+  const grid = $el('div', { class: 'agenda-grid' });
+  daysISO.forEach(iso => {
+    const [y, m, d] = iso.split('-').map(Number);
+    const dd = new Date(y, m-1, d);
+    const isToday = iso === todayISO;
+    const dow = (dd.getDay() + 6) % 7;
+    const isWeekend = dow >= 5;
+    const blocs = byDay[iso] || {};
+
+    const cls = ['agenda-day'];
+    if (isToday) cls.push('today');
+    if (dd.getMonth() !== refMonth) cls.push('other-month');
+    if (isWeekend) cls.push('weekend');
+
+    // ⏰ si au moins une tâche du jour a est_deadline_externe
+    let hasExt = false;
+    ['Matin', 'Aprem', 'Soir'].forEach(tr => {
+      const b = blocs[tr];
+      if (!b) return;
+      const tIds = WuboGrist.refListIds(b.taches_liees);
+      tIds.forEach(id => {
+        if (tachesById[id] && tachesById[id].est_deadline_externe) hasExt = true;
+      });
+    });
+    if (hasExt) cls.push('has-ext');
+
+    const cell = $el('div', {
+      class: cls.join(' '),
+      onclick: () => onAgendaDayClick(iso)
+    });
+    cell.appendChild($el('div', { class: 'agenda-day-num' }, String(dd.getDate())));
+
+    const dots = $el('div', { class: 'agenda-day-dots' });
+    ['Matin', 'Aprem', 'Soir'].forEach(tr => {
+      const b = blocs[tr];
+      const isCurrent = isBlocCurrent(b, isToday, tr);
+      let dotCls = 'agenda-dot empty';
+      if (b) {
+        const s = (b.statut || '').toLowerCase();
+        if (isCurrent) dotCls = 'agenda-dot current';
+        else if (s.includes('fait')) dotCls = 'agenda-dot done';
+        else if (s.includes('en cours')) dotCls = 'agenda-dot wip';
+        else if (s.includes('zapp')) dotCls = 'agenda-dot skip';
+        else dotCls = 'agenda-dot';
+      }
+      dots.appendChild($el('span', { class: dotCls, title: tr + (b ? ' · ' + (b.statut || '') : ' · pas de bloc') }));
+    });
+    cell.appendChild(dots);
+
+    grid.appendChild(cell);
+  });
+  node.appendChild(grid);
+
+  // Note de bas pour context
+  node.appendChild($el('div', { style: 'font-size:10px;color:var(--text-faint);font-style:italic;padding:4px 2px;text-align:center' },
+    '3 points/jour = Matin · Aprem · Soir. Tap un jour pour voir les détails.'));
+}
+
+function onAgendaDayClick(iso) {
+  // Bascule vers la vue Liste centrée sur le jour cliqué
+  const today = new Date();
+  const target = new Date(iso);
+  today.setHours(0,0,0,0); target.setHours(0,0,0,0);
+  const diffDays = Math.round((target - today) / 86400000);
+  dayOffset = diffDays;
+  setView('liste');
 }
 
 // Swipe sur la grille ET la liste (mobile)
@@ -1044,6 +1328,8 @@ function openTaskNew(blocId, parentTaskId) {
   document.getElementById('task-reporter').style.display = 'none';
   document.getElementById('subtasks-section').style.display = 'none';
   document.getElementById('task-ext-deadline').checked = false;
+  const delBtn = document.getElementById('task-delete-btn');
+  if (delBtn) delBtn.style.display = 'none';
   refreshTaskExtPreview();
   openModal('task-modal');
 }
@@ -1117,7 +1403,33 @@ function openTaskEdit(taskId) {
   const subs = Object.values(tachesById).filter(x => x.parent_tache === taskId);
   renderSubtasksList(subs);
   document.getElementById('subtasks-section').style.display = '';
+  const delBtn = document.getElementById('task-delete-btn');
+  if (delBtn) delBtn.style.display = '';
   openModal('task-modal');
+}
+
+async function deleteCurrentTask() {
+  if (!currentTaskEditId) return;
+  const t = tachesById[currentTaskEditId];
+  const titre = t ? (t.titre || '(sans titre)') : '';
+  if (!confirm(`Supprimer définitivement "${titre}" ?\n\nIrréversible. Préfère "Archiver" si tu veux juste la cacher.`)) return;
+  try {
+    const id = currentTaskEditId;
+    const blocs = await WuboGrist.fetchRows('Blocs_temps');
+    for (const b of blocs) {
+      const ids = WuboGrist.refListIds(b.taches_liees);
+      if (ids.includes(id)) {
+        const next = ids.filter(x => x !== id);
+        try { await WuboGrist.updateRecord('Blocs_temps', b.id, { taches_liees: ['L', ...next] }); } catch (_) {}
+      }
+    }
+    await WuboGrist.deleteRecord('Taches', id);
+    closeTaskEdit();
+    WuboGrist.toast('Tâche supprimée', 'info');
+    await render();
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
+  }
 }
 
 function renderSubtasksList(subs) {
@@ -1213,6 +1525,7 @@ async function saveTaskEdit() {
   }
 }
 
+let dumpBinding = null;
 async function submitDump() {
   const ctx = document.getElementById('dump-contexte').value;
   const content = document.getElementById('dump-content').value.trim();
@@ -1222,7 +1535,8 @@ async function submitDump() {
   }
   try {
     await WuboGrist.addRecord('Dump_notes', { timestamp: WuboGrist.nowUnix(), auteur: 'Taki', contenu: content, contexte: ctx, traite: false, converti_en: '' });
-    document.getElementById('dump-content').value = '';
+    if (dumpBinding) dumpBinding.reset();
+    else document.getElementById('dump-content').value = '';
     closeDump();
     WuboGrist.toast('Note ajoutée au dump', 'success');
   } catch (e) {
@@ -1264,7 +1578,17 @@ window.addEventListener('resize', () => {
 (async () => {
   await WuboGrist.initGrist();
   try { if (typeof grist !== 'undefined' && grist.onRecords) grist.onRecords(() => render()); } catch (_) {}
-  await render();
+  dumpBinding = WuboGrist.bindDumpTextarea(
+    document.getElementById('dump-content'),
+    document.getElementById('dump-contexte')
+  );
+  if (window.ModalSwipe) {
+    ModalSwipe.enable('bloc-modal', closeBloc);
+    ModalSwipe.enable('dump-modal', closeDump);
+    ModalSwipe.enable('task-modal', closeTaskEdit);
+  }
+  // Applique la vue restaurée depuis localStorage (fait le render une fois)
+  setView(currentView);
   setupSwipe();
   const extCheckbox = document.getElementById('task-ext-deadline');
   if (extCheckbox) extCheckbox.addEventListener('change', refreshTaskExtPreview);

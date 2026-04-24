@@ -190,7 +190,7 @@ label { font-size: 12px; font-weight: 600; color: var(--text-dim); text-transfor
   color: var(--text-faint);
 }
 
-/* Navigation tabs - present sur chaque widget */
+/* Navigation tabs - present sur chaque widget, sticky en haut */
 .app-nav {
   display: flex;
   align-items: center;
@@ -200,6 +200,10 @@ label { font-size: 12px; font-weight: 600; color: var(--text-dim); text-transfor
   border: 1px solid var(--border);
   border-radius: 8px;
   margin-bottom: 10px;
+  position: sticky;
+  top: calc(env(safe-area-inset-top) + 4px);
+  z-index: 30;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 .app-nav a.tab {
   flex: 1;
@@ -244,23 +248,76 @@ label { font-size: 12px; font-weight: 600; color: var(--text-dim); text-transfor
 .status-pill.archived { color: var(--text-dim); opacity: 0.5; }
 .status-pill.archived::before { content: "⧖"; font-size: 14px; }
 
-/* Sticky save button area dans les modals */
-.modal-content .sticky-save {
+/* ============ MODAL LAYOUT (flex column) ============ */
+/* Une modal fonctionne en 3 zones empilées :
+   .modal-grip (poignée) -> .modal-head (titre + croix) -> .modal-body (scroll) -> .sticky-save (footer)
+   Le .modal-body est inséré automatiquement par modal-swipe.js en wrappant tout ce qui se trouve
+   entre modal-head et sticky-save. */
+.modal-content {
+  display: flex;
+  flex-direction: column;
+  padding: 0 !important;
+  max-height: calc(100vh - env(safe-area-inset-top) - 8px);
+  overflow: hidden !important;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  will-change: transform;
+}
+.modal-grip {
+  width: 42px;
+  height: 4px;
+  background: var(--border-strong);
+  border-radius: 2px;
+  margin: 10px auto 0;
+  flex-shrink: 0;
+}
+.modal-content > .modal-head {
+  flex-shrink: 0;
+  padding: 10px 16px 4px;
+  background: var(--surface);
+}
+.modal-content > .modal-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+.modal-content > .sticky-save {
+  flex-shrink: 0;
+  position: static;
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.06);
+  z-index: 5;
+}
+.modal-content > .sticky-save button { flex: 1; }
+.modal-content > .sticky-save button.ghost { flex: 0 0 auto; padding-left: 14px; padding-right: 14px; }
+.modal-content > .sticky-save button.danger { flex: 0 0 auto; padding-left: 14px; padding-right: 14px; }
+
+/* Avant que ModalSwipe.ensureFlexLayout() passe, on garde l'ancien fallback pour que l'UI
+   reste cohérente même si le JS ne tourne pas (edge case). */
+.modal-content:not([data-flex-wrapped="1"]) .sticky-save {
   position: sticky;
-  bottom: -16px;
-  margin: 0 -16px -16px;
+  bottom: 0;
+  margin: 0;
   padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
   background: var(--surface);
   border-top: 1px solid var(--border);
   display: flex;
   gap: 8px;
-  box-shadow: 0 -4px 12px rgba(0,0,0,0.04);
   z-index: 5;
 }
-.modal-content .sticky-save button { flex: 1; }
-.modal-content .sticky-save button.ghost { flex: 0 0 auto; padding-left: 14px; padding-right: 14px; }
 
-/* Modal comportement mobile : empêche scroll body quand modal ouvert + rigide horizontalement */
+/* Modal backdrop */
 body.modal-open {
   overflow: hidden;
   position: fixed;
@@ -273,22 +330,6 @@ html, body {
 }
 .modal {
   touch-action: pan-y;
-}
-.modal-content {
-  overflow-x: hidden !important;
-  overscroll-behavior-x: none;
-  touch-action: pan-y;
-  will-change: transform;
-}
-/* Poignée de swipe visuelle en haut du modal-content */
-.modal-grip {
-  width: 42px;
-  height: 4px;
-  background: var(--border-strong);
-  border-radius: 2px;
-  margin: -6px auto 8px;
-  flex-shrink: 0;
-  pointer-events: none;
 }
 
 .drift-alert {
