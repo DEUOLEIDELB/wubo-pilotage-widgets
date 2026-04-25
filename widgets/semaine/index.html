@@ -1514,27 +1514,16 @@ function openAddTaskToBloc() {
   setTimeout(() => openTaskNew(blocId, null), 150);
 }
 
-function openTaskNew(blocId, parentTaskId) {
-  currentTaskEditId = null;
-  currentTaskNewBlocId = blocId || null;
-  currentTaskParent = parentTaskId || null;
-  currentTaskOriginalDate = null;
-  currentPushCount = 0;
-  document.getElementById('task-modal-title').textContent = parentTaskId ? 'Nouvelle sous-tâche' : 'Nouvelle tâche';
-  document.getElementById('task-titre').value = '';
-  document.getElementById('task-desc').value = '';
-  document.getElementById('task-livrable').value = '';
-  document.getElementById('task-statut').value = 'Pas commence';
-  document.getElementById('task-heures').value = '';
-  document.getElementById('task-date').value = unixToInputDate(WuboGrist.daysFromToday(0));
-  document.getElementById('task-meta').textContent = parentTaskId ? 'Sous-tâche' : 'Nouvelle tâche';
-  document.getElementById('task-reporter').style.display = 'none';
-  document.getElementById('subtasks-section').style.display = 'none';
-  document.getElementById('task-ext-deadline').checked = false;
-  const delBtn = document.getElementById('task-delete-btn');
-  if (delBtn) delBtn.style.display = 'none';
-  refreshTaskExtPreview();
-  openModal('task-modal');
+async function openTaskNew(blocId, parentTaskId) {
+  const r = await WuboTaskModal.open({
+    mode: 'new',
+    blocId: blocId || null,
+    parentTaskId: parentTaskId || null
+  });
+  if (r && r.action !== 'cancelled') {
+    if (r.action === 'saved' && blocId) pendingFlashBlocId = blocId;
+    await render();
+  }
 }
 
 function refreshTaskExtPreview() {
@@ -1573,42 +1562,13 @@ async function saveBloc() {
   }
 }
 
-function openTaskEdit(taskId) {
+async function openTaskEdit(taskId) {
   const t = tachesById[taskId];
   if (!t) return;
-  currentTaskEditId = taskId;
-  currentTaskNewBlocId = null;
-  currentTaskParent = null;
-  currentTaskOriginalDate = t.date_cible || null;
-  currentPushCount = t.push_count || 0;
-  document.getElementById('task-modal-title').textContent = 'Modifier la tâche';
-  document.getElementById('task-titre').value = t.titre || '';
-  document.getElementById('task-desc').value = t.description || '';
-  document.getElementById('task-livrable').value = t.livrable || '';
-  const statutSelect = document.getElementById('task-statut');
-  const curStatut = (t.statut || 'Pas commence').toLowerCase();
-  let selectVal = 'Pas commence';
-  if (curStatut.includes('fait')) selectVal = 'Fait';
-  else if (curStatut.includes('en cours')) selectVal = 'En cours';
-  else if (curStatut.includes('bloqu')) selectVal = 'Bloque';
-  else if (curStatut.includes('abandon')) selectVal = 'Abandonne';
-  statutSelect.value = selectVal;
-  document.getElementById('task-heures').value = t.estim_heures || '';
-  document.getElementById('task-date').value = unixToInputDate(t.date_cible);
-  document.getElementById('task-ext-deadline').checked = !!t.est_deadline_externe;
-  refreshTaskExtPreview();
-  const meta = [];
-  if (t.score) meta.push(`score ${t.score}`);
-  if (currentPushCount > 0) meta.push(`reportée ${currentPushCount}x`);
-  document.getElementById('task-meta').textContent = meta.join(' · ');
-  document.getElementById('task-reporter').style.display = 'flex';
-  document.getElementById('push-count-info').textContent = currentPushCount > 0 ? `Déjà reportée ${currentPushCount}x (bonus score +${Math.min(currentPushCount*3, 10)})` : '';
-  const subs = Object.values(tachesById).filter(x => x.parent_tache === taskId);
-  renderSubtasksList(subs);
-  document.getElementById('subtasks-section').style.display = '';
-  const delBtn = document.getElementById('task-delete-btn');
-  if (delBtn) delBtn.style.display = '';
-  openModal('task-modal');
+  const r = await WuboTaskModal.open({ mode: 'edit', task: t });
+  if (r && r.action !== 'cancelled') {
+    await render();
+  }
 }
 
 async function deleteCurrentTask() {

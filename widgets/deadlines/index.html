@@ -673,23 +673,11 @@ function openItem(item) {
   }
 }
 
-function openTaskEdit(t) {
-  currentTaskEditId = t.id;
-  document.getElementById('task-modal-title').textContent = 'Modifier la tâche';
-  document.getElementById('task-titre').value = t.titre || '';
-  document.getElementById('task-desc').value = t.description || '';
-  document.getElementById('task-statut').value = t.statut || 'Pas commencé';
-  document.getElementById('task-date').value = unixToInputDate(t.date_cible);
-  const ext = document.getElementById('task-ext-deadline');
-  if (ext) ext.checked = !!t.est_deadline_externe;
-  const meta = [];
-  if (t.score) meta.push(`score ${t.score}`);
-  if (t.estim_heures) meta.push(`${t.estim_heures}h`);
-  if (t.push_count) meta.push(`reportée ${t.push_count}x`);
-  document.getElementById('task-meta').textContent = meta.join(' · ');
-  document.getElementById('task-archive-btn').style.display = (t.statut === 'Fait') ? '' : 'none';
-  document.getElementById('task-delete-btn').style.display = '';
-  openModal('task-modal');
+async function openTaskEdit(t) {
+  const r = await WuboTaskModal.open({ mode: 'edit', task: t });
+  if (r && r.action !== 'cancelled') {
+    await render();
+  }
 }
 
 async function deleteCurrentTask() {

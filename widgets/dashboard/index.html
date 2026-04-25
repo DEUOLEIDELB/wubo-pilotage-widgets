@@ -1383,36 +1383,16 @@ async function render() {
   else objectifs.sort((a, b) => (a.priorite || 99) - (b.priorite || 99)).forEach(o => oNode.appendChild(renderObjectif(o)));
 }
 
-function openTaskNew(projetId, parentTaskId) {
-  currentTaskEditId = null;
-  currentTaskProjetId = projetId || null;
-  currentTaskParent = parentTaskId || null;
-  currentTaskOriginalDate = null;
-  currentPushCount = 0;
-  pendingSubtasks = [];
-  document.getElementById('task-modal-title').textContent = parentTaskId ? 'Nouvelle sous-tâche' : 'Nouvelle tâche';
-  document.getElementById('task-titre').value = '';
-  document.getElementById('task-desc').value = '';
-  document.getElementById('task-livrable').value = '';
-  document.getElementById('task-statut').value = 'Pas commence';
-  document.getElementById('task-heures').value = '';
-  document.getElementById('task-cash').value = 2;
-  document.getElementById('task-urgency').value = 2;
-  document.getElementById('task-strat').value = 2;
-  document.getElementById('task-date').value = unixToInputDate(WuboGrist.daysFromToday(7));
-  document.getElementById('task-ext-deadline').checked = false;
-  document.getElementById('task-meta').textContent = parentTaskId ? 'Sous-tâche' : 'Nouvelle tâche dans projet';
-  document.getElementById('task-reporter').style.display = 'none';
-  // Si on crée une tâche parent (pas une sous-tâche), proposer d'ajouter des sous-tâches en même temps
-  if (parentTaskId) {
-    document.getElementById('subtasks-section').style.display = 'none';
-  } else {
-    document.getElementById('subtasks-section').style.display = '';
-    document.getElementById('subtasks-label').textContent = 'Sous-tâches (optionnel)';
-    renderPendingSubtasksList();
+async function openTaskNew(projetId, parentTaskId) {
+  const r = await WuboTaskModal.open({
+    mode: 'new',
+    projetId: projetId || null,
+    parentTaskId: parentTaskId || null
+  });
+  if (r && r.action !== 'cancelled') {
+    if (r.action === 'saved') justUpdatedTaskIds.add(r.taskId);
+    await render();
   }
-  document.getElementById('task-archive-btn').style.display = 'none';
-  openModal('task-modal');
 }
 
 // Charge les champs de la modal à partir d'une tâche (utilisé par openTaskEdit et replaceTaskEdit)
@@ -1447,11 +1427,14 @@ function fillTaskEditFields(t) {
   updateArchiveBtnVisibility();
 }
 
-function openTaskEdit(taskId) {
+async function openTaskEdit(taskId) {
   const t = tachesById[taskId];
   if (!t) return;
-  fillTaskEditFields(t);
-  openModal('task-modal');
+  const r = await WuboTaskModal.open({ mode: 'edit', task: t });
+  if (r && r.action !== 'cancelled') {
+    if (r.action === 'saved') justUpdatedTaskIds.add(r.taskId);
+    await render();
+  }
 }
 
 // Remplace in-place le contenu de la modal task-edit sans fermer/rouvrir (évite flash blanc)
