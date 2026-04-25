@@ -22,24 +22,31 @@
   #app {
     max-width: 720px;
     margin: 0 auto;
-    /* padding-top = hauteur sticky-block (mesurée dynamiquement via JS, fallback 168px)
-       + 12px de respiration garantie sous le dernier sticky */
-    padding: calc(var(--sticky-h, 168px) + 12px) 10px calc(150px + env(safe-area-inset-bottom));
+    /* padding-top = hauteur sticky-block mesuree dynamiquement via JS (fallback 210px)
+       + 18px de respiration garantie sous le dernier sticky.
+       L'observation ResizeObserver met a jour --sticky-h quand le sub-titre se remplit. */
+    padding: calc(var(--sticky-h, 210px) + var(--header-respire, 18px)) 10px calc(150px + env(safe-area-inset-bottom));
     display: flex;
     flex-direction: column;
     gap: 8px;
   }
-  /* Sprint-header + view-toggle = header fixé en haut (ne bouge pas au bounce) */
+  /* ============ HEADER SEMAINE EN 3 ROWS ALIGNES ============
+     Row 1 : titre + profile-btn (pattern identique aux autres widgets pour que
+             le cercle profil ne saute pas d'onglet a onglet)
+     Row 2 : nav sprint (‹ Aujourd'hui ›) centree
+     Row 3 : tab-group (Liste / Agenda) */
   .semaine-sticky-block {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
-    padding: calc(env(safe-area-inset-top) + 10px) 10px 10px;
+    padding: calc(env(safe-area-inset-top) + 10px) 14px 0;
     z-index: 45;
     background: var(--bg);
-    /* Un seul indicateur de séparation : la border-bottom. Pas de double trait. */
     border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
   }
   @media (min-width: 600px) {
     .semaine-sticky-block {
@@ -52,27 +59,42 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 8px;
-    padding: 0 4px 8px;
-    background: var(--bg);
-    /* Pas de border-bottom ici : on laisse uniquement la border du sticky-block parent */
+    gap: 10px;
   }
   .sprint-header .title-block { flex: 1; min-width: 0; }
-  .sprint-header h1 { font-size: 16px; line-height: 1.1; }
-  .sprint-header .sub { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
-  .sprint-nav { display: flex; gap: 4px; flex-shrink: 0; }
+  .sprint-header h1 {
+    font-size: 18px;
+    font-weight: 700;
+    text-transform: capitalize;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    color: var(--text);
+  }
+  .sprint-header .sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+
+  .sprint-nav {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
   .sprint-nav button.nav-chev {
-    width: 34px; height: 34px; padding: 0;
+    width: 36px; height: 36px; padding: 0;
+    min-height: 36px;
     font-size: 16px; line-height: 1;
     background: var(--surface); color: var(--text);
-    border: 1px solid var(--border-strong); border-radius: 6px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
   }
   .sprint-nav button.nav-chev:active { opacity: 0.6; }
   .sprint-nav button.nav-today {
-    padding: 0 10px; height: 34px;
-    font-size: 12px;
+    padding: 0 14px; height: 36px;
+    min-height: 36px;
+    font-size: 13px;
+    font-weight: 600;
     background: var(--surface); color: var(--text);
-    border: 1px solid var(--border-strong); border-radius: 6px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
   }
 
   /* Toggle Liste / Agenda : utilise le composant .tab-group de lib/styles.css */
@@ -83,7 +105,7 @@
   #liste-view, #agenda-view {
     will-change: transform;
     touch-action: pan-y;
-    min-height: calc(100vh - var(--sticky-h, 168px) - 160px);
+    min-height: calc(100vh - var(--sticky-h, 210px) - 160px);
   }
 
   /* Vue agenda : calendrier mensuel compact multi-semaines */
@@ -499,7 +521,7 @@
   .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: flex-end; justify-content: center; z-index: 100; }
   .modal.hidden { display: none; }
   .modal-content {
-    background: var(--surface); width: 100%; max-width: 480px; border-radius: 12px 12px 0 0;
+    background: var(--surface); width: 100%; max-width: 480px; border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     padding: 16px; padding-bottom: calc(16px + env(safe-area-inset-bottom));
     display: flex; flex-direction: column; gap: 10px;
     max-height: 92vh; overflow-y: auto;
@@ -533,22 +555,26 @@
 
 <main id="app">
   <div class="semaine-sticky-block">
+    <!-- Row 1 : titre + profile (meme pattern que les autres widgets pour eviter le saut) -->
     <div class="sprint-header">
       <div class="title-block">
         <h1 id="title">Sprint</h1>
         <div class="sub" id="sub"></div>
       </div>
-      <div class="sprint-nav">
-        <button type="button" class="nav-chev" onclick="shiftWindow(-1)" aria-label="Période précédente" title="Période précédente">‹</button>
-        <button type="button" class="nav-today" onclick="resetWindow()" title="Revenir à aujourd'hui">Aujourd'hui</button>
-        <button type="button" class="nav-chev" onclick="shiftWindow(1)" aria-label="Période suivante" title="Période suivante">›</button>
-      </div>
-      <div id="profile-slot" class="profile-wrap" style="margin-left:6px"></div>
+      <div id="profile-slot" class="profile-wrap"></div>
     </div>
 
+    <!-- Row 2 : navigation de periode -->
+    <div class="sprint-nav">
+      <button type="button" class="nav-chev" onclick="shiftWindow(-1)" aria-label="Période précédente" title="Période précédente">‹</button>
+      <button type="button" class="nav-today" onclick="resetWindow()" title="Revenir à aujourd'hui">Aujourd'hui</button>
+      <button type="button" class="nav-chev" onclick="shiftWindow(1)" aria-label="Période suivante" title="Période suivante">›</button>
+    </div>
+
+    <!-- Row 3 : toggle vue -->
     <div class="tab-group" id="view-toggle" role="tablist">
       <button id="btn-liste" class="active" role="tab" aria-selected="true" onclick="setView('liste')">Liste</button>
-      <button id="btn-agenda" role="tab" aria-selected="false" onclick="setView('agenda')">Agenda (4 semaines)</button>
+      <button id="btn-agenda" role="tab" aria-selected="false" onclick="setView('agenda')">Agenda</button>
     </div>
   </div>
 

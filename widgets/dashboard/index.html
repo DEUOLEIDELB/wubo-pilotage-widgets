@@ -352,7 +352,7 @@
   .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: flex-end; justify-content: center; z-index: 100; overscroll-behavior: contain; }
   .modal.hidden { display: none; }
   .modal-content {
-    background: var(--surface); width: 100%; max-width: 520px; border-radius: 12px 12px 0 0;
+    background: var(--surface); width: 100%; max-width: 520px; border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     padding: 16px; padding-bottom: calc(16px + env(safe-area-inset-bottom));
     display: flex; flex-direction: column; gap: 10px;
     max-height: 88vh; overflow-y: auto;

@@ -61,8 +61,8 @@
      Fallback 168px pour le widget semaine (header + view-toggle). */
   --header-h: 68px;
   --footer-h: 112px;
-  --sticky-h: 190px;
-  --header-respire: 16px;     /* respiration garantie sous le dernier sticky */
+  --sticky-h: 210px;
+  --header-respire: 18px;     /* respiration garantie sous le dernier sticky */
 
   /* Radius : echelle compacte pour outil utilitaire */
   --radius-sm: 4px;           /* tags, badges, pills */

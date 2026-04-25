@@ -213,7 +213,7 @@
     background: var(--surface);
     width: 100%;
     max-width: 520px;
-    border-radius: 12px 12px 0 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     padding: 16px;
     padding-bottom: calc(16px + env(safe-area-inset-bottom));
     display: flex; flex-direction: column; gap: 10px;
@@ -558,9 +558,10 @@ function renderTabToggle() {
   const total = allDeadlines.length;
   const node = document.getElementById('tab-toggle');
   $clear(node);
+  // Labels courts (mobile-first). Explication affichée en dessous du tab-group via section-title.
   const tabs = [
-    { id: 'externes', label: 'Dures (non repoussables)', count: externes },
-    { id: 'internes', label: 'Cibles internes', count: internes },
+    { id: 'externes', label: 'Dures', count: externes },
+    { id: 'internes', label: 'Internes', count: internes },
     { id: 'all', label: 'Tout', count: total }
   ];
   tabs.forEach(t => {
