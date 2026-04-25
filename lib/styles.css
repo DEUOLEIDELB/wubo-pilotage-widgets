@@ -629,13 +629,16 @@ html, body {
 /* ============ TAB-GROUP UNIFIE ============
    Segmented control plat et RIGIDE : tous les tabs visibles d'un coup, jamais de scroll.
    Chaque tab partage l'espace via flex:1. Labels courts + ellipsis en garde-fou.
-   Active = underline violet (signal --current sans noir lourd). */
+   Active = underline violet (signal --current sans noir lourd).
+
+   Fond OPAQUE --bg : quand le tab-group est en position sticky, les taches qui defilent
+   dessous ne se voient plus en transparence (plus de texte sur texte). */
 .tab-group {
   display: flex;
   gap: 0;
   padding: 0;
   width: 100%;
-  background: transparent;
+  background: var(--bg);
   border-radius: 0;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;

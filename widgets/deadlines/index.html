@@ -51,11 +51,16 @@
   .page-title h1 { font-size: 18px; }
   .page-title .sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
 
-  /* Toggle Externes / Internes / Tout : utilise .tab-group + position sticky local */
+  /* Toggle Externes / Internes / Tout : .tab-group sticky sous le page-title fixe.
+     Marges negatives + padding pour que le fond --bg couvre bord a bord (evite que les
+     taches defilent dans les 14px de padding laisses par #app sur les cotes). */
   #tab-toggle {
     position: sticky;
     top: calc(env(safe-area-inset-top) + 68px);
     z-index: 22;
+    margin: 0 -14px;
+    padding: 0 14px;
+    background: var(--bg);
   }
 
   /* Section externes dure vs internes */
