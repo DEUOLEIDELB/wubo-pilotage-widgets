@@ -408,6 +408,7 @@
         <span>Vraie deadline externe (AAP, event, atelier école)</span>
       </label>
     </div>
+    <div class="field"><label>Qui travaille dessus ?</label><div id="task-collabs" class="collab-chips"></div></div>
     <div id="task-reporter" class="field" style="display:none">
       <label>Reporter</label>
       <div style="display:flex;gap:4px;flex-wrap:wrap">
@@ -450,6 +451,8 @@ let tachesById = {};
 let pendingSubtasks = [];
 // ID de la tâche flashée brièvement après édition (pour l'animation .just-updated)
 let justUpdatedTaskId = null;
+// Liste courante des collaborateurs sur la tâche en cours d'édition (format Grist ['L', ...])
+let currentTaskCollabs = ['L'];
 // Tâches dont les sous-tâches sont dépliées en ligne (persist session)
 const expandedTaskIds = (() => {
   try {
@@ -587,7 +590,15 @@ function renderBloc(tranche, bloc) {
 
   const el = $el('div', { class: classNames.join(' '), 'data-tranche': tranche }, head);
   if (bloc) el.setAttribute('data-bloc-id', String(bloc.id));
-  if (!bloc) { el.appendChild($el('div', { class: 'empty' }, 'Aucun bloc planifié')); return el; }
+  if (!bloc) {
+    // Bloc vide : CTA pour planifier immédiatement cette tranche aujourd'hui
+    el.appendChild($el('button', {
+      class: 'add-tache',
+      style: 'margin-top:4px',
+      onclick: () => createBlocToday(tranche)
+    }, '+ Planifier ' + tranche));
+    return el;
+  }
 
   const tIds = WuboGrist.refListIds(bloc.taches_liees);
   const ul = $el('ul', {});
@@ -1091,6 +1102,26 @@ const undoTimers = new Map();
 // Cache des blocs pour acceder au statut precedent avant update
 let blocsByIdCache = {};
 
+// Crée un bloc Planifie aujourd'hui pour la tranche donnée, puis ouvre la création de tâche sur ce bloc.
+async function createBlocToday(tranche) {
+  const todayISO = WuboGrist.todayISO();
+  const [y, m, d] = todayISO.split('-').map(Number);
+  const dateUnix = Math.floor(Date.UTC(y, m-1, d) / 1000);
+  try {
+    const { id } = await WuboGrist.addRecord('Blocs_temps', {
+      date: dateUnix,
+      tranche,
+      statut: 'Planifie',
+      proprietaire: WuboGrist.getUser() || 'Taki'
+    });
+    WuboGrist.toast(`Bloc ${tranche} créé`, 'success');
+    await render();
+    if (id) openTaskNew(id);
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
+  }
+}
+
 async function blocAction(blocId, statut) {
   const fields = { statut };
   if (statut === 'Fait') {
@@ -1246,6 +1277,10 @@ function fillTaskEditForm(taskId) {
   document.getElementById('task-date').value = unixToInputDate(t.date_cible);
   const extCb = document.getElementById('task-ext-deadline');
   if (extCb) extCb.checked = !!t.est_deadline_externe;
+  // Collaborateurs : charge la liste existante
+  currentTaskCollabs = Array.isArray(t.collaborateurs) ? t.collaborateurs.slice() : ['L'];
+  const collabsEl = document.getElementById('task-collabs');
+  if (collabsEl && window.WuboUI) WuboUI.renderCollaborateursPicker(collabsEl, currentTaskCollabs, list => { currentTaskCollabs = list; });
   // Remplit le dropdown projet (async, non bloquant) et pré-sélectionne le projet courant
   const projetSel = document.getElementById('task-projet');
   if (projetSel) WuboGrist.populateProjetSelect(projetSel, t.projet).catch(() => {});
@@ -1340,6 +1375,10 @@ function openTaskNew(blocId, parentTaskId) {
   document.getElementById('task-heures').value = '';
   const extCb = document.getElementById('task-ext-deadline');
   if (extCb) extCb.checked = false;
+  // Collab : pré-rempli avec le user courant
+  currentTaskCollabs = ['L', WuboGrist.getUser() || 'Taki'];
+  const collabsEl = document.getElementById('task-collabs');
+  if (collabsEl && window.WuboUI) WuboUI.renderCollaborateursPicker(collabsEl, currentTaskCollabs, list => { currentTaskCollabs = list; });
   const d = new Date(); d.setHours(12,0,0,0);
   document.getElementById('task-date').value = unixToInputDate(Math.floor(d.getTime()/1000));
   document.getElementById('task-meta').textContent = parentTaskId ? 'Sous-tâche' : 'Nouvelle tâche';
@@ -1482,7 +1521,8 @@ async function saveTaskEdit() {
     livrable: document.getElementById('task-livrable').value,
     statut: document.getElementById('task-statut').value,
     estim_heures: heures,
-    est_deadline_externe: extCb ? !!extCb.checked : false
+    est_deadline_externe: extCb ? !!extCb.checked : false,
+    collaborateurs: currentTaskCollabs
   };
   if (projetVal) fields.projet = projetVal;
   if (dateUnix) fields.date_cible = dateUnix;

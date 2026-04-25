@@ -291,7 +291,7 @@
   .taches { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; }
   .tache {
     display: grid;
-    grid-template-columns: 14px 18px 1fr auto;
+    grid-template-columns: 14px 18px 1fr auto auto;
     gap: 6px;
     align-items: center;
     padding: 4px 6px;
@@ -394,6 +394,7 @@
 
   <section>
     <div id="objectifs"></div>
+    <button class="ghost" onclick="openObjectifNew()" style="margin-top:10px;width:100%;padding:14px;border-style:dashed;font-weight:700">+ Nouvel objectif</button>
   </section>
 
   <section class="pill-legend" style="margin-top:8px;padding:6px 8px;font-size:10px;color:var(--text-dim);border:1px dashed var(--border);border-radius:4px;line-height:1.6">
@@ -453,6 +454,90 @@
     <div class="push-choice-list" id="push-choice-list"></div>
     <div class="sticky-save">
       <button class="ghost small" onclick="closePushModal()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- Objectif create/edit modal -->
+<div id="objectif-modal" class="modal hidden" onclick="backdropClose(event, 'objectif-modal')">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <h3 id="objectif-modal-title">Nouvel objectif</h3>
+      <button class="ghost small" onclick="closeObjectifModal()">Annuler</button>
+    </div>
+    <div class="field"><label>Titre</label><input id="obj-titre" placeholder="Ex: Sécuriser le financement Q3"></div>
+    <div class="field"><label>Description</label><textarea id="obj-desc" placeholder="Pourquoi cet objectif" style="min-height:70px"></textarea></div>
+    <div class="field" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div><label>Trimestre</label>
+        <select id="obj-trimestre">
+          <option value="">—</option>
+          <option value="2026-Q2">2026-Q2</option>
+          <option value="2026-Q3">2026-Q3</option>
+          <option value="2026-Q4">2026-Q4</option>
+          <option value="2027-Q1">2027-Q1</option>
+        </select>
+      </div>
+      <div><label>Priorité</label><input id="obj-priorite" type="number" min="1" max="5" placeholder="1-5"></div>
+    </div>
+    <div class="field"><label>Échéance</label><input id="obj-deadline" type="date"></div>
+    <div class="field">
+      <label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;color:var(--text);font-weight:600;cursor:pointer">
+        <input type="checkbox" id="obj-ext" style="width:auto;margin:0">
+        <span>Deadline externe (non repoussable)</span>
+      </label>
+    </div>
+    <div class="field"><label>Qui travaille dessus ?</label><div id="obj-collabs" class="collab-chips"></div></div>
+    <div class="field" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div><label>KPI visé</label><input id="obj-kpi-vise" placeholder="ex: 3 ateliers"></div>
+      <div><label>KPI actuel</label><input id="obj-kpi-actuel" placeholder="ex: 1 atelier"></div>
+    </div>
+    <div class="sticky-save">
+      <button class="ghost small" onclick="closeObjectifModal()">Annuler</button>
+      <button id="obj-delete-btn" class="danger small" style="display:none" onclick="deleteCurrentObjectif()">Supprimer</button>
+      <button class="primary" onclick="saveObjectif()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Projet create/edit modal -->
+<div id="projet-modal" class="modal hidden" onclick="backdropClose(event, 'projet-modal')">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <h3 id="projet-modal-title">Nouveau projet</h3>
+      <button class="ghost small" onclick="closeProjetModal()">Annuler</button>
+    </div>
+    <div id="projet-parent-info" style="font-size:11px;color:var(--text-dim);font-style:italic"></div>
+    <div class="field"><label>Titre</label><input id="proj-titre"></div>
+    <div class="field"><label>Description</label><textarea id="proj-desc" style="min-height:60px"></textarea></div>
+    <div class="field"><label>Échéance</label><input id="proj-date" type="date"></div>
+    <div class="field">
+      <label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;color:var(--text);font-weight:600;cursor:pointer">
+        <input type="checkbox" id="proj-ext" style="width:auto;margin:0">
+        <span>Deadline externe</span>
+      </label>
+    </div>
+    <div class="field"><label>Qui travaille dessus ?</label><div id="proj-collabs" class="collab-chips"></div></div>
+    <div class="sticky-save">
+      <button class="ghost small" onclick="closeProjetModal()">Annuler</button>
+      <button id="proj-delete-btn" class="danger small" style="display:none" onclick="deleteCurrentProjet()">Supprimer</button>
+      <button class="primary" onclick="saveProjet()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sujet à pousser create modal -->
+<div id="sujet-modal" class="modal hidden" onclick="backdropClose(event, 'sujet-modal')">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <h3>Nouveau sujet à pousser</h3>
+      <button class="ghost small" onclick="closeSujetModal()">Annuler</button>
+    </div>
+    <div style="font-size:12px;color:var(--text-dim);line-height:1.4">Sujet que tu sais devoir traiter mais que tu repousses (relance, RDV, contact). On te le rappellera ici.</div>
+    <div class="field"><label>Titre</label><input id="suj-titre" placeholder="Ex: Relancer Mr Dupont"></div>
+    <div class="field"><label>Prochaine étape concrète</label><input id="suj-etape" placeholder="Ex: Envoyer un mail récap"></div>
+    <div class="sticky-save">
+      <button class="ghost small" onclick="closeSujetModal()">Annuler</button>
+      <button class="primary" onclick="saveSujet()">Créer</button>
     </div>
   </div>
 </div>
@@ -680,28 +765,41 @@ async function deleteSujet(sujet) {
 function renderSujetsTop(sujets) {
   const section = document.getElementById('sujets-top-section');
   $clear(section);
-  if (sujets.length === 0) return;
-  // Tri : plus ancien (pas touché) d'abord
   const sorted = [...sujets].sort((a, b) => (b.jours_stagnation || 0) - (a.jours_stagnation || 0));
   const visible = sujetsExpanded ? sorted : sorted.slice(0, 3);
 
   const block = $el('div', { class: 'sujets-block' });
-  block.appendChild($el('div', { class: 'sujets-head' },
-    $el('span', { class: 'titre' }, `Sujets à pousser (${sujets.length})`),
-    $el('span', { class: 'hint' }, 'Glisse pour archiver ou supprimer')
-  ));
-  const list = $el('div', { class: 'sujets-list' });
-  visible.forEach(s => list.appendChild(renderSujetCard(s)));
-  block.appendChild(list);
-  if (sorted.length > 3) {
-    const hiddenCount = sorted.length - 3;
-    const btnLabel = sujetsExpanded ? 'Réduire' : `+ ${hiddenCount} autres`;
-    const toggleBtn = $el('button', {
-      class: 'sujet-expand-btn',
-      onclick: () => { sujetsExpanded = !sujetsExpanded; renderSujetsTop(sujets); }
-    }, btnLabel);
-    block.appendChild(toggleBtn);
+  const head = $el('div', { class: 'sujets-head' });
+  head.appendChild($el('span', { class: 'titre' }, `Sujets à pousser${sujets.length ? ' · ' + sujets.length : ''}`));
+  if (sujets.length) {
+    head.appendChild($el('span', { class: 'hint' }, 'Glisse pour archiver/supprimer'));
   }
+  block.appendChild(head);
+
+  if (sujets.length === 0) {
+    block.appendChild($el('div', {
+      style: 'font-size:12px;color:var(--text-faint);font-style:italic;line-height:1.4'
+    }, 'Aucun sujet à pousser. Si tu as un truc qui traîne dans la tête, ajoute-le.'));
+  } else {
+    const list = $el('div', { class: 'sujets-list' });
+    visible.forEach(s => list.appendChild(renderSujetCard(s)));
+    block.appendChild(list);
+    if (sorted.length > 3) {
+      const hiddenCount = sorted.length - 3;
+      const btnLabel = sujetsExpanded ? 'Réduire' : `+ ${hiddenCount} autres`;
+      const toggleBtn = $el('button', {
+        class: 'sujet-expand-btn',
+        onclick: () => { sujetsExpanded = !sujetsExpanded; renderSujetsTop(sujets); }
+      }, btnLabel);
+      block.appendChild(toggleBtn);
+    }
+  }
+
+  block.appendChild($el('button', {
+    class: 'ghost small',
+    style: 'align-self:flex-start;border-style:dashed',
+    onclick: openSujetNew
+  }, '+ Nouveau sujet'));
   section.appendChild(block);
 }
 
@@ -782,6 +880,227 @@ async function pushActionConvert() {
   }
 }
 
+// ============ Sujet à pousser : création ============
+function openSujetNew() {
+  document.getElementById('suj-titre').value = '';
+  document.getElementById('suj-etape').value = '';
+  openModal('sujet-modal');
+  setTimeout(() => { try { document.getElementById('suj-titre').focus(); } catch (_) {} }, 100);
+}
+function closeSujetModal() { closeModal('sujet-modal'); }
+async function saveSujet() {
+  const titre = document.getElementById('suj-titre').value.trim();
+  const etape = document.getElementById('suj-etape').value.trim();
+  if (!titre) { WuboGrist.toast('Titre obligatoire', 'warn'); return; }
+  try {
+    await WuboGrist.addRecord('Sujets_a_pousser', {
+      titre,
+      prochaine_etape: etape,
+      statut: 'Actif',
+      derniere_action: null,
+      proprietaire: WuboGrist.getUser() || 'Taki'
+    });
+    closeSujetModal();
+    WuboGrist.toast('Sujet ajouté', 'success');
+    await render();
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
+  }
+}
+
+// ============ Objectif : création / édition / suppression ============
+let currentObjEditId = null;
+let currentObjCollabs = ['L'];
+function openObjectifNew() {
+  currentObjEditId = null;
+  currentObjCollabs = ['L', WuboGrist.getUser() || 'Taki'];
+  document.getElementById('objectif-modal-title').textContent = 'Nouvel objectif';
+  document.getElementById('obj-titre').value = '';
+  document.getElementById('obj-desc').value = '';
+  document.getElementById('obj-trimestre').value = '';
+  document.getElementById('obj-priorite').value = '';
+  document.getElementById('obj-deadline').value = '';
+  document.getElementById('obj-ext').checked = false;
+  document.getElementById('obj-kpi-vise').value = '';
+  document.getElementById('obj-kpi-actuel').value = '';
+  document.getElementById('obj-delete-btn').style.display = 'none';
+  WuboUI.renderCollaborateursPicker(
+    document.getElementById('obj-collabs'),
+    currentObjCollabs,
+    list => { currentObjCollabs = list; }
+  );
+  openModal('objectif-modal');
+  setTimeout(() => { try { document.getElementById('obj-titre').focus(); } catch (_) {} }, 120);
+}
+function openObjectifEdit(o) {
+  currentObjEditId = o.id;
+  currentObjCollabs = Array.isArray(o.collaborateurs) ? o.collaborateurs.slice() : ['L'];
+  document.getElementById('objectif-modal-title').textContent = 'Modifier l\'objectif';
+  document.getElementById('obj-titre').value = o.titre || '';
+  document.getElementById('obj-desc').value = o.description || '';
+  document.getElementById('obj-trimestre').value = o.trimestre || '';
+  document.getElementById('obj-priorite').value = o.priorite || '';
+  document.getElementById('obj-deadline').value = o.deadline ? unixToInputDate(o.deadline) : '';
+  document.getElementById('obj-ext').checked = !!o.est_deadline_externe;
+  document.getElementById('obj-kpi-vise').value = o.kpi_vise || '';
+  document.getElementById('obj-kpi-actuel').value = o.kpi_actuel || '';
+  document.getElementById('obj-delete-btn').style.display = '';
+  WuboUI.renderCollaborateursPicker(
+    document.getElementById('obj-collabs'),
+    currentObjCollabs,
+    list => { currentObjCollabs = list; }
+  );
+  openModal('objectif-modal');
+}
+function closeObjectifModal() {
+  currentObjEditId = null;
+  closeModal('objectif-modal');
+}
+async function saveObjectif() {
+  const titre = document.getElementById('obj-titre').value.trim();
+  if (!titre) { WuboGrist.toast('Titre obligatoire', 'warn'); return; }
+  const fields = {
+    titre,
+    description: document.getElementById('obj-desc').value,
+    trimestre: document.getElementById('obj-trimestre').value || null,
+    priorite: parseInt(document.getElementById('obj-priorite').value, 10) || null,
+    est_deadline_externe: document.getElementById('obj-ext').checked,
+    kpi_vise: document.getElementById('obj-kpi-vise').value,
+    kpi_actuel: document.getElementById('obj-kpi-actuel').value,
+    statut: 'Actif',
+    collaborateurs: currentObjCollabs
+  };
+  const dlStr = document.getElementById('obj-deadline').value;
+  if (dlStr) fields.deadline = inputDateToUnix(dlStr);
+  try {
+    if (currentObjEditId) {
+      await WuboGrist.updateRecord('Objectifs', currentObjEditId, fields);
+      WuboGrist.toast('Objectif mis à jour', 'success');
+    } else {
+      fields.proprietaire = WuboGrist.getUser() || 'Taki';
+      await WuboGrist.addRecord('Objectifs', fields);
+      WuboGrist.toast('Objectif créé', 'success');
+    }
+    closeObjectifModal();
+    await render();
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
+  }
+}
+async function deleteCurrentObjectif() {
+  if (!currentObjEditId) return;
+  const ok = await WuboUI.confirm({
+    title: 'Supprimer l\'objectif ?',
+    message: 'Les projets liés perdront leur rattachement. Préfère "Archiver".',
+    yesLabel: 'Supprimer',
+    danger: true
+  });
+  if (!ok) return;
+  try {
+    await WuboGrist.deleteRecord('Objectifs', currentObjEditId);
+    closeObjectifModal();
+    WuboGrist.toast('Objectif supprimé', 'info');
+    await render();
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
+  }
+}
+
+// ============ Projet : création / édition / suppression ============
+let currentProjEditId = null;
+let currentProjObjectifId = null;
+let currentProjCollabs = ['L'];
+function openProjetNew(objectifId) {
+  currentProjEditId = null;
+  currentProjObjectifId = objectifId || null;
+  currentProjCollabs = ['L', WuboGrist.getUser() || 'Taki'];
+  const obj = objectifs.find(o => o.id === objectifId);
+  document.getElementById('projet-modal-title').textContent = 'Nouveau projet';
+  document.getElementById('projet-parent-info').textContent = obj ? `Sous l'objectif : ${obj.titre || ''}` : '';
+  document.getElementById('proj-titre').value = '';
+  document.getElementById('proj-desc').value = '';
+  document.getElementById('proj-date').value = '';
+  document.getElementById('proj-ext').checked = false;
+  document.getElementById('proj-delete-btn').style.display = 'none';
+  WuboUI.renderCollaborateursPicker(
+    document.getElementById('proj-collabs'),
+    currentProjCollabs,
+    list => { currentProjCollabs = list; }
+  );
+  openModal('projet-modal');
+  setTimeout(() => { try { document.getElementById('proj-titre').focus(); } catch (_) {} }, 120);
+}
+function openProjetEdit(p) {
+  currentProjEditId = p.id;
+  currentProjObjectifId = p.objectif || null;
+  currentProjCollabs = Array.isArray(p.collaborateurs) ? p.collaborateurs.slice() : ['L'];
+  const obj = objectifs.find(o => o.id === p.objectif);
+  document.getElementById('projet-modal-title').textContent = 'Modifier le projet';
+  document.getElementById('projet-parent-info').textContent = obj ? `Sous l'objectif : ${obj.titre || ''}` : 'Sans objectif';
+  document.getElementById('proj-titre').value = p.titre || '';
+  document.getElementById('proj-desc').value = p.description || '';
+  document.getElementById('proj-date').value = p.date_cible ? unixToInputDate(p.date_cible) : '';
+  document.getElementById('proj-ext').checked = !!p.est_deadline_externe;
+  document.getElementById('proj-delete-btn').style.display = '';
+  WuboUI.renderCollaborateursPicker(
+    document.getElementById('proj-collabs'),
+    currentProjCollabs,
+    list => { currentProjCollabs = list; }
+  );
+  openModal('projet-modal');
+}
+function closeProjetModal() {
+  currentProjEditId = null;
+  currentProjObjectifId = null;
+  closeModal('projet-modal');
+}
+async function saveProjet() {
+  const titre = document.getElementById('proj-titre').value.trim();
+  if (!titre) { WuboGrist.toast('Titre obligatoire', 'warn'); return; }
+  const fields = {
+    titre,
+    description: document.getElementById('proj-desc').value,
+    est_deadline_externe: document.getElementById('proj-ext').checked,
+    statut: 'Actif',
+    collaborateurs: currentProjCollabs
+  };
+  const dlStr = document.getElementById('proj-date').value;
+  if (dlStr) fields.date_cible = inputDateToUnix(dlStr);
+  if (currentProjObjectifId) fields.objectif = currentProjObjectifId;
+  try {
+    if (currentProjEditId) {
+      await WuboGrist.updateRecord('Projets', currentProjEditId, fields);
+      WuboGrist.toast('Projet mis à jour', 'success');
+    } else {
+      fields.proprietaire = WuboGrist.getUser() || 'Taki';
+      await WuboGrist.addRecord('Projets', fields);
+      WuboGrist.toast('Projet créé', 'success');
+    }
+    closeProjetModal();
+    await render();
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
+  }
+}
+async function deleteCurrentProjet() {
+  if (!currentProjEditId) return;
+  const ok = await WuboUI.confirm({
+    title: 'Supprimer le projet ?',
+    message: 'Les tâches liées resteront mais perdront leur rattachement.',
+    yesLabel: 'Supprimer',
+    danger: true
+  });
+  if (!ok) return;
+  try {
+    await WuboGrist.deleteRecord('Projets', currentProjEditId);
+    closeProjetModal();
+    WuboGrist.toast('Projet supprimé', 'info');
+    await render();
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
+  }
+}
+
 async function pushActionReport(days) {
   if (!currentPushSujet) return;
   try {
@@ -814,12 +1133,14 @@ function renderTache(t, isSubtask) {
     $el('span', { class: 'titre', title: t.titre },
       t.titre || '',
       t.est_deadline_externe ? $el('span', { class: 'ext-indicator', title: 'Deadline externe' }, '⏰ ext') : null
-    ),
-    $el('span', { class: 'date' + (late ? ' late' : '') },
-      fmtDate(t.date_cible) + (t.estim_heures ? ` · ${t.estim_heures}h` : ''),
-      t.push_count ? $el('span', { class: 'push-indicator' }, ` ↻${t.push_count}`) : null
     )
   );
+  const tachePastilles = WuboUI.renderAssignees(t, { size: 'sm' });
+  if (tachePastilles) el.appendChild(tachePastilles);
+  el.appendChild($el('span', { class: 'date' + (late ? ' late' : '') },
+    fmtDate(t.date_cible) + (t.estim_heures ? ` · ${t.estim_heures}h` : ''),
+    t.push_count ? $el('span', { class: 'push-indicator' }, ` ↻${t.push_count}`) : null
+  ));
   // Nettoyer le flag apres 2s (affichage)
   if (justUpdatedTaskIds.has(t.id)) {
     const id = t.id;
@@ -861,10 +1182,20 @@ function renderProjet(p) {
   if (archivedCount > 0) metaParts.push(`${archivedCount} arch`);
   if (totalH > 0) metaParts.push(`${totalH}h`);
   if (p.date_cible) metaParts.push(`éch ${fmtDate(p.date_cible)}`);
-  wrap.appendChild($el('div', { class: 'projet-head' },
-    $el('span', { class: 'projet-title' }, p.titre || ''),
-    $el('span', { class: 'projet-meta' }, metaParts.join(' · '))
-  ));
+
+  const projHead = $el('div', {
+    class: 'projet-head',
+    onclick: (e) => { e.stopPropagation(); openProjetEdit(p); },
+    style: { cursor: 'pointer' }
+  });
+  const projHeadLeft = $el('span', { class: 'projet-title' }, p.titre || '');
+  const projHeadRight = $el('span', { style: 'display:inline-flex;align-items:center;gap:6px' });
+  const projPastilles = WuboUI.renderAssignees(p, { size: 'sm' });
+  if (projPastilles) projHeadRight.appendChild(projPastilles);
+  projHeadRight.appendChild($el('span', { class: 'projet-meta' }, metaParts.join(' · ')));
+  projHead.appendChild(projHeadLeft);
+  projHead.appendChild(projHeadRight);
+  wrap.appendChild(projHead);
 
   if (tachesRoot.length > 0) {
     const datedTaches = tachesRoot.filter(t => t.date_cible);
@@ -893,29 +1224,41 @@ function renderObjectif(o) {
   const prog = Math.round(o.progression || 0);
   const el = $el('div', { class: 'objectif' });
 
+  // Méta épurée : proprietaire affiché via pastilles, plus dans le texte
   const metaBits = [];
   if (o.trimestre) metaBits.push(o.trimestre);
   if (o.priorite) metaBits.push('P' + o.priorite);
   if (o.deadline) metaBits.push('éch ' + fmtDate(o.deadline));
-  if (o.proprietaire) metaBits.push(o.proprietaire);
 
-  // Header sticky : reste collé pendant le scroll de sa section
-  const head = $el('div', { class: 'obj-head' });
+  // Header sticky cliquable pour éditer
+  const head = $el('div', {
+    class: 'obj-head',
+    onclick: (e) => {
+      if (e.target.closest('.tag') || e.target.closest('button')) return;
+      openObjectifEdit(o);
+    },
+    style: { cursor: 'pointer' }
+  });
   const headLeft = $el('div', { style: { flex: '1', minWidth: '0' } });
   headLeft.appendChild($el('div', { class: 'obj-title', title: o.titre || '' }, o.titre || ''));
-  headLeft.appendChild($el('div', { class: 'obj-meta' }, metaBits.join(' · ')));
+  if (metaBits.length) headLeft.appendChild($el('div', { class: 'obj-meta' }, metaBits.join(' · ')));
   if (o.est_deadline_externe) {
     const badges = $el('div', { class: 'obj-badges' });
     badges.appendChild($el('span', { class: 'badge-ext' }, '⏰ Deadline externe'));
     headLeft.appendChild(badges);
   }
   head.appendChild(headLeft);
-  head.appendChild($el('span', { class: 'tag ' + (prog >= 75 ? 'done' : prog >= 25 ? 'wip' : '') }, `${prog}%`));
+
+  // Droite du head : pastilles assignees + progression
+  const headRight = $el('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', flexShrink: '0' } });
+  const pastilles = WuboUI.renderAssignees(o, { size: 'md' });
+  if (pastilles) headRight.appendChild(pastilles);
+  headRight.appendChild($el('span', { class: 'tag ' + (prog >= 75 ? 'done' : prog >= 25 ? 'wip' : '') }, `${prog}%`));
+  head.appendChild(headRight);
   el.appendChild(head);
 
-  // Corps NON sticky : contient la progression + projets + tâches
   const body = $el('div', { class: 'obj-body' });
-  if (o.description) body.appendChild($el('div', { style: { fontSize: '11px', color: 'var(--text-dim)' } }, o.description));
+  if (o.description) body.appendChild($el('div', { style: { fontSize: '12px', color: 'var(--text-dim)' } }, o.description));
 
   body.appendChild($el('div', { class: 'obj-prog-row' },
     $el('div', { class: 'progress-bar ' + (prog >= 50 ? 'high' : 'low') },
@@ -931,7 +1274,12 @@ function renderObjectif(o) {
     ));
   }
   projetsOfObj.forEach(p => body.appendChild(renderProjet(p)));
-  if (projetsOfObj.length === 0) body.appendChild($el('div', { class: 'empty', style: { fontSize: '11px' } }, 'Aucun projet rattaché'));
+  if (projetsOfObj.length === 0) body.appendChild($el('div', { class: 'empty', style: { fontSize: '12px' } }, 'Aucun projet rattaché'));
+  body.appendChild($el('button', {
+    class: 'ghost small',
+    style: 'align-self:flex-start;border-style:dashed;margin-top:4px',
+    onclick: (e) => { e.stopPropagation(); openProjetNew(o.id); }
+  }, '+ Projet'));
   el.appendChild(body);
   return el;
 }
@@ -1316,6 +1664,9 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeTaskE
     ModalSwipe.enable('task-modal', closeTaskEdit);
     ModalSwipe.enable('dump-modal', closeDump);
     ModalSwipe.enable('push-modal', closePushModal);
+    ModalSwipe.enable('objectif-modal', closeObjectifModal);
+    ModalSwipe.enable('projet-modal', closeProjetModal);
+    ModalSwipe.enable('sujet-modal', closeSujetModal);
   }
   render();
 })();
