@@ -272,21 +272,78 @@
   .projet-title { font-size: 13px; font-weight: 700; color: var(--text); letter-spacing: -0.005em; }
   .projet-meta { font-size: 11px; color: var(--text-faint); }
 
+  /* Mini-timeline projet : ligne fine début→fin, curseur aujourd'hui, ticks tâches.
+     ~24px total. Deux infos d'un coup d'œil : avancement temps + position tâches. */
   .gantt {
-    display: flex;
-    gap: 1px;
-    height: 10px;
-    margin: 4px 0 2px;
-    background: repeating-linear-gradient(90deg, var(--border) 0, var(--border) 1px, transparent 1px, transparent 20%);
-    border-radius: 2px;
     position: relative;
+    margin: 6px 0 2px;
+    padding: 8px 0 12px;
+    height: 30px;
   }
-  .gantt-tick { position: absolute; top: 0; width: 10px; height: 10px; border-radius: 2px; transform: translateX(-5px); }
+  .gantt-track {
+    position: absolute;
+    top: 14px;
+    left: 0; right: 0;
+    height: 2px;
+    background: var(--border-strong);
+    border-radius: 1px;
+  }
+  .gantt-track-fill {
+    position: absolute;
+    top: 0; left: 0;
+    height: 100%;
+    background: var(--current);
+    border-radius: 1px;
+  }
+  .gantt-today {
+    position: absolute;
+    top: 8px;
+    width: 2px;
+    height: 14px;
+    background: var(--current);
+    transform: translateX(-1px);
+    z-index: 2;
+  }
+  .gantt-today::after {
+    content: "";
+    position: absolute;
+    top: -3px; left: -3px;
+    width: 8px; height: 8px;
+    background: var(--current);
+    border-radius: 50%;
+    border: 2px solid var(--surface);
+  }
+  .gantt-tick {
+    position: absolute;
+    top: 11px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    transform: translateX(-4px);
+    border: 1.5px solid var(--surface);
+    z-index: 1;
+  }
   .gantt-tick.done { background: var(--success); }
-  .gantt-tick.wip { background: var(--accent-strong); }
-  .gantt-tick.blocked { background: var(--danger); }
+  .gantt-tick.wip { background: var(--accent); }
+  .gantt-tick.blocked { background: var(--warning); }
   .gantt-tick.todo { background: var(--border-strong); }
-  .gantt-tick.late { background: var(--danger); border: 1px solid white; }
+  .gantt-tick.late { background: var(--danger); }
+  .gantt-label {
+    position: absolute;
+    bottom: 0;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-faint);
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .gantt-label.start { left: 0; }
+  .gantt-label.end { right: 0; }
+  .gantt-label.now {
+    color: var(--current);
+    font-weight: 700;
+    transform: translateX(-50%);
+  }
 
   .taches { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
   .tache {
@@ -1232,18 +1289,52 @@ function renderTache(t, isSubtask) {
   return el;
 }
 
+// Mini-timeline projet : barre début→deadline, curseur "aujourd'hui",
+// ticks par tâche datée (offset Y léger si dates trop proches pour ne pas se superposer).
 function renderGantt(taches, minTs, maxTs) {
   const range = Math.max(1, maxTs - minTs);
   const g = $el('div', { class: 'gantt' });
+  const now = todayUnix();
+
+  // Track + portion temps écoulée
+  g.appendChild($el('div', { class: 'gantt-track' }));
+  const elapsedPct = Math.max(0, Math.min(1, (now - minTs) / range));
+  if (elapsedPct > 0) {
+    g.appendChild($el('div', {
+      class: 'gantt-track-fill',
+      style: `top:14px;left:0;width:${elapsedPct * 100}%;height:2px`
+    }));
+  }
+
+  // Curseur aujourd'hui (uniquement si dans la fenêtre)
+  if (now >= minTs && now <= maxTs) {
+    g.appendChild($el('div', {
+      class: 'gantt-today',
+      style: `left:${elapsedPct * 100}%`,
+      title: 'Aujourd\'hui'
+    }));
+  }
+
+  // Ticks tâches : si plusieurs dates très proches, on les garde au même Y (on accepte
+  // un léger chevauchement, car la bordure blanche les sépare visuellement)
   taches.forEach(t => {
     if (!t.date_cible) return;
     const pct = Math.max(0, Math.min(1, (t.date_cible - minTs) / range));
     const cls = t.statut === 'Fait' ? 'done'
               : t.statut === 'En cours' ? 'wip'
               : t.statut === 'Bloque' ? 'blocked'
-              : (t.date_cible < todayUnix() ? 'late' : 'todo');
-    g.appendChild($el('span', { class: 'gantt-tick ' + cls, style: { left: `${pct * 100}%` }, title: `${t.titre} (${fmtDate(t.date_cible)})` }));
+              : (t.date_cible < now ? 'late' : 'todo');
+    g.appendChild($el('span', {
+      class: 'gantt-tick ' + cls,
+      style: `left:${pct * 100}%`,
+      title: `${t.titre} · ${fmtDate(t.date_cible)} · ${t.statut || ''}`
+    }));
   });
+
+  // Labels début / fin (date min et max formatées court)
+  g.appendChild($el('div', { class: 'gantt-label start' }, fmtDate(minTs)));
+  g.appendChild($el('div', { class: 'gantt-label end' }, fmtDate(maxTs)));
+
   return g;
 }
 
@@ -1279,9 +1370,22 @@ function renderProjet(p) {
 
   if (tachesRoot.length > 0) {
     const datedTaches = tachesRoot.filter(t => t.date_cible);
-    if (datedTaches.length > 1) {
-      const minTs = Math.min(todayUnix(), ...datedTaches.map(t => t.date_cible));
-      const maxTs = Math.max(p.date_cible || 0, ...datedTaches.map(t => t.date_cible));
+    // Affiche le gantt dès qu'on a quelque chose de daté (tâche OU deadline projet)
+    if (datedTaches.length >= 1 || p.date_cible) {
+      const now = todayUnix();
+      const oneWeek = 7 * 86400;
+      const dates = datedTaches.map(t => t.date_cible);
+      if (p.date_cible) dates.push(p.date_cible);
+      // Début : la plus ancienne date connue, OU 1 semaine avant aujourd'hui (buffer min)
+      let minTs = Math.min(now - oneWeek, ...dates);
+      // Fin : la plus tardive, OU 1 semaine après aujourd'hui (buffer min)
+      let maxTs = Math.max(now + oneWeek, ...dates);
+      // S'assure d'une fenêtre minimum de 14j sinon les ticks sont écrasés
+      if (maxTs - minTs < 14 * 86400) {
+        const mid = (minTs + maxTs) / 2;
+        minTs = mid - 7 * 86400;
+        maxTs = mid + 7 * 86400;
+      }
       wrap.appendChild(renderGantt(datedTaches, minTs, maxTs));
     }
     const tachesNode = $el('div', { class: 'taches' });
