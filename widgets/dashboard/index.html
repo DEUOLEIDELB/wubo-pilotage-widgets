@@ -948,7 +948,13 @@ function openObjectifNew() {
 }
 function openObjectifEdit(o) {
   currentObjEditId = o.id;
-  currentObjCollabs = Array.isArray(o.collaborateurs) ? o.collaborateurs.slice() : ['L'];
+  // Le picker pré-coche l'union proprietaire + collaborateurs pour que l'utilisateur
+  // puisse retirer le proprietaire d'un objectif ancien (avant la colonne collaborateurs)
+  const initialCollabs = Array.isArray(o.collaborateurs) ? o.collaborateurs.slice() : ['L'];
+  if (o.proprietaire && WuboGrist.USERS.includes(o.proprietaire) && !initialCollabs.includes(o.proprietaire)) {
+    initialCollabs.push(o.proprietaire);
+  }
+  currentObjCollabs = initialCollabs;
   document.getElementById('objectif-modal-title').textContent = 'Modifier l\'objectif';
   document.getElementById('obj-titre').value = o.titre || '';
   document.getElementById('obj-desc').value = o.description || '';
@@ -974,6 +980,15 @@ function closeObjectifModal() {
 async function saveObjectif() {
   const titre = document.getElementById('obj-titre').value.trim();
   if (!titre) { WuboGrist.toast('Titre obligatoire', 'warn'); return; }
+  // Synchronise proprietaire avec le picker : si l'utilisateur a coché des chips,
+  // proprietaire = current user si dedans, sinon premier collab. Si rien : null (Shared).
+  const currentUser = WuboGrist.getUser() || 'Taki';
+  const collabsList = (currentObjCollabs || []).slice(1).filter(u => WuboGrist.USERS.includes(u));
+  let propriotaireValue = null;
+  if (collabsList.length === 0) propriotaireValue = currentUser;
+  else if (collabsList.includes(currentUser)) propriotaireValue = currentUser;
+  else propriotaireValue = collabsList[0];
+
   const fields = {
     titre,
     description: document.getElementById('obj-desc').value,
@@ -983,7 +998,8 @@ async function saveObjectif() {
     kpi_vise: document.getElementById('obj-kpi-vise').value,
     kpi_actuel: document.getElementById('obj-kpi-actuel').value,
     statut: 'Actif',
-    collaborateurs: currentObjCollabs
+    collaborateurs: currentObjCollabs,
+    proprietaire: propriotaireValue
   };
   const dlStr = document.getElementById('obj-deadline').value;
   if (dlStr) fields.deadline = inputDateToUnix(dlStr);
@@ -992,7 +1008,6 @@ async function saveObjectif() {
       await WuboGrist.updateRecord('Objectifs', currentObjEditId, fields);
       WuboGrist.toast('Objectif mis à jour', 'success');
     } else {
-      fields.proprietaire = WuboGrist.getUser() || 'Taki';
       await WuboGrist.addRecord('Objectifs', fields);
       WuboGrist.toast('Objectif créé', 'success');
     }
@@ -1066,7 +1081,12 @@ function openProjetNew(objectifId) {
 function openProjetEdit(p) {
   currentProjEditId = p.id;
   currentProjObjectifId = p.objectif || null;
-  currentProjCollabs = Array.isArray(p.collaborateurs) ? p.collaborateurs.slice() : ['L'];
+  // Pré-coche l'union proprietaire + collaborateurs (pour pouvoir retirer l'ancien proprietaire)
+  const initialCollabs = Array.isArray(p.collaborateurs) ? p.collaborateurs.slice() : ['L'];
+  if (p.proprietaire && WuboGrist.USERS.includes(p.proprietaire) && !initialCollabs.includes(p.proprietaire)) {
+    initialCollabs.push(p.proprietaire);
+  }
+  currentProjCollabs = initialCollabs;
   const obj = objectifs.find(o => o.id === p.objectif);
   document.getElementById('projet-modal-title').textContent = 'Modifier le projet';
   document.getElementById('projet-parent-info').textContent = obj ? `Sous l'objectif : ${obj.titre || ''}` : 'Sans objectif';
@@ -1091,12 +1111,21 @@ function closeProjetModal() {
 async function saveProjet() {
   const titre = document.getElementById('proj-titre').value.trim();
   if (!titre) { WuboGrist.toast('Titre obligatoire', 'warn'); return; }
+  // Synchronise proprietaire avec le picker (cohérent avec saveObjectif et saveTaskEdit)
+  const currentUser = WuboGrist.getUser() || 'Taki';
+  const collabsList = (currentProjCollabs || []).slice(1).filter(u => WuboGrist.USERS.includes(u));
+  let propriotaireValue = null;
+  if (collabsList.length === 0) propriotaireValue = currentUser;
+  else if (collabsList.includes(currentUser)) propriotaireValue = currentUser;
+  else propriotaireValue = collabsList[0];
+
   const fields = {
     titre,
     description: document.getElementById('proj-desc').value,
     est_deadline_externe: document.getElementById('proj-ext').checked,
     statut: 'Actif',
-    collaborateurs: currentProjCollabs
+    collaborateurs: currentProjCollabs,
+    proprietaire: propriotaireValue
   };
   const dlStr = document.getElementById('proj-date').value;
   if (dlStr) fields.date_cible = inputDateToUnix(dlStr);
@@ -1106,7 +1135,6 @@ async function saveProjet() {
       await WuboGrist.updateRecord('Projets', currentProjEditId, fields);
       WuboGrist.toast('Projet mis à jour', 'success');
     } else {
-      fields.proprietaire = WuboGrist.getUser() || 'Taki';
       await WuboGrist.addRecord('Projets', fields);
       WuboGrist.toast('Projet créé', 'success');
     }
