@@ -71,6 +71,17 @@
 
   /* Couleur de la barre OS (theme-color meta), synchronisee avec --bg */
   --theme-color: #F4F3F7;
+
+  /* ========== TEXTE SUR FOND COLORE (constants, jamais theme-dependant) ==========
+     Contrats explicites pour le texte au-dessus des couleurs de marque saturees.
+     Ne JAMAIS utiliser var(--text) sur ces fonds car en dark mode --text devient
+     blanc et le contraste casse (notamment le jaune ou le bleu clair). */
+  --on-accent: #191919;       /* texte noir sur jaune (AAA 13:1, fixe) */
+  --on-blue: #191919;         /* texte noir sur bleu Wubo clair (AAA 14:1, fixe) */
+  --on-current: #FFFFFF;      /* texte blanc sur violet (AAA 9:1) */
+  --on-danger: #FFFFFF;       /* texte blanc sur pink (AA 5.4:1) */
+  --on-success: #FFFFFF;      /* texte blanc sur vert (AA 5:1) */
+  --on-warning: #FFFFFF;      /* texte blanc sur orange fonce (AA 4.6:1) */
 }
 
 /* ============================================================
@@ -214,12 +225,12 @@ button {
   min-height: 44px;
 }
 button:active { transform: translate(1px, 1px); box-shadow: none !important; }
-button.primary { background: var(--accent); color: var(--text); border-color: var(--accent-strong); font-weight: 700; }
-button.accent { background: var(--accent); color: var(--text); border-color: var(--accent-strong); font-weight: 700; }
+button.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent-strong); font-weight: 700; }
+button.accent { background: var(--accent); color: var(--on-accent); border-color: var(--accent-strong); font-weight: 700; }
 button.ghost { background: transparent; color: var(--text); border: 1px solid var(--border-strong); }
-button.success { background: var(--current); color: white; border-color: var(--current); }
+button.success { background: var(--current); color: var(--on-current); border-color: var(--current); }
 button.danger { background: var(--surface); color: var(--danger); border-color: var(--danger); }
-button.dark { background: var(--text); color: white; border-color: var(--text); }
+button.dark { background: var(--text); color: var(--surface); border-color: var(--text); }
 button.small { padding: 7px 11px; font-size: 13px; border-width: 1px; min-height: 36px; border-radius: var(--radius-sm); }
 button:disabled { opacity: 0.55; cursor: not-allowed; }
 button:focus-visible { outline: 2px solid var(--current); outline-offset: 2px; }
@@ -278,12 +289,12 @@ label { font-size: 13px; font-weight: 700; color: var(--text-dim); text-transfor
   color: var(--text-dim);
   line-height: 1.4;
 }
-.tag.current { background: var(--current); color: white; }
-.tag.done { background: var(--success); color: white; }
+.tag.current { background: var(--current); color: var(--on-current); }
+.tag.done { background: var(--success); color: var(--on-success); }
 .tag.skip { background: var(--done-bg); color: var(--text-faint); text-decoration: line-through; }
-.tag.wip { background: var(--accent); color: var(--text); }
-.tag.warn { background: var(--warning); color: white; }
-.tag.danger { background: var(--danger); color: white; }
+.tag.wip { background: var(--accent); color: var(--on-accent); }
+.tag.warn { background: var(--warning); color: var(--on-warning); }
+.tag.danger { background: var(--danger); color: var(--on-danger); }
 
 .empty {
   color: var(--text-faint);
@@ -466,7 +477,7 @@ html { background: var(--bg); }
   border-radius: 50%;
   border: 1px solid var(--border-strong);
   background: var(--accent);
-  color: var(--text);
+  color: var(--on-accent);
   font-size: 15px;
   font-weight: 700;
   padding: 0;
@@ -478,11 +489,12 @@ html { background: var(--bg); }
 }
 .profile-btn:active { opacity: 0.7; }
 .profile-btn:focus-visible { outline: 2px solid var(--current); outline-offset: 2px; }
-/* Couleurs DA Wubo : la couleur de fond suffit comme signal, pas besoin de contour noir */
-.profile-btn.taki  { background: var(--accent); color: var(--text); }
-.profile-btn.numa  { background: var(--current); color: white; }
-.profile-btn.lyes  { background: var(--blue); color: var(--text); }
-.profile-btn.team  { background: var(--pink); color: white; }
+/* Couleurs DA Wubo : utiliser --on-accent/--on-blue (FIXE noir) sur jaune/bleu sinon
+   le texte devient illisible en dark mode quand --text devient blanc. */
+.profile-btn.taki  { background: var(--accent); color: var(--on-accent); }
+.profile-btn.numa  { background: var(--current); color: var(--on-current); }
+.profile-btn.lyes  { background: var(--blue); color: var(--on-blue); }
+.profile-btn.team  { background: var(--pink); color: var(--on-danger); }
 
 /* Tile utilisateur (onboarding + menu profil) */
 .user-tile {
@@ -502,9 +514,9 @@ html { background: var(--bg); }
 .user-tile:active { transform: translate(1px, 1px); }
 .user-tile.selected { border: 2px solid var(--current); box-shadow: 1px 2px 0 var(--current); }
 .user-tile:focus-visible { outline: 2px solid var(--current); outline-offset: 2px; }
-.user-tile.taki { background: var(--accent); color: var(--text); }
-.user-tile.numa { background: var(--current); color: white; }
-.user-tile.lyes { background: var(--blue); color: var(--text); }
+.user-tile.taki { background: var(--accent); color: var(--on-accent); }
+.user-tile.numa { background: var(--current); color: var(--on-current); }
+.user-tile.lyes { background: var(--blue); color: var(--on-blue); }
 .user-tile-letter {
   font-size: 28px;
   font-weight: 800;
@@ -545,9 +557,9 @@ html { background: var(--bg); }
   color: var(--text);
   border: 1px solid var(--border-strong);
 }
-.profile-avatar.taki { background: var(--accent); color: var(--text); }
-.profile-avatar.numa { background: var(--current); color: white; }
-.profile-avatar.lyes { background: var(--blue); color: var(--text); }
+.profile-avatar.taki { background: var(--accent); color: var(--on-accent); }
+.profile-avatar.numa { background: var(--current); color: var(--on-current); }
+.profile-avatar.lyes { background: var(--blue); color: var(--on-blue); }
 .profile-me-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .profile-me-name {
   font-size: 16px;
@@ -657,9 +669,9 @@ html { background: var(--bg); }
   color: var(--text);
   background: var(--surface-alt);
 }
-.profile-user-chip.taki .profile-user-chip-letter { background: var(--accent); color: var(--text); }
-.profile-user-chip.numa .profile-user-chip-letter { background: var(--current); color: white; }
-.profile-user-chip.lyes .profile-user-chip-letter { background: var(--blue); color: var(--text); }
+.profile-user-chip.taki .profile-user-chip-letter { background: var(--accent); color: var(--on-accent); }
+.profile-user-chip.numa .profile-user-chip-letter { background: var(--current); color: var(--on-current); }
+.profile-user-chip.lyes .profile-user-chip-letter { background: var(--blue); color: var(--on-blue); }
 .profile-user-chip-name { font-size: 13px; }
 .profile-user-chip:focus-visible { outline: 2px solid var(--current); outline-offset: 2px; }
 
@@ -690,7 +702,7 @@ html { background: var(--bg); }
 .assignee-pill {
   border-radius: 50%;
   background: var(--text);
-  color: white;
+  color: var(--surface);          /* inverse de --text : marche dans les 2 themes */
   font-weight: 800;
   display: inline-flex;
   align-items: center;
@@ -704,9 +716,9 @@ html { background: var(--bg); }
 .assignee-stack.sm .assignee-pill:first-child { margin-left: 0; }
 .assignee-stack.md .assignee-pill { width: 24px; height: 24px; font-size: 11px; border-width: 2px; margin-left: -8px; }
 .assignee-stack.md .assignee-pill:first-child { margin-left: 0; }
-.assignee-pill.taki { background: var(--accent); color: var(--text); }
-.assignee-pill.numa { background: var(--current); color: white; }
-.assignee-pill.lyes { background: var(--blue); color: var(--text); }
+.assignee-pill.taki { background: var(--accent); color: var(--on-accent); }
+.assignee-pill.numa { background: var(--current); color: var(--on-current); }
+.assignee-pill.lyes { background: var(--blue); color: var(--on-blue); }
 
 /* ============ COLLAB CHIPS (multi-select dans modals) ============ */
 .collab-chips {
@@ -730,9 +742,9 @@ html { background: var(--bg); }
 }
 .collab-chip:active { transform: translate(1px, 1px); }
 .collab-chip.picked { border: 2px solid var(--current); box-shadow: var(--shadow-sm); }
-.collab-chip.picked.taki { background: var(--accent); color: var(--text); }
-.collab-chip.picked.numa { background: var(--current); color: white; }
-.collab-chip.picked.lyes { background: var(--blue); color: var(--text); }
+.collab-chip.picked.taki { background: var(--accent); color: var(--on-accent); }
+.collab-chip.picked.numa { background: var(--current); color: var(--on-current); }
+.collab-chip.picked.lyes { background: var(--blue); color: var(--on-blue); }
 .collab-chip-letter {
   display: inline-flex;
   align-items: center;
@@ -757,7 +769,7 @@ html { background: var(--bg); }
   transform: translateX(-50%);
   bottom: calc(var(--footer-h, 112px) + 8px + env(safe-area-inset-bottom));
   background: var(--text);
-  color: white;
+  color: var(--surface);          /* inverse de --text, marche en dark mode */
   padding: 10px 12px 0;
   border-radius: 8px;
   z-index: 60;
@@ -989,7 +1001,7 @@ html, body {
 .tab-group > button.active .badge-count,
 .tab-group > a.active .badge-count {
   background: var(--current);
-  color: white;
+  color: var(--on-current);
 }
 
 /* Hide Outfit references if anywhere */

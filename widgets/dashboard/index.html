@@ -108,11 +108,10 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #fff;
     pointer-events: none;
   }
-  .sujet-actions.left { left: 0; background: var(--success); }
-  .sujet-actions.right { right: 0; background: var(--danger); }
+  .sujet-actions.left { left: 0; background: var(--success); color: var(--on-success); }
+  .sujet-actions.right { right: 0; background: var(--danger); color: var(--on-danger); }
   .sujet-card {
     position: relative;
     background: var(--surface);
@@ -409,7 +408,7 @@
   .add-cta.full,
   .add-tache-projet { width: 100%; text-align: center; }
 
-  #error { background: var(--danger); color: white; padding: 8px; border-radius: 4px; font-size: 12px; display: none; }
+  #error { background: var(--danger); color: var(--on-danger); padding: 8px; border-radius: 4px; font-size: 12px; display: none; }
   #error button { margin-top: 6px; background: white; color: var(--danger); border: 1px solid white; }
 
   h2 { font-size: 11px; margin-bottom: 4px; }
