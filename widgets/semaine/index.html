@@ -934,7 +934,31 @@ function renderCell(bloc, isToday, tranche, iso) {
 
   if (bloc.note_fin_bloc) cell.appendChild($el('span', { class: 'note-dot', title: bloc.note_fin_bloc }, '●'));
   if (blocHasExtDeadline(bloc)) cell.appendChild($el('span', { class: 'ext-dot', title: 'Deadline externe' }, '⏰'));
+  // Pastilles assignees en bas de la cellule
+  const cellAssignees = blocAssignees(bloc);
+  if (cellAssignees.length) {
+    const stack = $el('span', { class: 'assignee-stack sm', style: 'position:absolute;bottom:3px;right:4px' });
+    cellAssignees.forEach(u => {
+      stack.appendChild($el('span', { class: 'assignee-pill ' + u.toLowerCase(), title: u }, u.charAt(0)));
+    });
+    cell.appendChild(stack);
+  }
   return cell;
+}
+
+// Agrège les assignees de toutes les tâches d'un bloc + le proprietaire du bloc
+function blocAssignees(bloc) {
+  const set = new Set();
+  if (bloc && bloc.proprietaire && WuboGrist.USERS.includes(bloc.proprietaire)) set.add(bloc.proprietaire);
+  if (bloc) {
+    const tIds = WuboGrist.refListIds(bloc.taches_liees);
+    tIds.forEach(id => {
+      const t = tachesById[id];
+      if (!t) return;
+      WuboGrist.getAssignees(t).forEach(u => set.add(u));
+    });
+  }
+  return Array.from(set);
 }
 
 function renderSlot(bloc, isToday, tranche, iso) {
@@ -976,7 +1000,20 @@ function renderSlot(bloc, isToday, tranche, iso) {
     if (extra.children.length) body.appendChild(extra);
   }
   slot.appendChild(body);
-  slot.appendChild($el('span', { class: slotDotClass(bloc, isCurrent) }));
+  // Pastilles assignees agrégées (bloc + tâches)
+  const assignees = blocAssignees(bloc);
+  if (assignees.length) {
+    const pastilles = $el('span', { class: 'assignee-stack sm' });
+    assignees.forEach(u => {
+      pastilles.appendChild($el('span', {
+        class: 'assignee-pill ' + u.toLowerCase(),
+        title: u
+      }, u.charAt(0)));
+    });
+    slot.appendChild(pastilles);
+  } else {
+    slot.appendChild($el('span', { class: slotDotClass(bloc, isCurrent) }));
+  }
   return slot;
 }
 
