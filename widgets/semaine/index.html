@@ -497,6 +497,57 @@
   #error { background: var(--danger); color: var(--on-danger); padding: 10px; border-radius: 6px; font-size: 12px; display: none; }
   #error button { margin-top: 6px; background: white; color: var(--danger); border: 1px solid white; }
 
+  /* Zone "À planifier cette semaine" : tâches flottantes (date_cible posée mais
+     pas dans un bloc). Clic sur une ligne ouvre le modal d'édition. */
+  #floating-week { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 8px; }
+  #floating-week:empty { display: none; }
+  .floating-week-head {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    padding: 0 4px 2px;
+  }
+  .floating-week-task {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+  .floating-week-task:active { background: var(--surface-2); }
+  .floating-week-task-left {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+  }
+  .floating-week-date {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    flex-shrink: 0;
+    width: 42px;
+  }
+  .floating-week-titre {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+  }
+
   /* Badge deadline externe */
   .ext-badge {
     display: inline-flex;
@@ -585,6 +636,9 @@
   </div>
 
   <div id="error"></div>
+
+  <!-- Tâches flottantes de la semaine visible (date_cible posée mais aucun bloc) -->
+  <div id="floating-week"></div>
 
   <!-- Vue Liste : desktop grid 4x3 + mobile liste verticale -->
   <div id="liste-view">
@@ -1156,6 +1210,66 @@ function renderList(daysISO, byDay, todayISO) {
   });
 }
 
+// Zone "À planifier cette semaine" : tâches du current user dont la date_cible
+// tombe dans la fenêtre visible mais qui ne sont liées à AUCUN bloc du current user.
+// Clic sur le titre → ouvre la task modal en édition (l'user peut choisir tranche+date).
+function renderFloatingWeek(visibleDaysISO, blocs) {
+  const node = document.getElementById('floating-week');
+  $clear(node);
+  if (!visibleDaysISO || !visibleDaysISO.length) return;
+  const currentUser = WuboGrist.getUser() || 'Taki';
+  const visibleSet = new Set(visibleDaysISO);
+
+  // Collecte les task IDs dejà liés à un bloc du current user dans la fenêtre
+  const taskIdsBound = new Set();
+  blocs.forEach(b => {
+    if (b.proprietaire !== currentUser) return;
+    const iso = WuboGrist.gristDateToISO(b.date);
+    if (!visibleSet.has(iso)) return;
+    WuboGrist.refListIds(b.taches_liees).forEach(id => taskIdsBound.add(id));
+  });
+
+  // Tâches flottantes : current user assignee + date_cible dans fenêtre + statut actif + non liée
+  const floating = Object.values(tachesById).filter(t => {
+    if (!t.date_cible) return false;
+    const iso = WuboGrist.gristDateToISO(t.date_cible);
+    if (!visibleSet.has(iso)) return false;
+    if (t.statut === 'Fait' || t.statut === 'Archive' || t.statut === 'Abandonne') return false;
+    if (t.parent_tache) return false;
+    if (taskIdsBound.has(t.id)) return false;
+    // Current user doit être assignee (proprietaire ou collab)
+    const assignees = WuboGrist.getAssignees(t);
+    if (!assignees.includes(currentUser)) return false;
+    return true;
+  });
+
+  if (!floating.length) return;
+  node.appendChild($el('div', { class: 'floating-week-head' }, `À planifier cette semaine (${floating.length})`));
+  // Tri par date croissante
+  floating.sort((a, b) => (a.date_cible || 0) - (b.date_cible || 0));
+  floating.forEach(t => {
+    const dateLabel = formatShortDate(t.date_cible);
+    const row = $el('div', {
+      class: 'floating-week-task',
+      onclick: () => openTaskEdit(t.id)
+    });
+    const left = $el('div', { class: 'floating-week-task-left' });
+    left.appendChild($el('span', { class: 'floating-week-date' }, dateLabel));
+    left.appendChild($el('span', { class: 'floating-week-titre' }, t.titre || '(sans titre)'));
+    row.appendChild(left);
+    const pastilles = WuboUI.renderAssignees(t, { size: 'sm' });
+    if (pastilles) row.appendChild(pastilles);
+    node.appendChild(row);
+  });
+}
+
+function formatShortDate(unixTs) {
+  if (!unixTs) return '';
+  const d = new Date(unixTs * 1000);
+  const days = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
+  return `${days[d.getUTCDay()]} ${d.getUTCDate()}`;
+}
+
 async function render() {
   document.getElementById('error').style.display = 'none';
   windowSize = computeWindowSize();
@@ -1174,6 +1288,10 @@ async function render() {
 
   const todayISO = WuboGrist.todayISO();
   const byDay = blocsByDayISO(allBlocs);
+
+  // Décide la fenêtre visible selon vue, puis rend zone "À planifier"
+  const visibleDays = currentView === 'agenda' ? agendaDaysISO() : windowDaysISO();
+  renderFloatingWeek(visibleDays, allBlocs);
 
   if (currentView === 'agenda') {
     const daysISO = agendaDaysISO();
