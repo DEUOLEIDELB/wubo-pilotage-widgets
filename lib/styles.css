@@ -8,11 +8,11 @@
        - foncée (--name-strong) : version texte AA sur fond clair
        - douce (--name-soft) : halo de fond pour signaler un état sans alourdir */
 
-  /* Surfaces */
-  --bg: #FAF5F2;              /* cream Wubo, jamais blanc pur */
+  /* Surfaces : neutre moderne avec teinte violet imperceptible (Wubo DNA sans beige) */
+  --bg: #F4F3F7;              /* neutre clair, tech/pro, hint de violet subtile */
   --surface: #FFFFFF;
-  --surface-alt: #F4EEE8;     /* surface secondaire douce, pour groupes/pills */
-  --done-bg: #F2EDE8;         /* compat : alias surface-alt grisé */
+  --surface-alt: #ECEAF1;     /* surface secondaire douce, teinte violet plus marquee */
+  --done-bg: #E9E7EF;         /* compat : surface-alt legerement plus foncee */
 
   /* Bordures (2 niveaux) */
   --border: #E5DFD9;          /* défaut, subtil */
