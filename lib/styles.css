@@ -490,6 +490,44 @@ html { background: var(--bg); }
 }
 .collab-chip.picked .collab-chip-letter { background: rgba(0, 0, 0, 0.18); }
 .collab-chip-name { font-size: 13px; font-weight: 700; }
+
+/* ============ COOLDOWN NOTICE ============
+   Barre flottante au-dessus de la bottom-nav, progress bar 10s
+   pour Modifier ou Annuler une assignation cross-user fraiche. */
+.cooldown-notice {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(var(--footer-h, 112px) + 8px + env(safe-area-inset-bottom));
+  background: var(--text);
+  color: white;
+  padding: 10px 12px 0;
+  border-radius: 8px;
+  z-index: 60;
+  width: calc(100% - 24px);
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 3px 3px 0 var(--border-strong);
+  overflow: hidden;
+}
+.cooldown-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.cooldown-msg { font-size: 13px; font-weight: 600; flex: 1; min-width: 0; }
+.cooldown-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.cooldown-btn {
+  padding: 7px 12px; font-size: 12px; font-weight: 700;
+  border-radius: 6px; cursor: pointer; min-height: 32px;
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--border-strong);
+}
+.cooldown-btn:active { transform: translate(1px, 1px); }
+.cooldown-btn.danger {
+  background: var(--danger); color: white; border-color: var(--danger);
+}
+.cooldown-progress { height: 3px; background: rgba(255,255,255,0.15); margin: 0 -12px; }
+.cooldown-progress-fill { height: 100%; background: var(--accent); width: 100%; }
+
 .profile-btn .view-dot {
   position: absolute;
   width: 10px; height: 10px;

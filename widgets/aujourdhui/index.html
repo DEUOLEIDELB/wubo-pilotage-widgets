@@ -731,9 +731,9 @@ async function render() {
       WuboGrist.fetchRows('Blocs_temps'),
       WuboGrist.fetchRows('Taches')
     ]);
-    // Filtre multi-user : en mode 'mine', on garde proprietaire === user ou Shared
-    const b = WuboGrist.filterByOwner(bRaw);
-    const t = WuboGrist.filterByOwner(tRaw);
+    // Jour = vue perso : uniquement les blocs et tâches du user courant (proprietaire ou collaborateur)
+    const b = WuboGrist.filterMineOnly(bRaw);
+    const t = WuboGrist.filterMineOnly(tRaw);
     allBlocsFetched = b;
     const today = WuboGrist.todayISO();
     blocs = b.filter(x => WuboGrist.gristDateToISO(x.date) === today);
