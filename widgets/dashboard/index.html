@@ -331,7 +331,7 @@
     box-shadow: 0 1px 3px color-mix(in srgb, var(--current) 30%, transparent);
   }
   /* Pastilles taches : centrees sur la piste, bordure surface, micro-elevation,
-     legere lift au survol/focus pour rendre l'info-bulle decouvrable. */
+     cliquables pour scroller + reperer la tache dans la liste en dessous. */
   .gantt-tick {
     position: absolute;
     top: 18px;
@@ -343,8 +343,8 @@
     z-index: 3;
     box-sizing: border-box;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.14);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-    cursor: help;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+    cursor: pointer;
   }
   .gantt-tick:hover, .gantt-tick:focus-visible {
     transform: translateX(-6px) scale(1.25);
@@ -352,6 +352,7 @@
     z-index: 5;
     outline: none;
   }
+  .gantt-tick:active { transform: translateX(-6px) scale(1.1); }
   .gantt-tick.done { background: var(--success); }
   /* Petit checkmark CSS dans les taches faites : info en plus, pas juste une couleur */
   .gantt-tick.done::after {
@@ -367,23 +368,8 @@
   .gantt-tick.wip { background: var(--accent); border-color: var(--accent-strong); }
   .gantt-tick.blocked { background: var(--warning); }
   .gantt-tick.todo { background: var(--border-strong); }
-  /* Tache en retard : pulse doux pour appeler l'attention, sans clignoter */
-  .gantt-tick.late {
-    background: var(--danger);
-    animation: gantt-pulse 1.8s ease-in-out infinite;
-  }
-  @keyframes gantt-pulse {
-    0%, 100% {
-      box-shadow: 0 1px 2px rgba(0,0,0,0.14),
-                  0 0 0 0 color-mix(in srgb, var(--danger) 50%, transparent);
-    }
-    50% {
-      box-shadow: 0 1px 2px rgba(0,0,0,0.14),
-                  0 0 0 6px color-mix(in srgb, var(--danger) 0%, transparent);
-    }
-  }
+  .gantt-tick.late { background: var(--danger); }
   @media (prefers-reduced-motion: reduce) {
-    .gantt-tick.late { animation: none; }
     .gantt-tick { transition: none; }
   }
   .gantt-label {
@@ -438,6 +424,23 @@
     100% { background-color: var(--surface); box-shadow: none; }
   }
   .tache.just-updated { animation: justUpdatedFlash 2s ease-out; }
+
+  /* Reperage visuel quand on clique un tick du gantt : flash violet sur la tache
+     correspondante dans la liste. Ponctuel, declenche par l'utilisateur. */
+  @keyframes tacheLocateFlash {
+    0%   { background-color: var(--current-soft); box-shadow: 0 0 0 0 var(--current); }
+    15%  { background-color: var(--current-soft); box-shadow: 0 0 0 3px var(--current); }
+    70%  { background-color: var(--current-soft); box-shadow: 0 0 0 3px var(--current); }
+    100% { background-color: var(--surface); box-shadow: 0 0 0 0 transparent; }
+  }
+  .tache.locate-flash {
+    animation: tacheLocateFlash 1.4s ease-out;
+    position: relative;
+    z-index: 1;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tache.locate-flash { animation: none; background: var(--current-soft); }
+  }
 
   /* CTA "+" discret et unifie pour ajouter une tache/projet/objectif/sujet.
      Alleger visuel : dashed 1px, pas de full-width lourd par defaut. */
@@ -1316,6 +1319,7 @@ function renderTache(t, isSubtask) {
   if (justUpdatedTaskIds.has(t.id)) classes.push('just-updated');
   const el = $el('div', {
     class: classes.join(' '),
+    dataset: { taskId: t.id },
     onclick: () => openTaskEdit(t.id)
   },
     $el('span', { class: 'status-pill ' + statutPill }),
@@ -1340,6 +1344,19 @@ function renderTache(t, isSubtask) {
     }, 2100);
   }
   return el;
+}
+
+// Repere visuel : scrolle jusqu'a la tache correspondante dans la liste,
+// puis joue un flash violet bref. Declenche par click sur un tick du gantt.
+function locateTacheInList(taskId) {
+  const target = document.querySelector(`.tache[data-task-id="${taskId}"]`);
+  if (!target) return;
+  target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  // Restart animation si deja en cours (clic repete sur le meme tick)
+  target.classList.remove('locate-flash');
+  void target.offsetWidth;
+  target.classList.add('locate-flash');
+  setTimeout(() => target.classList.remove('locate-flash'), 1500);
 }
 
 // Mini-timeline projet : barre début→deadline, curseur "aujourd'hui",
@@ -1369,7 +1386,8 @@ function renderGantt(taches, minTs, maxTs) {
   }
 
   // Ticks tâches : si plusieurs dates très proches, on les garde au même Y (on accepte
-  // un léger chevauchement, car la bordure blanche les sépare visuellement)
+  // un léger chevauchement, car la bordure blanche les sépare visuellement).
+  // Click sur un tick : scroll + flash de reperage sur la tache correspondante en dessous.
   taches.forEach(t => {
     if (!t.date_cible) return;
     const pct = Math.max(0, Math.min(1, (t.date_cible - minTs) / range));
@@ -1380,7 +1398,18 @@ function renderGantt(taches, minTs, maxTs) {
     g.appendChild($el('span', {
       class: 'gantt-tick ' + cls,
       style: `left:${pct * 100}%`,
-      title: `${t.titre} · ${fmtDate(t.date_cible)} · ${t.statut || ''}`
+      title: `${t.titre} · ${fmtDate(t.date_cible)} · ${t.statut || ''}`,
+      role: 'button',
+      tabindex: '0',
+      'aria-label': `Reperer la tache ${t.titre}`,
+      dataset: { taskId: t.id },
+      onclick: (e) => { e.stopPropagation(); locateTacheInList(t.id); },
+      onkeydown: (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault(); e.stopPropagation();
+          locateTacheInList(t.id);
+        }
+      }
     }));
   });
 
