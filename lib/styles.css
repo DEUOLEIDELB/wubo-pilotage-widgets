@@ -627,30 +627,25 @@ html, body {
 }
 
 /* ============ TAB-GROUP UNIFIE ============
-   Segmented control plat : barre inferieure fine, tab actif souligne en violet.
-   Pas de conteneur bg (plus de liserai fantome) : les tabs se detachent sur le bg du parent.
-   Scroll horizontal natif si ca deborde en mobile etroit. */
+   Segmented control plat et RIGIDE : tous les tabs visibles d'un coup, jamais de scroll.
+   Chaque tab partage l'espace via flex:1. Labels courts + ellipsis en garde-fou.
+   Active = underline violet (signal --current sans noir lourd). */
 .tab-group {
   display: flex;
   gap: 0;
   padding: 0;
+  width: 100%;
   background: transparent;
   border-radius: 0;
   border-bottom: 1px solid var(--border);
-  overflow-x: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  width: 100%;
-  min-width: 0;
   flex-shrink: 0;
 }
-.tab-group::-webkit-scrollbar { display: none; }
 .tab-group > button,
 .tab-group > a {
-  flex: 1 1 auto;
-  min-width: max-content;
+  flex: 1 1 0;
+  min-width: 0;
   min-height: 40px;
-  padding: 10px 12px;
+  padding: 10px 8px;
   font-size: 13px;
   font-weight: 600;
   color: var(--text-dim);
@@ -664,6 +659,8 @@ html, body {
   line-height: 1.2;
   position: relative;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   margin-bottom: -1px;            /* aligne la border-bottom sur celle du container */
   transition: color 0.12s, border-color 0.12s;
 }
@@ -681,9 +678,9 @@ html, body {
 }
 .tab-group .badge-count {
   display: inline-block;
-  min-width: 18px;
-  padding: 1px 6px;
-  margin-left: 5px;
+  min-width: 16px;
+  padding: 0 5px;
+  margin-left: 4px;
   font-size: 10px;
   font-weight: 700;
   color: var(--text-dim);
