@@ -52,27 +52,22 @@
   .page-title .sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
 
   /* Toggle Externes / Internes / Tout : .tab-group sticky sous le page-title fixe.
-     - Fond --surface (blanc) pour se distinguer du page-title (cream --bg) juste au-dessus
-     - Bord-a-bord via margin -14px + padding 14px pour eviter la transparence laterale
-     - Centrage horizontal explicite sur desktop (@media >= 600px) pour rester sous
-       le page-title max-width 560px (evite le decalage optique) */
+     - Fond --surface (blanc) distinct du page-title (cream --bg)
+     - BUG CORRIGE : .tab-group de lib a width:100% qui ne s'elargit pas avec un
+       margin negatif. Il faut calc(100% + 28px) pour que le fond s'etire reellement
+       bord-a-bord des deux cotes (sinon asymetrie : gauche OK, droite manquante).
+     - Sur mobile : #app n'a pas de max-width active -> +28px = viewport entier.
+     - Sur desktop >=600px : #app est 560px centre, donc 100%+28 = 560px pile
+       comme le page-title, centrage automatique via l'alignement avec #app. */
   #tab-toggle {
     position: sticky;
     top: calc(env(safe-area-inset-top) + 68px);
     z-index: 22;
+    width: calc(100% + 28px);
     margin: 0 -14px;
     padding: 0 14px;
     background: var(--surface);
     box-sizing: border-box;
-  }
-  @media (min-width: 600px) {
-    #tab-toggle {
-      max-width: 560px;
-      margin-left: auto;
-      margin-right: auto;
-      padding-left: 14px;
-      padding-right: 14px;
-    }
   }
 
   /* Section externes dure vs internes */
