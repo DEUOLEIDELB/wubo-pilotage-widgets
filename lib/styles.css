@@ -64,23 +64,26 @@ h3 { font-size: 15px; font-weight: 700; }
 button {
   font-family: inherit;
   font-size: 14px;
-  font-weight: 700;
-  background: var(--text);
-  color: white;
-  border: 2px solid var(--text);
+  font-weight: 600;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
   padding: 10px 14px;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   line-height: 1;
+  min-height: 44px;
 }
 button:active { transform: translate(1px, 1px); box-shadow: none !important; }
-button.primary { background: var(--current); color: white; border-color: var(--text); }
-button.accent { background: var(--accent); color: var(--text); border-color: var(--text); }
-button.ghost { background: var(--surface); color: var(--text); border: 2px solid var(--text); }
-button.success { background: var(--current); color: white; border-color: var(--text); }
-button.danger { background: var(--pink); color: white; border-color: var(--text); }
-button.small { padding: 7px 11px; font-size: 13px; border-width: 2px; }
-button:disabled { opacity: 0.4; cursor: not-allowed; }
+button.primary { background: var(--accent); color: var(--text); border-color: var(--accent-strong); font-weight: 700; }
+button.accent { background: var(--accent); color: var(--text); border-color: var(--accent-strong); font-weight: 700; }
+button.ghost { background: transparent; color: var(--text); border: 1px solid var(--border-strong); }
+button.success { background: var(--current); color: white; border-color: var(--current); }
+button.danger { background: var(--surface); color: var(--danger); border-color: var(--danger); }
+button.dark { background: var(--text); color: white; border-color: var(--text); }
+button.small { padding: 7px 11px; font-size: 13px; border-width: 1px; min-height: 36px; }
+button:disabled { opacity: 0.55; cursor: not-allowed; }
+button:focus-visible { outline: 2px solid var(--current); outline-offset: 2px; }
 
 input, select, textarea {
   font-family: inherit;
@@ -97,6 +100,16 @@ input, select, textarea {
 input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--current);
+  box-shadow: 0 0 0 2px var(--current-soft);
+}
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--current);
+  outline-offset: 1px;
+}
+a:focus-visible, [role="button"]:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--current);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 textarea { resize: vertical; min-height: 100px; line-height: 1.4; }
 select {
@@ -213,7 +226,6 @@ html { background: var(--bg); }
   flex-direction: column;
   gap: 10px;
   z-index: 50;
-  box-shadow: 0 -4px 14px rgba(0, 0, 0, 0.08);
 }
 .bottom-nav .nav-tabs {
   display: flex;
@@ -305,14 +317,15 @@ html { background: var(--bg); }
    Bouton circulaire en haut à droite, tap = menu profil (switch user + view mode). */
 .profile-btn {
   flex-shrink: 0;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
   border-radius: 50%;
-  border: 2px solid var(--border-strong);
+  border: 1px solid var(--border-strong);
   background: var(--accent);
   color: var(--text);
-  font-size: 14px;
-  font-weight: 800;
+  font-size: 15px;
+  font-weight: 700;
   padding: 0;
   cursor: pointer;
   line-height: 1;
@@ -321,11 +334,12 @@ html { background: var(--bg); }
   justify-content: center;
 }
 .profile-btn:active { opacity: 0.7; }
-/* Couleurs DA Wubo : Taki=jaune, Numa=violet, Lyes=bleu, Shared=pink */
-.profile-btn.taki  { background: var(--accent); color: var(--text); border-color: var(--text); }
-.profile-btn.numa  { background: var(--current); color: white; border-color: var(--text); }
-.profile-btn.lyes  { background: var(--blue); color: var(--text); border-color: var(--text); }
-.profile-btn.team  { background: var(--pink); color: white; border-color: var(--text); }
+.profile-btn:focus-visible { outline: 2px solid var(--current); outline-offset: 2px; }
+/* Couleurs DA Wubo : la couleur de fond suffit comme signal, pas besoin de contour noir */
+.profile-btn.taki  { background: var(--accent); color: var(--text); }
+.profile-btn.numa  { background: var(--current); color: white; }
+.profile-btn.lyes  { background: var(--blue); color: var(--text); }
+.profile-btn.team  { background: var(--pink); color: white; }
 
 /* Tile utilisateur (onboarding + menu profil) */
 .user-tile {
@@ -336,14 +350,15 @@ html { background: var(--bg); }
   gap: 6px;
   padding: 16px 10px;
   background: var(--surface);
-  border: 2px solid var(--text);
+  border: 1px solid var(--border-strong);
   border-radius: 10px;
   cursor: pointer;
   color: var(--text);
-  transition: transform 0.08s;
+  transition: transform 0.08s, border-color 0.08s, box-shadow 0.08s;
 }
 .user-tile:active { transform: translate(1px, 1px); }
-.user-tile.selected { box-shadow: 3px 3px 0 var(--text); }
+.user-tile.selected { border: 2px solid var(--current); box-shadow: 1px 2px 0 var(--current); }
+.user-tile:focus-visible { outline: 2px solid var(--current); outline-offset: 2px; }
 .user-tile.taki { background: var(--accent); color: var(--text); }
 .user-tile.numa { background: var(--current); color: white; }
 .user-tile.lyes { background: var(--blue); color: var(--text); }
@@ -445,7 +460,6 @@ html { background: var(--bg); }
   padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
   background: var(--surface);
   border-top: 1px solid var(--border);
-  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.06);
   z-index: 5;
 }
 .modal-content > .sticky-save button { flex: 1; }
