@@ -75,32 +75,7 @@
     border: 1px solid var(--border-strong); border-radius: 6px;
   }
 
-  /* Toggle Liste / Agenda */
-  .view-toggle {
-    display: flex;
-    gap: 2px;
-    background: var(--done-bg);
-    border-radius: 8px;
-    padding: 3px;
-    margin: 0;
-  }
-  .view-toggle button {
-    flex: 1;
-    min-height: 36px;
-    padding: 8px 10px;
-    font-size: 12px;
-    font-weight: 600;
-    background: transparent;
-    color: var(--text-dim);
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-  }
-  .view-toggle button.active {
-    background: var(--surface);
-    color: var(--text);
-    box-shadow: 1px 1px 0 var(--border-strong);
-  }
+  /* Toggle Liste / Agenda : utilise le composant .tab-group de lib/styles.css */
 
   /* Containers swipables : will-change pour perf animation.
      min-height couvre tout l'espace visible pour que le swipe fonctionne
@@ -571,9 +546,9 @@
       <div id="profile-slot" class="profile-wrap" style="margin-left:6px"></div>
     </div>
 
-    <div class="view-toggle" id="view-toggle">
-      <button id="btn-liste" class="active" onclick="setView('liste')">Liste</button>
-      <button id="btn-agenda" onclick="setView('agenda')">Agenda (4 semaines)</button>
+    <div class="tab-group" id="view-toggle" role="tablist">
+      <button id="btn-liste" class="active" role="tab" aria-selected="true" onclick="setView('liste')">Liste</button>
+      <button id="btn-agenda" role="tab" aria-selected="false" onclick="setView('agenda')">Agenda (4 semaines)</button>
     </div>
   </div>
 
@@ -1196,8 +1171,12 @@ function setView(v) {
   if (v !== 'liste' && v !== 'agenda') return;
   currentView = v;
   try { localStorage.setItem('wubo_semaine_view', v); } catch (_) {}
-  document.getElementById('btn-liste').classList.toggle('active', v === 'liste');
-  document.getElementById('btn-agenda').classList.toggle('active', v === 'agenda');
+  const btnListe = document.getElementById('btn-liste');
+  const btnAgenda = document.getElementById('btn-agenda');
+  btnListe.classList.toggle('active', v === 'liste');
+  btnAgenda.classList.toggle('active', v === 'agenda');
+  btnListe.setAttribute('aria-selected', v === 'liste' ? 'true' : 'false');
+  btnAgenda.setAttribute('aria-selected', v === 'agenda' ? 'true' : 'false');
   document.getElementById('liste-view').style.display = (v === 'liste') ? '' : 'none';
   document.getElementById('agenda-view').style.display = (v === 'agenda') ? 'flex' : 'none';
   render();
@@ -1782,6 +1761,9 @@ window.addEventListener('resize', () => {
   await WuboGrist.initGrist();
   if (window.WuboUI) {
     await WuboUI.ensureUser(document.getElementById('profile-slot'));
+    // Mesure dynamique du sticky-block et injecte --sticky-h sur :root
+    // pour le padding-top du #app : plus de magic number, respiration garantie.
+    WuboUI.syncStickyHeight('.semaine-sticky-block');
   }
   try { if (typeof grist !== 'undefined' && grist.onRecords) grist.onRecords(() => render()); } catch (_) {}
   window.addEventListener('wubo-data-fresh', () => render());

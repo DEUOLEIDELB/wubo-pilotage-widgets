@@ -278,14 +278,18 @@ html { background: var(--bg); }
 .bottom-nav .nav-tabs a.tab {
   flex: 1;
   text-align: center;
-  padding: 10px 4px;
-  font-size: 13px;
+  padding: 14px 6px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--text-dim);
   text-decoration: none;
   border-radius: 6px;
   line-height: 1.15;
   white-space: nowrap;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .bottom-nav .nav-tabs a.tab.active {
   background: var(--surface);
@@ -414,6 +418,73 @@ html { background: var(--bg); }
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
+
+/* ============ ASSIGNEE PASTILLES (qui est sur cette tâche/objectif) ============ */
+.assignee-stack {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.assignee-pill {
+  border-radius: 50%;
+  background: var(--text);
+  color: white;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--surface);
+  margin-left: -7px;
+  flex-shrink: 0;
+}
+.assignee-pill:first-child { margin-left: 0; }
+.assignee-stack.sm .assignee-pill { width: 18px; height: 18px; font-size: 9px; border-width: 2px; margin-left: -6px; }
+.assignee-stack.sm .assignee-pill:first-child { margin-left: 0; }
+.assignee-stack.md .assignee-pill { width: 24px; height: 24px; font-size: 11px; border-width: 2px; margin-left: -8px; }
+.assignee-stack.md .assignee-pill:first-child { margin-left: 0; }
+.assignee-pill.taki { background: var(--accent); color: var(--text); }
+.assignee-pill.numa { background: var(--current); color: white; }
+.assignee-pill.lyes { background: var(--blue); color: var(--text); }
+
+/* ============ COLLAB CHIPS (multi-select dans modals) ============ */
+.collab-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.collab-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px 7px 8px;
+  background: var(--surface);
+  border: 2px solid var(--border-strong);
+  border-radius: 999px;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  min-height: 36px;
+}
+.collab-chip:active { transform: translate(1px, 1px); }
+.collab-chip.picked { border-color: var(--text); box-shadow: 2px 2px 0 var(--text); }
+.collab-chip.picked.taki { background: var(--accent); color: var(--text); }
+.collab-chip.picked.numa { background: var(--current); color: white; }
+.collab-chip.picked.lyes { background: var(--blue); color: var(--text); }
+.collab-chip-letter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.08);
+  font-size: 11px;
+  font-weight: 800;
+  border: 1px solid currentColor;
+}
+.collab-chip.picked .collab-chip-letter { background: rgba(0, 0, 0, 0.18); }
+.collab-chip-name { font-size: 13px; font-weight: 700; }
 .profile-btn .view-dot {
   position: absolute;
   width: 10px; height: 10px;
@@ -537,7 +608,7 @@ html, body {
 }
 
 .drift-alert {
-  background: var(--accent);
+  background: var(--surface);
   color: var(--text);
   padding: 10px 12px;
   border-radius: 6px;
@@ -545,6 +616,77 @@ html, body {
   font-weight: 600;
   font-size: 13px;
   border-left: 4px solid var(--warning);
+  border: 1px solid var(--border);
+  border-left-width: 4px;
+  border-left-color: var(--warning);
+}
+
+/* ============ TAB-GROUP UNIFIE ============
+   Composant de pills group reutilisable : view-toggle (semaine), tab-toggle (deadlines),
+   ou n'importe quel toggle local. Le bg --done-bg fait le contraste, pas besoin de border.
+   Tab actif = barre violette dessous (signal --current sans noir). */
+.tab-group {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--done-bg);
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.tab-group > button,
+.tab-group > a {
+  flex: 1;
+  min-height: 36px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  text-decoration: none;
+  text-align: center;
+  line-height: 1.2;
+  position: relative;
+  white-space: nowrap;
+}
+.tab-group > button.active,
+.tab-group > a.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+.tab-group > button.active::after,
+.tab-group > a.active::after {
+  content: "";
+  position: absolute;
+  left: 8px; right: 8px; bottom: 4px;
+  height: 2px;
+  background: var(--current);
+  border-radius: 1px;
+}
+.tab-group > button:focus-visible,
+.tab-group > a:focus-visible {
+  outline: 2px solid var(--current);
+  outline-offset: 1px;
+}
+.tab-group .badge-count {
+  display: inline-block;
+  min-width: 18px;
+  padding: 1px 5px;
+  margin-left: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-dim);
+  background: var(--border);
+  border-radius: 9px;
+  vertical-align: middle;
+}
+.tab-group > button.active .badge-count,
+.tab-group > a.active .badge-count {
+  background: var(--current);
+  color: white;
 }
 
 /* Hide Outfit references if anywhere */

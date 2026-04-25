@@ -51,47 +51,12 @@
   .page-title h1 { font-size: 18px; }
   .page-title .sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
 
-  /* Toggle Externes / Internes / Tout - sticky sous le page-title fixed */
-  .tab-toggle {
-    display: flex;
-    gap: 2px;
-    background: var(--done-bg);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 2px;
+  /* Toggle Externes / Internes / Tout : utilise .tab-group + position sticky local */
+  #tab-toggle {
     position: sticky;
     top: calc(env(safe-area-inset-top) + 68px);
     z-index: 22;
   }
-  .tab-toggle button {
-    flex: 1;
-    padding: 7px 8px;
-    font-size: 11px;
-    font-weight: 600;
-    background: transparent;
-    color: var(--text-dim);
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    line-height: 1.1;
-  }
-  .tab-toggle button.active {
-    background: var(--surface);
-    color: var(--text);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
-  }
-  .tab-toggle button .badge-count {
-    display: inline-block;
-    min-width: 16px;
-    padding: 0 4px;
-    margin-left: 4px;
-    font-size: 9px;
-    font-weight: 700;
-    color: var(--text-dim);
-    background: var(--border);
-    border-radius: 8px;
-  }
-  .tab-toggle button.active .badge-count { background: var(--current); color: white; }
 
   /* Section externes dure vs internes */
   .section-title {
@@ -276,7 +241,7 @@
 
   <div id="error"></div>
 
-  <div class="tab-toggle" id="tab-toggle"></div>
+  <div class="tab-group" id="tab-toggle" role="tablist"></div>
 
   <section id="deadlines-list"></section>
 </main>
@@ -599,8 +564,11 @@ function renderTabToggle() {
     { id: 'all', label: 'Tout', count: total }
   ];
   tabs.forEach(t => {
+    const isActive = currentTab === t.id;
     const btn = $el('button', {
-      class: currentTab === t.id ? 'active' : '',
+      class: isActive ? 'active' : '',
+      role: 'tab',
+      'aria-selected': isActive ? 'true' : 'false',
       onclick: () => { currentTab = t.id; renderList(); renderTabToggle(); }
     }, t.label);
     btn.appendChild($el('span', { class: 'badge-count' }, String(t.count)));
