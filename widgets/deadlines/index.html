@@ -52,15 +52,27 @@
   .page-title .sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
 
   /* Toggle Externes / Internes / Tout : .tab-group sticky sous le page-title fixe.
-     Marges negatives + padding pour que le fond --bg couvre bord a bord (evite que les
-     taches defilent dans les 14px de padding laisses par #app sur les cotes). */
+     - Fond --surface (blanc) pour se distinguer du page-title (cream --bg) juste au-dessus
+     - Bord-a-bord via margin -14px + padding 14px pour eviter la transparence laterale
+     - Centrage horizontal explicite sur desktop (@media >= 600px) pour rester sous
+       le page-title max-width 560px (evite le decalage optique) */
   #tab-toggle {
     position: sticky;
     top: calc(env(safe-area-inset-top) + 68px);
     z-index: 22;
     margin: 0 -14px;
     padding: 0 14px;
-    background: var(--bg);
+    background: var(--surface);
+    box-sizing: border-box;
+  }
+  @media (min-width: 600px) {
+    #tab-toggle {
+      max-width: 560px;
+      margin-left: auto;
+      margin-right: auto;
+      padding-left: 14px;
+      padding-right: 14px;
+    }
   }
 
   /* Section externes dure vs internes */
