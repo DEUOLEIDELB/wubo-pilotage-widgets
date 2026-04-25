@@ -369,6 +369,34 @@
   </div>
 </div>
 
+<!-- Bloc edit modal : statut + note + tâches liées (même pattern que Semaine) -->
+<div id="bloc-modal" class="modal hidden" onclick="backdropClose(event, 'bloc-modal')">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <h3 id="bloc-modal-title">Bloc</h3>
+      <button class="ghost small" onclick="closeBlocEdit()">Fermer</button>
+    </div>
+    <div id="bloc-modal-meta" style="font-size:12px;color:var(--text-dim)"></div>
+    <div class="field">
+      <label>Statut</label>
+      <select id="bloc-statut">
+        <option value="Planifie">Planifié</option>
+        <option value="En cours">En cours</option>
+        <option value="Fait">Fait</option>
+        <option value="Zappe">Zappé</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Note de fin de bloc</label>
+      <textarea id="bloc-note" placeholder="Ce que tu as fait, la raison du zap, etc." style="min-height:80px"></textarea>
+    </div>
+    <div class="sticky-save">
+      <button class="ghost small" onclick="closeBlocEdit()">Annuler</button>
+      <button class="primary" onclick="saveBlocEdit()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 <div id="task-modal" class="modal hidden" onclick="backdropClose(event, 'task-modal')">
   <div class="modal-content" onclick="event.stopPropagation()">
     <div class="modal-head">
@@ -580,7 +608,15 @@ function renderBloc(tranche, bloc) {
   const tagClass = statut === 'Fait' ? 'done' : statut === 'Zappe' ? 'skip' : isCurrent ? 'current' : '';
   const tagLabel = statut === 'Fait' ? 'Fait' : statut === 'Zappe' ? 'Zappé' : isCurrent ? 'En cours' : 'Planifié';
 
-  const head = $el('div', { class: 'bloc-head' },
+  const head = $el('div', {
+    class: 'bloc-head',
+    style: bloc ? 'cursor:pointer' : '',
+    onclick: bloc ? (e) => {
+      // Ne pas ouvrir la modal si on clique sur le tag ou un bouton d'action
+      if (e.target.closest('.tag') || e.target.closest('button')) return;
+      openBlocEdit(bloc.id);
+    } : null
+  },
     $el('div', {},
       $el('span', { class: 'bloc-tranche' }, tranche),
       $el('span', { class: 'bloc-time' }, ' · ' + TRANCHE_TIMES[tranche])
@@ -1101,6 +1137,43 @@ async function rattrapageReplan(bloc) {
 const undoTimers = new Map();
 // Cache des blocs pour acceder au statut precedent avant update
 let blocsByIdCache = {};
+
+// ============ Bloc edit (note + statut) ============
+let currentBlocEditId = null;
+function openBlocEdit(blocId) {
+  const bloc = blocsByIdCache[blocId];
+  if (!bloc) return;
+  currentBlocEditId = blocId;
+  const d = new Date(bloc.date * 1000);
+  const dayName = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' });
+  document.getElementById('bloc-modal-title').textContent = `${dayName.charAt(0).toUpperCase() + dayName.slice(1)} · ${bloc.tranche}`;
+  const metaBits = [];
+  if (bloc.proprietaire) metaBits.push(bloc.proprietaire);
+  const tIds = WuboGrist.refListIds(bloc.taches_liees);
+  if (tIds.length) metaBits.push(`${tIds.length} tâche${tIds.length > 1 ? 's' : ''}`);
+  document.getElementById('bloc-modal-meta').textContent = metaBits.join(' · ');
+  document.getElementById('bloc-statut').value = bloc.statut || 'Planifie';
+  document.getElementById('bloc-note').value = bloc.note_fin_bloc || '';
+  openModal('bloc-modal');
+}
+function closeBlocEdit() {
+  currentBlocEditId = null;
+  closeModal('bloc-modal');
+}
+async function saveBlocEdit() {
+  if (!currentBlocEditId) return;
+  try {
+    await WuboGrist.updateRecord('Blocs_temps', currentBlocEditId, {
+      statut: document.getElementById('bloc-statut').value,
+      note_fin_bloc: document.getElementById('bloc-note').value
+    });
+    closeBlocEdit();
+    WuboGrist.toast('Bloc mis à jour', 'success');
+    await render();
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
+  }
+}
 
 // Crée un bloc Planifie aujourd'hui pour la tranche donnée, puis ouvre la création de tâche sur ce bloc.
 async function createBlocToday(tranche) {
@@ -1677,6 +1750,7 @@ document.addEventListener('keydown', e => {
   if (window.ModalSwipe) {
     ModalSwipe.enable('task-modal', closeTaskEdit);
     ModalSwipe.enable('dump-modal', closeDump);
+    ModalSwipe.enable('bloc-modal', closeBlocEdit);
   }
   render();
   setInterval(render, 120000);

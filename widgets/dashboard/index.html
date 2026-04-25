@@ -503,6 +503,7 @@
     </div>
     <div class="sticky-save">
       <button class="ghost small" onclick="closeObjectifModal()">Annuler</button>
+      <button id="obj-archive-btn" class="ghost small" style="display:none" onclick="archiveCurrentObjectif()">Archiver</button>
       <button id="obj-delete-btn" class="danger small" style="display:none" onclick="deleteCurrentObjectif()">Supprimer</button>
       <button class="primary" onclick="saveObjectif()">Enregistrer</button>
     </div>
@@ -529,6 +530,7 @@
     <div class="field"><label>Qui travaille dessus ?</label><div id="proj-collabs" class="collab-chips"></div></div>
     <div class="sticky-save">
       <button class="ghost small" onclick="closeProjetModal()">Annuler</button>
+      <button id="proj-archive-btn" class="ghost small" style="display:none" onclick="archiveCurrentProjet()">Archiver</button>
       <button id="proj-delete-btn" class="danger small" style="display:none" onclick="deleteCurrentProjet()">Supprimer</button>
       <button class="primary" onclick="saveProjet()">Enregistrer</button>
     </div>
@@ -934,6 +936,7 @@ function openObjectifNew() {
   document.getElementById('obj-kpi-vise').value = '';
   document.getElementById('obj-kpi-actuel').value = '';
   document.getElementById('obj-delete-btn').style.display = 'none';
+  document.getElementById('obj-archive-btn').style.display = 'none';
   WuboUI.renderCollaborateursPicker(
     document.getElementById('obj-collabs'),
     currentObjCollabs,
@@ -955,6 +958,7 @@ function openObjectifEdit(o) {
   document.getElementById('obj-kpi-vise').value = o.kpi_vise || '';
   document.getElementById('obj-kpi-actuel').value = o.kpi_actuel || '';
   document.getElementById('obj-delete-btn').style.display = '';
+  document.getElementById('obj-archive-btn').style.display = '';
   WuboUI.renderCollaborateursPicker(
     document.getElementById('obj-collabs'),
     currentObjCollabs,
@@ -997,11 +1001,28 @@ async function saveObjectif() {
     WuboGrist.toast('Erreur : ' + e.message, 'error');
   }
 }
+async function archiveCurrentObjectif() {
+  if (!currentObjEditId) return;
+  const ok = await WuboUI.confirm({
+    title: 'Archiver l\'objectif ?',
+    message: 'Il disparaît des listes mais reste dans Grist.',
+    yesLabel: 'Archiver'
+  });
+  if (!ok) return;
+  try {
+    await WuboGrist.archiveRecord('Objectifs', currentObjEditId);
+    closeObjectifModal();
+    WuboGrist.toast('Objectif archivé', 'info');
+    await render();
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
+  }
+}
 async function deleteCurrentObjectif() {
   if (!currentObjEditId) return;
   const ok = await WuboUI.confirm({
     title: 'Supprimer l\'objectif ?',
-    message: 'Les projets liés perdront leur rattachement. Préfère "Archiver".',
+    message: 'Irréversible. Les projets liés perdront leur rattachement. Préfère "Archiver".',
     yesLabel: 'Supprimer',
     danger: true
   });
@@ -1032,6 +1053,7 @@ function openProjetNew(objectifId) {
   document.getElementById('proj-date').value = '';
   document.getElementById('proj-ext').checked = false;
   document.getElementById('proj-delete-btn').style.display = 'none';
+  document.getElementById('proj-archive-btn').style.display = 'none';
   WuboUI.renderCollaborateursPicker(
     document.getElementById('proj-collabs'),
     currentProjCollabs,
@@ -1052,6 +1074,7 @@ function openProjetEdit(p) {
   document.getElementById('proj-date').value = p.date_cible ? unixToInputDate(p.date_cible) : '';
   document.getElementById('proj-ext').checked = !!p.est_deadline_externe;
   document.getElementById('proj-delete-btn').style.display = '';
+  document.getElementById('proj-archive-btn').style.display = '';
   WuboUI.renderCollaborateursPicker(
     document.getElementById('proj-collabs'),
     currentProjCollabs,
@@ -1092,11 +1115,28 @@ async function saveProjet() {
     WuboGrist.toast('Erreur : ' + e.message, 'error');
   }
 }
+async function archiveCurrentProjet() {
+  if (!currentProjEditId) return;
+  const ok = await WuboUI.confirm({
+    title: 'Archiver le projet ?',
+    message: 'Il disparaît des listes mais reste dans Grist.',
+    yesLabel: 'Archiver'
+  });
+  if (!ok) return;
+  try {
+    await WuboGrist.archiveRecord('Projets', currentProjEditId);
+    closeProjetModal();
+    WuboGrist.toast('Projet archivé', 'info');
+    await render();
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
+  }
+}
 async function deleteCurrentProjet() {
   if (!currentProjEditId) return;
   const ok = await WuboUI.confirm({
     title: 'Supprimer le projet ?',
-    message: 'Les tâches liées resteront mais perdront leur rattachement.',
+    message: 'Irréversible. Les tâches liées resteront mais perdront leur rattachement.',
     yesLabel: 'Supprimer',
     danger: true
   });
