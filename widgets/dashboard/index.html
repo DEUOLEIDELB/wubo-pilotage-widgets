@@ -11,6 +11,10 @@
 <link rel="icon" type="image/svg+xml" href="../../icon.svg">
 <link rel="manifest" href="../../manifest.webmanifest">
 <title>Objectifs - Pilotage Wubo</title>
+<link rel="prefetch" href="../aujourdhui/" as="document">
+<link rel="prefetch" href="../semaine/" as="document">
+<link rel="prefetch" href="../deadlines/" as="document">
+<style>@view-transition { navigation: auto; }</style>
 <link rel="stylesheet" href="../../lib/styles.css">
 <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
 <script src="../../lib/wubo-theme.js"></script>
@@ -19,6 +23,8 @@
 <script src="../../lib/modal-swipe.js"></script>
 <script src="../../lib/wubo-ui.js"></script>
 <script src="../../lib/wubo-task-modal.js"></script>
+<script src="../../lib/wubo-projet-modal.js"></script>
+<script src="../../lib/wubo-objectif-modal.js"></script>
 <style>
   #app {
     max-width: 800px;
@@ -583,75 +589,6 @@
   </div>
 </div>
 
-<!-- Objectif create/edit modal -->
-<div id="objectif-modal" class="modal hidden" onclick="backdropClose(event, 'objectif-modal')">
-  <div class="modal-content" onclick="event.stopPropagation()">
-    <div class="modal-head">
-      <h3 id="objectif-modal-title">Nouvel objectif</h3>
-      <button class="ghost small" onclick="closeObjectifModal()">Annuler</button>
-    </div>
-    <div class="field"><label>Titre</label><input id="obj-titre" placeholder="Ex: Sécuriser le financement Q3"></div>
-    <div class="field"><label>Description</label><textarea id="obj-desc" placeholder="Pourquoi cet objectif" style="min-height:70px"></textarea></div>
-    <div class="field" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div><label>Trimestre</label>
-        <select id="obj-trimestre">
-          <option value="">—</option>
-          <option value="2026-Q2">2026-Q2</option>
-          <option value="2026-Q3">2026-Q3</option>
-          <option value="2026-Q4">2026-Q4</option>
-          <option value="2027-Q1">2027-Q1</option>
-        </select>
-      </div>
-      <div><label>Priorité</label><input id="obj-priorite" type="number" min="1" max="5" placeholder="1-5"></div>
-    </div>
-    <div class="field"><label>Échéance</label><input id="obj-deadline" type="date"></div>
-    <div class="field">
-      <label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;color:var(--text);font-weight:600;cursor:pointer">
-        <input type="checkbox" id="obj-ext" style="width:auto;margin:0">
-        <span>Deadline externe (non repoussable)</span>
-      </label>
-    </div>
-    <div class="field"><label>Qui travaille dessus ?</label><div id="obj-collabs" class="collab-chips"></div></div>
-    <div class="field" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div><label>KPI visé</label><input id="obj-kpi-vise" placeholder="ex: 3 ateliers"></div>
-      <div><label>KPI actuel</label><input id="obj-kpi-actuel" placeholder="ex: 1 atelier"></div>
-    </div>
-    <div class="sticky-save">
-      <button class="ghost small" onclick="closeObjectifModal()">Annuler</button>
-      <button id="obj-archive-btn" class="ghost small" style="display:none" onclick="archiveCurrentObjectif()">Archiver</button>
-      <button id="obj-delete-btn" class="danger small" style="display:none" onclick="deleteCurrentObjectif()">Supprimer</button>
-      <button class="primary" onclick="saveObjectif()">Enregistrer</button>
-    </div>
-  </div>
-</div>
-
-<!-- Projet create/edit modal -->
-<div id="projet-modal" class="modal hidden" onclick="backdropClose(event, 'projet-modal')">
-  <div class="modal-content" onclick="event.stopPropagation()">
-    <div class="modal-head">
-      <h3 id="projet-modal-title">Nouveau projet</h3>
-      <button class="ghost small" onclick="closeProjetModal()">Annuler</button>
-    </div>
-    <div id="projet-parent-info" style="font-size:11px;color:var(--text-dim);font-style:italic"></div>
-    <div class="field"><label>Titre</label><input id="proj-titre"></div>
-    <div class="field"><label>Description</label><textarea id="proj-desc" style="min-height:60px"></textarea></div>
-    <div class="field"><label>Échéance</label><input id="proj-date" type="date"></div>
-    <div class="field">
-      <label style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0;color:var(--text);font-weight:600;cursor:pointer">
-        <input type="checkbox" id="proj-ext" style="width:auto;margin:0">
-        <span>Deadline externe</span>
-      </label>
-    </div>
-    <div class="field"><label>Qui travaille dessus ?</label><div id="proj-collabs" class="collab-chips"></div></div>
-    <div class="sticky-save">
-      <button class="ghost small" onclick="closeProjetModal()">Annuler</button>
-      <button id="proj-archive-btn" class="ghost small" style="display:none" onclick="archiveCurrentProjet()">Archiver</button>
-      <button id="proj-delete-btn" class="danger small" style="display:none" onclick="deleteCurrentProjet()">Supprimer</button>
-      <button class="primary" onclick="saveProjet()">Enregistrer</button>
-    </div>
-  </div>
-</div>
-
 <!-- Sujet à pousser create modal -->
 <div id="sujet-modal" class="modal hidden" onclick="backdropClose(event, 'sujet-modal')">
   <div class="modal-content" onclick="event.stopPropagation()">
@@ -1036,262 +973,25 @@ async function saveSujet() {
 }
 
 // ============ Objectif : création / édition / suppression ============
-let currentObjEditId = null;
-let currentObjCollabs = ['L'];
-function openObjectifNew() {
-  currentObjEditId = null;
-  currentObjCollabs = ['L', WuboGrist.getUser() || 'Taki'];
-  document.getElementById('objectif-modal-title').textContent = 'Nouvel objectif';
-  document.getElementById('obj-titre').value = '';
-  document.getElementById('obj-desc').value = '';
-  document.getElementById('obj-trimestre').value = '';
-  document.getElementById('obj-priorite').value = '';
-  document.getElementById('obj-deadline').value = '';
-  document.getElementById('obj-ext').checked = false;
-  document.getElementById('obj-kpi-vise').value = '';
-  document.getElementById('obj-kpi-actuel').value = '';
-  document.getElementById('obj-delete-btn').style.display = 'none';
-  document.getElementById('obj-archive-btn').style.display = 'none';
-  WuboUI.renderCollaborateursPicker(
-    document.getElementById('obj-collabs'),
-    currentObjCollabs,
-    list => { currentObjCollabs = list; }
-  );
-  openModal('objectif-modal');
-  setTimeout(() => { try { document.getElementById('obj-titre').focus(); } catch (_) {} }, 120);
+// Wrappers fins autour de WuboObjectifModal (lib/wubo-objectif-modal.js)
+async function openObjectifNew() {
+  const r = await WuboObjectifModal.open({ mode: 'new' });
+  if (r && r.action !== 'cancelled') await render();
 }
-function openObjectifEdit(o) {
-  currentObjEditId = o.id;
-  // Le picker pré-coche l'union proprietaire + collaborateurs pour que l'utilisateur
-  // puisse retirer le proprietaire d'un objectif ancien (avant la colonne collaborateurs)
-  const initialCollabs = Array.isArray(o.collaborateurs) ? o.collaborateurs.slice() : ['L'];
-  if (o.proprietaire && WuboGrist.USERS.includes(o.proprietaire) && !initialCollabs.includes(o.proprietaire)) {
-    initialCollabs.push(o.proprietaire);
-  }
-  currentObjCollabs = initialCollabs;
-  document.getElementById('objectif-modal-title').textContent = 'Modifier l\'objectif';
-  document.getElementById('obj-titre').value = o.titre || '';
-  document.getElementById('obj-desc').value = o.description || '';
-  document.getElementById('obj-trimestre').value = o.trimestre || '';
-  document.getElementById('obj-priorite').value = o.priorite || '';
-  document.getElementById('obj-deadline').value = o.deadline ? unixToInputDate(o.deadline) : '';
-  document.getElementById('obj-ext').checked = !!o.est_deadline_externe;
-  document.getElementById('obj-kpi-vise').value = o.kpi_vise || '';
-  document.getElementById('obj-kpi-actuel').value = o.kpi_actuel || '';
-  document.getElementById('obj-delete-btn').style.display = '';
-  document.getElementById('obj-archive-btn').style.display = '';
-  WuboUI.renderCollaborateursPicker(
-    document.getElementById('obj-collabs'),
-    currentObjCollabs,
-    list => { currentObjCollabs = list; }
-  );
-  openModal('objectif-modal');
-}
-function closeObjectifModal() {
-  currentObjEditId = null;
-  closeModal('objectif-modal');
-}
-async function saveObjectif() {
-  const titre = document.getElementById('obj-titre').value.trim();
-  if (!titre) { WuboGrist.toast('Titre obligatoire', 'warn'); return; }
-  // Synchronise proprietaire avec le picker : si l'utilisateur a coché des chips,
-  // proprietaire = current user si dedans, sinon premier collab. Si rien : null (Shared).
-  const currentUser = WuboGrist.getUser() || 'Taki';
-  const collabsList = (currentObjCollabs || []).slice(1).filter(u => WuboGrist.USERS.includes(u));
-  let propriotaireValue = null;
-  if (collabsList.length === 0) propriotaireValue = currentUser;
-  else if (collabsList.includes(currentUser)) propriotaireValue = currentUser;
-  else propriotaireValue = collabsList[0];
-
-  const fields = {
-    titre,
-    description: document.getElementById('obj-desc').value,
-    trimestre: document.getElementById('obj-trimestre').value || null,
-    priorite: parseInt(document.getElementById('obj-priorite').value, 10) || null,
-    est_deadline_externe: document.getElementById('obj-ext').checked,
-    kpi_vise: document.getElementById('obj-kpi-vise').value,
-    kpi_actuel: document.getElementById('obj-kpi-actuel').value,
-    statut: 'Actif',
-    collaborateurs: currentObjCollabs,
-    proprietaire: propriotaireValue
-  };
-  const dlStr = document.getElementById('obj-deadline').value;
-  if (dlStr) fields.deadline = inputDateToUnix(dlStr);
-  try {
-    if (currentObjEditId) {
-      await WuboGrist.updateRecord('Objectifs', currentObjEditId, fields);
-      WuboGrist.toast('Objectif mis à jour', 'success');
-    } else {
-      await WuboGrist.addRecord('Objectifs', fields);
-      WuboGrist.toast('Objectif créé', 'success');
-    }
-    closeObjectifModal();
-    await render();
-  } catch (e) {
-    WuboGrist.toast('Erreur : ' + e.message, 'error');
-  }
-}
-async function archiveCurrentObjectif() {
-  if (!currentObjEditId) return;
-  const ok = await WuboUI.confirm({
-    title: 'Archiver l\'objectif ?',
-    message: 'Il disparaît des listes mais reste dans Grist.',
-    yesLabel: 'Archiver'
-  });
-  if (!ok) return;
-  try {
-    await WuboGrist.archiveRecord('Objectifs', currentObjEditId);
-    closeObjectifModal();
-    WuboGrist.toast('Objectif archivé', 'info');
-    await render();
-  } catch (e) {
-    WuboGrist.toast('Erreur : ' + e.message, 'error');
-  }
-}
-async function deleteCurrentObjectif() {
-  if (!currentObjEditId) return;
-  const ok = await WuboUI.confirm({
-    title: 'Supprimer l\'objectif ?',
-    message: 'Irréversible. Les projets liés perdront leur rattachement. Préfère "Archiver".',
-    yesLabel: 'Supprimer',
-    danger: true
-  });
-  if (!ok) return;
-  try {
-    await WuboGrist.deleteRecord('Objectifs', currentObjEditId);
-    closeObjectifModal();
-    WuboGrist.toast('Objectif supprimé', 'info');
-    await render();
-  } catch (e) {
-    WuboGrist.toast('Erreur : ' + e.message, 'error');
-  }
+async function openObjectifEdit(o) {
+  const r = await WuboObjectifModal.open({ mode: 'edit', objectif: o });
+  if (r && r.action !== 'cancelled') await render();
 }
 
 // ============ Projet : création / édition / suppression ============
-let currentProjEditId = null;
-let currentProjObjectifId = null;
-let currentProjCollabs = ['L'];
-function openProjetNew(objectifId) {
-  currentProjEditId = null;
-  currentProjObjectifId = objectifId || null;
-  currentProjCollabs = ['L', WuboGrist.getUser() || 'Taki'];
-  const obj = objectifs.find(o => o.id === objectifId);
-  document.getElementById('projet-modal-title').textContent = 'Nouveau projet';
-  document.getElementById('projet-parent-info').textContent = obj ? `Sous l'objectif : ${obj.titre || ''}` : '';
-  document.getElementById('proj-titre').value = '';
-  document.getElementById('proj-desc').value = '';
-  document.getElementById('proj-date').value = '';
-  document.getElementById('proj-ext').checked = false;
-  document.getElementById('proj-delete-btn').style.display = 'none';
-  document.getElementById('proj-archive-btn').style.display = 'none';
-  WuboUI.renderCollaborateursPicker(
-    document.getElementById('proj-collabs'),
-    currentProjCollabs,
-    list => { currentProjCollabs = list; }
-  );
-  openModal('projet-modal');
-  setTimeout(() => { try { document.getElementById('proj-titre').focus(); } catch (_) {} }, 120);
+// Wrappers fins autour de WuboProjetModal (lib/wubo-projet-modal.js)
+async function openProjetNew(objectifId) {
+  const r = await WuboProjetModal.open({ mode: 'new', objectifId });
+  if (r && r.action !== 'cancelled') await render();
 }
-function openProjetEdit(p) {
-  currentProjEditId = p.id;
-  currentProjObjectifId = p.objectif || null;
-  // Pré-coche l'union proprietaire + collaborateurs (pour pouvoir retirer l'ancien proprietaire)
-  const initialCollabs = Array.isArray(p.collaborateurs) ? p.collaborateurs.slice() : ['L'];
-  if (p.proprietaire && WuboGrist.USERS.includes(p.proprietaire) && !initialCollabs.includes(p.proprietaire)) {
-    initialCollabs.push(p.proprietaire);
-  }
-  currentProjCollabs = initialCollabs;
-  const obj = objectifs.find(o => o.id === p.objectif);
-  document.getElementById('projet-modal-title').textContent = 'Modifier le projet';
-  document.getElementById('projet-parent-info').textContent = obj ? `Sous l'objectif : ${obj.titre || ''}` : 'Sans objectif';
-  document.getElementById('proj-titre').value = p.titre || '';
-  document.getElementById('proj-desc').value = p.description || '';
-  document.getElementById('proj-date').value = p.date_cible ? unixToInputDate(p.date_cible) : '';
-  document.getElementById('proj-ext').checked = !!p.est_deadline_externe;
-  document.getElementById('proj-delete-btn').style.display = '';
-  document.getElementById('proj-archive-btn').style.display = '';
-  WuboUI.renderCollaborateursPicker(
-    document.getElementById('proj-collabs'),
-    currentProjCollabs,
-    list => { currentProjCollabs = list; }
-  );
-  openModal('projet-modal');
-}
-function closeProjetModal() {
-  currentProjEditId = null;
-  currentProjObjectifId = null;
-  closeModal('projet-modal');
-}
-async function saveProjet() {
-  const titre = document.getElementById('proj-titre').value.trim();
-  if (!titre) { WuboGrist.toast('Titre obligatoire', 'warn'); return; }
-  // Synchronise proprietaire avec le picker (cohérent avec saveObjectif et saveTaskEdit)
-  const currentUser = WuboGrist.getUser() || 'Taki';
-  const collabsList = (currentProjCollabs || []).slice(1).filter(u => WuboGrist.USERS.includes(u));
-  let propriotaireValue = null;
-  if (collabsList.length === 0) propriotaireValue = currentUser;
-  else if (collabsList.includes(currentUser)) propriotaireValue = currentUser;
-  else propriotaireValue = collabsList[0];
-
-  const fields = {
-    titre,
-    description: document.getElementById('proj-desc').value,
-    est_deadline_externe: document.getElementById('proj-ext').checked,
-    statut: 'Actif',
-    collaborateurs: currentProjCollabs,
-    proprietaire: propriotaireValue
-  };
-  const dlStr = document.getElementById('proj-date').value;
-  if (dlStr) fields.date_cible = inputDateToUnix(dlStr);
-  if (currentProjObjectifId) fields.objectif = currentProjObjectifId;
-  try {
-    if (currentProjEditId) {
-      await WuboGrist.updateRecord('Projets', currentProjEditId, fields);
-      WuboGrist.toast('Projet mis à jour', 'success');
-    } else {
-      await WuboGrist.addRecord('Projets', fields);
-      WuboGrist.toast('Projet créé', 'success');
-    }
-    closeProjetModal();
-    await render();
-  } catch (e) {
-    WuboGrist.toast('Erreur : ' + e.message, 'error');
-  }
-}
-async function archiveCurrentProjet() {
-  if (!currentProjEditId) return;
-  const ok = await WuboUI.confirm({
-    title: 'Archiver le projet ?',
-    message: 'Il disparaît des listes mais reste dans Grist.',
-    yesLabel: 'Archiver'
-  });
-  if (!ok) return;
-  try {
-    await WuboGrist.archiveRecord('Projets', currentProjEditId);
-    closeProjetModal();
-    WuboGrist.toast('Projet archivé', 'info');
-    await render();
-  } catch (e) {
-    WuboGrist.toast('Erreur : ' + e.message, 'error');
-  }
-}
-async function deleteCurrentProjet() {
-  if (!currentProjEditId) return;
-  const ok = await WuboUI.confirm({
-    title: 'Supprimer le projet ?',
-    message: 'Irréversible. Les tâches liées resteront mais perdront leur rattachement.',
-    yesLabel: 'Supprimer',
-    danger: true
-  });
-  if (!ok) return;
-  try {
-    await WuboGrist.deleteRecord('Projets', currentProjEditId);
-    closeProjetModal();
-    WuboGrist.toast('Projet supprimé', 'info');
-    await render();
-  } catch (e) {
-    WuboGrist.toast('Erreur : ' + e.message, 'error');
-  }
+async function openProjetEdit(p) {
+  const r = await WuboProjetModal.open({ mode: 'edit', projet: p });
+  if (r && r.action !== 'cancelled') await render();
 }
 
 async function pushActionReport(days) {
@@ -1434,6 +1134,7 @@ function renderProjet(p) {
   const metaParts = [`${done}/${total} faites`];
   if (archivedCount > 0) metaParts.push(`${archivedCount} arch`);
   if (totalH > 0) metaParts.push(`${totalH}h`);
+  if (p.date_creation) metaParts.push(`créé ${fmtDate(p.date_creation)}`);
   if (p.date_cible) metaParts.push(`éch ${fmtDate(p.date_cible)}`);
 
   const projHead = $el('div', {
@@ -1913,8 +1614,6 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeTaskE
     ModalSwipe.enable('task-modal', closeTaskEdit);
     ModalSwipe.enable('dump-modal', closeDump);
     ModalSwipe.enable('push-modal', closePushModal);
-    ModalSwipe.enable('objectif-modal', closeObjectifModal);
-    ModalSwipe.enable('projet-modal', closeProjetModal);
     ModalSwipe.enable('sujet-modal', closeSujetModal);
   }
   render();

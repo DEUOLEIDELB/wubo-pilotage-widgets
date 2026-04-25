@@ -11,6 +11,10 @@
 <link rel="icon" type="image/svg+xml" href="../../icon.svg">
 <link rel="manifest" href="../../manifest.webmanifest">
 <title>Échéances - Pilotage Wubo</title>
+<link rel="prefetch" href="../aujourdhui/" as="document">
+<link rel="prefetch" href="../semaine/" as="document">
+<link rel="prefetch" href="../dashboard/" as="document">
+<style>@view-transition { navigation: auto; }</style>
 <link rel="stylesheet" href="../../lib/styles.css">
 <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
 <script src="../../lib/wubo-theme.js"></script>
@@ -19,6 +23,8 @@
 <script src="../../lib/modal-swipe.js"></script>
 <script src="../../lib/wubo-ui.js"></script>
 <script src="../../lib/wubo-task-modal.js"></script>
+<script src="../../lib/wubo-projet-modal.js"></script>
+<script src="../../lib/wubo-objectif-modal.js"></script>
 <style>
   #app {
     max-width: 560px;
@@ -664,13 +670,15 @@ async function render() {
   renderList();
 }
 
-function openItem(item) {
+async function openItem(item) {
   if (item.typeKey === 'tache') {
     openTaskEdit(item.raw);
-  } else {
-    // Projets / Objectifs : redirection vers Grist direct (page web)
-    const url = `https://grist.playwubo.com/doc/cmTvfM75iZzS8eRsPAJdpy`;
-    window.open(url, '_blank', 'noopener');
+  } else if (item.typeKey === 'projet') {
+    const r = await WuboProjetModal.open({ mode: 'edit', projet: item.raw });
+    if (r && r.action !== 'cancelled') await render();
+  } else if (item.typeKey === 'objectif') {
+    const r = await WuboObjectifModal.open({ mode: 'edit', objectif: item.raw });
+    if (r && r.action !== 'cancelled') await render();
   }
 }
 
