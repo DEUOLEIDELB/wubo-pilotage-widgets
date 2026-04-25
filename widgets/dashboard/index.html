@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Objectifs">
-<meta name="theme-color" content="#F4F4F1">
+<meta name="theme-color" content="#FAF5F2">
 <link rel="apple-touch-icon" href="../../apple-touch-icon.png">
 <link rel="shortcut icon" href="favicon.ico">
 <link rel="icon" type="image/svg+xml" href="../../icon.svg">
@@ -159,7 +159,7 @@
   .sujet-card.long .sujet-age { color: var(--danger); font-weight: 600; }
   .sujet-card.moyen .sujet-age { color: var(--warning); font-weight: 600; }
   @keyframes sujetFlash {
-    0% { background: #FFF9D6; }
+    0% { background: var(--accent-soft); }
     100% { background: var(--surface); }
   }
   .sujet-card.just-actioned { animation: sujetFlash 1.5s ease-out; }
@@ -235,7 +235,7 @@
     display: inline-flex;
     align-items: center;
     gap: 3px;
-    background: #FEE9E7;
+    background: var(--danger-soft);
     color: var(--danger);
     border: 1px solid var(--danger);
     font-size: 9px;
@@ -315,7 +315,7 @@
     color: var(--danger);
     font-weight: 700;
     margin-left: 3px;
-    background: #FEE9E7;
+    background: var(--danger-soft);
     border: 1px solid var(--danger);
     padding: 0 3px;
     border-radius: 2px;
@@ -323,8 +323,8 @@
 
   /* Highlight cellule recemment modifiee */
   @keyframes justUpdatedFlash {
-    0% { background-color: #FFF9D6; box-shadow: 0 0 0 2px var(--accent-strong); }
-    60% { background-color: #FFF9D6; box-shadow: 0 0 0 2px var(--accent-strong); }
+    0% { background-color: var(--accent-soft); box-shadow: 0 0 0 2px var(--accent-strong); }
+    60% { background-color: var(--accent-soft); box-shadow: 0 0 0 2px var(--accent-strong); }
     100% { background-color: var(--surface); box-shadow: none; }
   }
   .tache.just-updated { animation: justUpdatedFlash 2s ease-out; }
@@ -400,7 +400,7 @@
     <span style="color:var(--text-faint)">○</span> Pas commencée &middot;
     <span style="color:var(--accent-strong)">◐</span> En cours &middot;
     <span style="color:var(--success)">✓</span> Fait &middot;
-    <span style="color:#E87722">⚠</span> Bloquée &middot;
+    <span style="color:var(--warning)">⚠</span> Bloquée &middot;
     <span style="color:var(--danger)">✕</span> Abandonnée &middot;
     <span style="color:var(--text-dim);opacity:0.6">⧖</span> Archivée
   </section>

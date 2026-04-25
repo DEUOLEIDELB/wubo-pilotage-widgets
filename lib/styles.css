@@ -1,27 +1,68 @@
 /* Wubo Pilotage - DA utilitaire dense */
 
 :root {
-  /* Palette Wubo officielle (Guidelines colors) */
-  --bg: #FAF5F2;
+  /* ========== PALETTE WUBO ==========
+     Couleurs officielles Wubo + variantes accessibles WCAG AA (4.5:1 sur surface).
+     Chaque couleur a 3 variantes :
+       - solide (--name) : fond saturé, texte NOIR ou BLANC selon le contraste
+       - foncée (--name-strong) : version texte AA sur fond clair
+       - douce (--name-soft) : halo de fond pour signaler un état sans alourdir */
+
+  /* Surfaces */
+  --bg: #FAF5F2;              /* cream Wubo, jamais blanc pur */
   --surface: #FFFFFF;
-  --border: #E5DFD9;
-  --border-strong: #B8B0A8;
-  --text: #191919;
-  --text-dim: #4A4A4A;
-  --text-faint: #6B6B6B;
-  --accent: #FFDD0B;
-  --accent-strong: #E6C400;
-  --current: #5914D0;
-  --current-soft: #EEE2FB;
-  --pink: #D40272;
-  --blue: #1DC1F9;
-  --danger: #D40272;
-  --success: #5914D0;
-  --warning: #E6C400;
-  --done-bg: #F2EDE8;
-  /* Hauteurs des fixed : chaque widget override --header-h selon son header */
+  --surface-alt: #F4EEE8;     /* surface secondaire douce, pour groupes/pills */
+  --done-bg: #F2EDE8;         /* compat : alias surface-alt grisé */
+
+  /* Bordures (2 niveaux) */
+  --border: #E5DFD9;          /* défaut, subtil */
+  --border-strong: #B8B0A8;   /* contrastée, pour pills/inputs */
+
+  /* Texte (4 niveaux de hiérarchie, tous AA minimum sur --bg) */
+  --text: #191919;            /* AAA — corps principal */
+  --text-dim: #4A4A4A;        /* AAA — sous-titres */
+  --text-faint: #6B6B6B;      /* AA  — métadonnées secondaires */
+  --text-muted: #8A8278;      /* AA  — placeholders, hints peu critiques */
+
+  /* Yellow Wubo : CTA principal (texte noir uniquement, jamais texte blanc) */
+  --accent: #FFDD0B;          /* fond plein, texte NOIR (AAA 13:1) */
+  --accent-strong: #8B6F00;   /* texte jaune-foncé sur surface (AA 4.5:1) */
+  --accent-soft: #FFF6BC;     /* halo jaune doux pour bg signaling */
+
+  /* Purple Wubo : état courant, focus, sélection */
+  --current: #5914D0;         /* fond plein, texte BLANC (AAA 9:1) ou texte sur surface AAA */
+  --current-soft: #EEE2FB;    /* halo violet doux */
+
+  /* Pink Wubo : vrai destructif / erreur critique uniquement */
+  --pink: #D40272;            /* compat */
+  --danger: #D40272;          /* fond plein, texte BLANC (AA 5.4:1) */
+  --danger-soft: #FFE3EE;     /* halo pink doux */
+
+  /* Blue Wubo : info / metadata, JAMAIS texte blanc dessus */
+  --blue: #1DC1F9;            /* fond plein, texte NOIR uniquement (AAA) */
+  --info: #0E6F90;            /* texte bleu foncé sur surface (AA 4.6:1) */
+  --info-soft: #E0F6FE;       /* halo bleu doux */
+
+  /* Success : vert dédié (au lieu d'aliaser --current/violet, sémantique claire) */
+  --success: #1F8A4A;         /* fond/texte vert (AA 5.2:1 sur surface) */
+  --success-soft: #E5F4ED;    /* halo vert doux */
+
+  /* Warning : orange foncé pour drift/stagnation/blocage */
+  --warning: #B36B00;         /* texte orange sur surface (AA 4.6:1) */
+  --warning-soft: #FFF1D6;    /* halo orange doux */
+
+  /* ========== OMBRES (DA Wubo : offset solide uniquement, zéro blur) ========== */
+  --shadow-sm: 1px 1px 0 var(--border-strong);   /* boutons hover, élévation légère */
+  --shadow-md: 0 2px 0 var(--border);            /* sticky headers, séparation */
+  --shadow-lg: 2px 2px 0 var(--text);            /* modals, sélection forte */
+
+  /* ========== HAUTEURS DYNAMIQUES ==========
+     --sticky-h est mesuré au load par le helper JS WuboUI.syncStickyHeight().
+     Fallback 168px pour le widget semaine (header + view-toggle). */
   --header-h: 68px;
   --footer-h: 112px;
+  --sticky-h: 168px;
+  --header-respire: 12px;     /* respiration garantie sous le dernier sticky */
 }
 
 * {
@@ -387,30 +428,30 @@ html { background: var(--bg); }
 /* Conteneur relatif pour positionner le view-dot sur profile-btn */
 .profile-wrap { position: relative; display: inline-flex; }
 
-/* Status pills plus lisibles - couleurs corrigées */
+/* Status pills : glyphe + couleur sémantique. Couleurs WCAG AA sur surface. */
 .status-pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   line-height: 1;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
 }
 .status-pill.todo { color: var(--text-faint); }
-.status-pill.todo::before { content: "○"; font-size: 16px; }
-.status-pill.wip { color: var(--accent-strong); }
-.status-pill.wip::before { content: "◐"; font-size: 16px; }
-.status-pill.done { color: var(--success); }
-.status-pill.done::before { content: "✓"; font-weight: 900; font-size: 14px; }
-.status-pill.blocked { color: #E87722; }
-.status-pill.blocked::before { content: "⚠"; font-size: 14px; }
+.status-pill.todo::before { content: "○"; font-size: 17px; }
+.status-pill.wip { color: var(--accent-strong); }      /* AA #8B6F00 sur surface */
+.status-pill.wip::before { content: "◐"; font-size: 17px; }
+.status-pill.done { color: var(--success); }           /* AA #1F8A4A vert */
+.status-pill.done::before { content: "✓"; font-weight: 900; font-size: 15px; }
+.status-pill.blocked { color: var(--warning); }        /* AA #B36B00 orange foncé */
+.status-pill.blocked::before { content: "⚠"; font-size: 15px; }
 .status-pill.abandoned { color: var(--danger); }
-.status-pill.abandoned::before { content: "✕"; font-size: 14px; font-weight: 900; }
-.status-pill.archived { color: var(--text-dim); opacity: 0.5; }
-.status-pill.archived::before { content: "⧖"; font-size: 14px; }
+.status-pill.abandoned::before { content: "✕"; font-size: 15px; font-weight: 900; }
+.status-pill.archived { color: var(--text-dim); opacity: 0.55; }
+.status-pill.archived::before { content: "⧖"; font-size: 15px; }
 
 /* ============ MODAL LAYOUT (flex column) ============ */
 /* Une modal fonctionne en 3 zones empilées :

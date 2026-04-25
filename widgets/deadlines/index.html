@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Échéances">
-<meta name="theme-color" content="#F4F4F1">
+<meta name="theme-color" content="#FAF5F2">
 <link rel="apple-touch-icon" href="../../apple-touch-icon.png">
 <link rel="shortcut icon" href="favicon.ico">
 <link rel="icon" type="image/svg+xml" href="../../icon.svg">
@@ -148,9 +148,9 @@
   }
   .deadline-item:active { opacity: 0.7; }
   .deadline-item.externe { border-left-color: var(--danger); border-left-width: 4px; }
-  .deadline-item.externe.late { background: #FDECEB; }
+  .deadline-item.externe.late { background: var(--danger-soft); }
   .deadline-item.late { border-left-color: var(--danger); }
-  .deadline-item.soon { border-left-color: #E87722; }
+  .deadline-item.soon { border-left-color: var(--warning); }
   .deadline-item.ok { border-left-color: var(--success); }
 
   .dl-when {
@@ -171,7 +171,7 @@
     margin-top: 2px;
   }
   .deadline-item.late .dl-when .jours-label { color: var(--danger); }
-  .deadline-item.soon .dl-when .jours-label { color: #E87722; }
+  .deadline-item.soon .dl-when .jours-label { color: var(--warning); }
   .deadline-item.ok .dl-when .jours-label { color: var(--success); }
   .deadline-item.externe.late .dl-when .jours-label { color: var(--danger); }
 
@@ -198,7 +198,7 @@
     font-weight: 700;
     flex-shrink: 0;
   }
-  .dl-type.projet { background: #E2F0FB; color: #0B63A8; }
+  .dl-type.projet { background: var(--info-soft); color: var(--info); }
   .dl-type.objectif { background: var(--current-soft); color: var(--current); }
   .dl-meta {
     display: flex;
@@ -219,7 +219,7 @@
     padding: 1px 4px;
     border: 1px solid var(--danger);
     border-radius: 2px;
-    background: #FFF;
+    background: var(--surface);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     flex-shrink: 0;

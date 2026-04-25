@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Semaine">
-<meta name="theme-color" content="#F4F4F1">
+<meta name="theme-color" content="#FAF5F2">
 <link rel="apple-touch-icon" href="../../apple-touch-icon.png">
 <link rel="shortcut icon" href="favicon.ico">
 <link rel="icon" type="image/svg+xml" href="../../icon.svg">
@@ -273,10 +273,10 @@
   }
   .cell:active { opacity: 0.7; }
   .cell.empty { background: var(--bg); border-style: dashed; cursor: default; }
-  .cell.done { background: #EAF4EE; }
+  .cell.done { background: var(--success-soft); }
   .cell.current { background: var(--current-soft); border-color: var(--current); border-left: 3px solid var(--current); }
   .cell.skip { background: var(--done-bg); }
-  .cell.wip { background: #FFFCE5; }
+  .cell.wip { background: var(--accent-soft); }
 
   .cell .status-dot { width: 6px; height: 6px; border-radius: 50%; position: absolute; top: 4px; right: 4px; }
   .status-dot.done { background: var(--success); }
@@ -371,10 +371,10 @@
     color: var(--current);
     font-weight: 600;
   }
-  .slot.done { background: #EAF4EE; }
+  .slot.done { background: var(--success-soft); }
   .slot.current { background: var(--current-soft); border-left: 3px solid var(--current); padding-left: 7px; }
   .slot.skip { background: var(--done-bg); }
-  .slot.wip { background: #FFFCE5; }
+  .slot.wip { background: var(--accent-soft); }
   .slot .slot-tranche {
     font-size: 10px;
     font-weight: 700;
@@ -505,7 +505,7 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    background: #FCE8E6;
+    background: var(--danger-soft);
     color: var(--danger);
     border: 1px solid var(--danger);
   }
@@ -589,11 +589,11 @@
   <div id="agenda-view" class="agenda-wrap" style="display:none"></div>
 
   <div class="legend">
-    <span class="lg"><span class="dot" style="background:#188038"></span>Fait</span>
-    <span class="lg"><span class="dot" style="background:#5914D0"></span>Courant</span>
-    <span class="lg"><span class="dot" style="background:#F0CC00"></span>En cours</span>
-    <span class="lg"><span class="dot" style="background:#C8C8C3"></span>Planifié</span>
-    <span class="lg"><span class="dot" style="background:#9A9A95"></span>Zappé</span>
+    <span class="lg"><span class="dot" style="background:var(--success)"></span>Fait</span>
+    <span class="lg"><span class="dot" style="background:var(--current)"></span>Courant</span>
+    <span class="lg"><span class="dot" style="background:var(--accent-strong)"></span>En cours</span>
+    <span class="lg"><span class="dot" style="background:var(--border-strong)"></span>Planifié</span>
+    <span class="lg"><span class="dot" style="background:var(--text-faint)"></span>Zappé</span>
     <span class="lg"><span class="note-ico">●</span>Note</span>
     <span class="lg"><span class="ext-ico">⏰</span>Deadline externe</span>
     <span class="lg"><span class="libre-ico">Libre</span> sans tâche</span>
