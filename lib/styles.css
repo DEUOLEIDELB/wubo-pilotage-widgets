@@ -68,6 +68,99 @@
   --radius-sm: 4px;           /* tags, badges, pills */
   --radius-md: 6px;           /* boutons, cards, inputs */
   --radius-lg: 10px;          /* modals, profile-btn */
+
+  /* Couleur de la barre OS (theme-color meta), synchronisee avec --bg */
+  --theme-color: #F4F3F7;
+}
+
+/* ============================================================
+   DARK MODE — overrides via [data-theme="dark"] (explicite)
+   ou [data-theme="auto"] + media (prefers-color-scheme: dark).
+
+   Mode default = "auto" (suit l'OS). L'utilisateur peut forcer
+   "light" ou "dark" depuis la modal profil. Persiste localStorage.
+   ============================================================ */
+:root[data-theme="dark"],
+:root[data-theme="auto"] {
+  /* placeholder vide pour la cascade auto - voir media query plus bas */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="auto"] {
+    --bg: #15151B;
+    --surface: #1F1F26;
+    --surface-alt: #2A2A33;
+    --done-bg: #25252E;
+
+    --border: #2D2D36;
+    --border-strong: #4A4A55;
+
+    --text: #F0EFF2;
+    --text-dim: #C5C4CC;
+    --text-faint: #9A99A2;
+    --text-muted: #767680;
+
+    --accent: #FFDD0B;          /* yellow Wubo, garde meme couleur (texte noir AAA dessus) */
+    --accent-strong: #FFD93B;   /* texte jaune sur fond sombre, contraste 9:1 (AAA) */
+    --accent-soft: #3A3517;     /* halo jaune muted pour dark */
+
+    --current: #8949E8;         /* purple plus clair pour visibilite sur dark */
+    --current-soft: #2D1F45;    /* halo violet dark */
+
+    --pink: #E63B8E;
+    --danger: #E63B8E;          /* pink Wubo legerement adouci pour dark */
+    --danger-soft: #3D1525;
+
+    --blue: #1DC1F9;
+    --info: #4FB8E0;            /* bleu clair lisible sur dark, AA 6:1 */
+    --info-soft: #112430;
+
+    --success: #44C77A;         /* vert plus clair sur dark, AA 5.5:1 */
+    --success-soft: #14301F;
+
+    --warning: #E69A33;         /* orange plus clair, AA 5:1 */
+    --warning-soft: #2D2010;
+
+    --theme-color: #15151B;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #15151B;
+  --surface: #1F1F26;
+  --surface-alt: #2A2A33;
+  --done-bg: #25252E;
+
+  --border: #2D2D36;
+  --border-strong: #4A4A55;
+
+  --text: #F0EFF2;
+  --text-dim: #C5C4CC;
+  --text-faint: #9A99A2;
+  --text-muted: #767680;
+
+  --accent: #FFDD0B;
+  --accent-strong: #FFD93B;
+  --accent-soft: #3A3517;
+
+  --current: #8949E8;
+  --current-soft: #2D1F45;
+
+  --pink: #E63B8E;
+  --danger: #E63B8E;
+  --danger-soft: #3D1525;
+
+  --blue: #1DC1F9;
+  --info: #4FB8E0;
+  --info-soft: #112430;
+
+  --success: #44C77A;
+  --success-soft: #14301F;
+
+  --warning: #E69A33;
+  --warning-soft: #2D2010;
+
+  --theme-color: #15151B;
 }
 
 * {
@@ -422,6 +515,170 @@ html { background: var(--bg); }
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+/* ============ MODAL PROFIL : refonte pro ============
+   Utilise dans WuboUI.openProfileMenu(). Remplace l'ancien layout vertical
+   user-tile heavy par : avatar bandeau + sections claires (Apparence/Identite/Compte). */
+
+/* Bandeau identite courante (haut du modal) */
+.profile-me {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--surface-alt);
+  border-radius: var(--radius-md);
+  margin-bottom: 4px;
+}
+.profile-avatar {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+}
+.profile-avatar.taki { background: var(--accent); color: var(--text); }
+.profile-avatar.numa { background: var(--current); color: white; }
+.profile-avatar.lyes { background: var(--blue); color: var(--text); }
+.profile-me-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.profile-me-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  text-transform: capitalize;
+  line-height: 1.1;
+}
+.profile-me-sub {
+  font-size: 12px;
+  color: var(--text-faint);
+  line-height: 1.2;
+}
+
+/* Section labels (Apparence / Utilisateur / Compte) */
+.profile-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 8px;
+  margin-bottom: -4px;
+}
+
+/* Toggle thème : segmented control (Auto / Clair / Sombre) */
+.theme-toggle {
+  display: flex;
+  gap: 0;
+  padding: 3px;
+  background: var(--surface-alt);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+.theme-toggle-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 8px;
+  min-height: 38px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.theme-toggle-btn:hover { color: var(--text); }
+.theme-toggle-btn.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+.theme-toggle-btn:focus-visible {
+  outline: 2px solid var(--current);
+  outline-offset: -2px;
+}
+.theme-toggle-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+.theme-toggle-label { line-height: 1; }
+
+/* Picker utilisateur : chips horizontales compactes */
+.profile-user-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.profile-user-chip {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px;
+  min-height: 44px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.profile-user-chip:hover { border-color: var(--current); }
+.profile-user-chip.selected {
+  border: 2px solid var(--current);
+  box-shadow: var(--shadow-sm);
+  cursor: default;
+}
+.profile-user-chip-letter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text);
+  background: var(--surface-alt);
+}
+.profile-user-chip.taki .profile-user-chip-letter { background: var(--accent); color: var(--text); }
+.profile-user-chip.numa .profile-user-chip-letter { background: var(--current); color: white; }
+.profile-user-chip.lyes .profile-user-chip-letter { background: var(--blue); color: var(--text); }
+.profile-user-chip-name { font-size: 13px; }
+.profile-user-chip:focus-visible { outline: 2px solid var(--current); outline-offset: 2px; }
+
+.profile-hint {
+  font-size: 11px;
+  color: var(--text-faint);
+  line-height: 1.4;
+  padding: 2px 4px;
+}
+
+.profile-footer {
+  text-align: center;
+  font-size: 10px;
+  color: var(--text-muted);
+  padding: 8px 0 4px;
+  margin-top: 4px;
+  border-top: 1px solid var(--border);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 /* ============ ASSIGNEE PASTILLES (qui est sur cette tâche/objectif) ============ */
