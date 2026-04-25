@@ -258,7 +258,7 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 5px;
-    padding: 4px 12px 4px 4px;
+    padding: 4px 4px 22px 4px;
     min-height: 64px;
     font-size: 9px;
     line-height: 1.2;
@@ -352,7 +352,7 @@
   .slot {
     position: relative;
     display: grid;
-    grid-template-columns: 54px 1fr 14px;
+    grid-template-columns: 54px 1fr auto;
     align-items: center;
     gap: 8px;
     padding: 8px 10px;
@@ -934,10 +934,13 @@ function renderCell(bloc, isToday, tranche, iso) {
 
   if (bloc.note_fin_bloc) cell.appendChild($el('span', { class: 'note-dot', title: bloc.note_fin_bloc }, '●'));
   if (blocHasExtDeadline(bloc)) cell.appendChild($el('span', { class: 'ext-dot', title: 'Deadline externe' }, '⏰'));
-  // Pastilles assignees en bas de la cellule
+  // Pastilles assignees centrées en bas de la cellule
   const cellAssignees = blocAssignees(bloc);
   if (cellAssignees.length) {
-    const stack = $el('span', { class: 'assignee-stack sm', style: 'position:absolute;bottom:3px;right:4px' });
+    const stack = $el('span', {
+      class: 'assignee-stack sm',
+      style: 'position:absolute;bottom:3px;left:50%;transform:translateX(-50%)'
+    });
     cellAssignees.forEach(u => {
       stack.appendChild($el('span', { class: 'assignee-pill ' + u.toLowerCase(), title: u }, u.charAt(0)));
     });
