@@ -178,58 +178,82 @@
     margin: 0 -14px;
     padding: 0 14px 4px;
   }
+  /* "À rattraper" ULTRA COMPACT : 1 tache = 1 ligne flex (32px haute).
+     [date 52px] [titre flex ellipsis] [✓ 30x30] [→ 30x30].
+     Pour autre chose que ✓Fait ou →Aujourd'hui : tap sur le titre ouvre la modal. */
   .rattrapage {
     background: var(--warning-soft);
     border: 1px solid var(--warning);
     border-radius: var(--radius-md);
-    padding: 10px 12px;
+    padding: 4px 6px 6px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 0;
     margin-bottom: 4px;
   }
   .rattrapage-head {
-    font-size: 12px;
+    font-size: 10px;
     font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
     color: var(--warning);
+    padding: 2px 4px 4px;
   }
   .ratt-task-row {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 6px 0;
-    border-top: 1px dashed var(--warning);
-  }
-  .ratt-task-row:first-of-type { border-top: none; padding-top: 0; }
-  .ratt-task-head {
-    display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 13px;
+    padding: 2px 4px;
+    min-height: 36px;
+    border-top: 1px dashed var(--warning);
   }
-  .ratt-task-head .when {
+  .ratt-task-row:first-of-type { border-top: none; }
+  .ratt-when {
     font-size: 10px;
+    font-weight: 700;
     text-transform: uppercase;
     color: var(--warning);
-    font-weight: 700;
-    min-width: 56px;
+    flex-shrink: 0;
+    min-width: 48px;
+    line-height: 1.1;
   }
-  .ratt-task-head .titre {
+  .ratt-titre {
     flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     cursor: pointer;
+    padding: 4px 2px;
   }
-  .ratt-task-head .titre:hover { text-decoration: underline; }
-  .ratt-task-actions {
-    display: flex;
-    gap: 4px;
-    flex-wrap: wrap;
+  .ratt-titre:hover, .ratt-titre:active { color: var(--current); }
+  .ratt-act {
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    min-height: 30px;
+    padding: 0;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-dim);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
   }
-  .ratt-task-actions button {
-    flex: 1;
-    min-width: 60px;
-    padding: 4px 6px;
-    font-size: 11px;
-  }
+  .ratt-act:hover { background: var(--surface); border-color: var(--border-strong); }
+  .ratt-act:active { transform: translate(1px, 1px); }
+  .ratt-act-fait { color: var(--success); border-color: var(--success); }
+  .ratt-act-fait:hover { background: var(--success-soft); }
+  .ratt-act-today { color: var(--current); border-color: var(--current); }
+  .ratt-act-today:hover { background: var(--current-soft); }
   /* Bouton "+ voir N autres" : pleine largeur, dashed warning, discret mais cliquable.
      Apparait sous la liste rattrapage quand le backlog depasse rattrapageVisibleCount.
      Variante .ratt-show-less : meme style mais avec icone reduce. */
@@ -668,13 +692,12 @@ function renderTaskRow(t) {
 }
 
 // Rend la zone "A rattraper" en haut (sticky CSS).
-// Affichage par salves : 2 taches visibles par defaut, un bouton "+ voir N autres"
-// expand par batch de RATT_BATCH_STEP. Le compteur visible est persiste au niveau
-// du widget pour que traiter une tache ne reset pas l'expand : si l'user voit 5
-// taches et en traite une, il continue a voir 5 (la suivante du backlog remplit
-// le slot libere). Si le backlog se vide ou que l'user a tout traite, le compteur
-// se reaccroche naturellement (clamp sur tasks.length).
-const RATT_DEFAULT_VISIBLE = 2;
+// Format ULTRA COMPACT : 1 tache par ligne (badge date + titre + 2 actions
+// principales : ✓ Fait et → Aujourd'hui). Pour ajuster finement (+1j / +1sem /
+// autre date), tap sur le titre ouvre la modal d'edition complete.
+// Salves : 1 visible par defaut, +3 par clic sur "voir plus". Le compteur est
+// persiste : traiter une tache n'efface pas l'expand, la suivante remplit.
+const RATT_DEFAULT_VISIBLE = 1;
 const RATT_BATCH_STEP = 3;
 let rattrapageVisibleCount = RATT_DEFAULT_VISIBLE;
 
@@ -682,13 +705,11 @@ function renderRattrapageTasks(tasks) {
   const node = document.getElementById('rattrapage');
   $clear(node);
   if (!tasks.length) {
-    // Reset au cas ou la liste se remplit a nouveau plus tard : on repart a 2.
     rattrapageVisibleCount = RATT_DEFAULT_VISIBLE;
     return;
   }
 
   // Clamp : si le backlog a retreci sous le compteur user, on resserre.
-  // Si jamais le compteur est tombe a 0 ou en dessous du minimum, on remonte.
   if (rattrapageVisibleCount > tasks.length) rattrapageVisibleCount = tasks.length;
   if (rattrapageVisibleCount < RATT_DEFAULT_VISIBLE) {
     rattrapageVisibleCount = Math.min(RATT_DEFAULT_VISIBLE, tasks.length);
@@ -701,31 +722,29 @@ function renderRattrapageTasks(tasks) {
 
   const toShow = tasks.slice(0, rattrapageVisibleCount);
   toShow.forEach(t => {
-    const wrap = $el('div', { class: 'ratt-task-row' });
-    wrap.appendChild($el('div', { class: 'ratt-task-head' },
-      $el('span', { class: 'when' }, fmtPastDate(t.date_cible)),
-      $el('span', { class: 'status-pill ' + statutClass(t.statut) }),
-      $el('span', { class: 'titre', onclick: () => openTaskEdit(t.id) }, t.titre || '(sans titre)')
+    // Une seule ligne flex : [badge date] [titre clickable] [✓] [→]
+    const row = $el('div', { class: 'ratt-task-row' });
+    row.appendChild($el('span', { class: 'ratt-when', title: fmtPastDate(t.date_cible) },
+      fmtPastDate(t.date_cible)
     ));
-    const actions = $el('div', { class: 'ratt-task-actions' });
-    actions.appendChild($el('button', {
-      class: 'primary small',
-      onclick: () => replanTaskTo(t, 0)
-    }, "Aujourd'hui"));
-    actions.appendChild($el('button', {
-      class: 'ghost small',
-      onclick: () => replanTaskTo(t, 1)
-    }, '+1j'));
-    actions.appendChild($el('button', {
-      class: 'ghost small',
-      onclick: () => replanTaskTo(t, 7)
-    }, '+1sem'));
-    actions.appendChild($el('button', {
-      class: 'success small',
-      onclick: () => markTaskFait(t)
-    }, '✓ Fait'));
-    wrap.appendChild(actions);
-    block.appendChild(wrap);
+    row.appendChild($el('span', {
+      class: 'ratt-titre',
+      title: 'Tap pour ajuster (+1j, +1sem, autre date…)',
+      onclick: () => openTaskEdit(t.id)
+    }, t.titre || '(sans titre)'));
+    row.appendChild($el('button', {
+      class: 'ratt-act ratt-act-fait',
+      title: 'Marquer Fait',
+      'aria-label': 'Marquer Fait',
+      onclick: (e) => { e.stopPropagation(); markTaskFait(t); }
+    }, '✓'));
+    row.appendChild($el('button', {
+      class: 'ratt-act ratt-act-today',
+      title: 'Reporter à aujourd\'hui',
+      'aria-label': 'Reporter à aujourd\'hui',
+      onclick: (e) => { e.stopPropagation(); replanTaskTo(t, 0); }
+    }, '→'));
+    block.appendChild(row);
   });
 
   // Bouton "+ voir N autres" : annonce le nombre de la prochaine salve
