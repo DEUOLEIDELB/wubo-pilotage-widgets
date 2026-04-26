@@ -248,6 +248,19 @@
     word-break: break-word;
     cursor: pointer;
   }
+  .floating-task-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    background: var(--surface-2);
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
   .floating-task-actions {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
@@ -883,9 +896,11 @@ function fmtPastDate(dateUnix) {
   return `${DAY_NAMES_FR[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS_FR[d.getUTCMonth()]}`;
 }
 
-// Rend la zone "À planifier aujourd'hui" : tâches du current user dont la
-// date_cible = aujourd'hui mais qui ne sont liées à aucun de ses blocs.
-// Chaque tâche : titre + pastilles + 3 boutons Matin/Aprem/Soir pour la planifier.
+// Rend la zone "À planifier" : 2 sous-sections.
+// 1. Tâches du current user avec date_cible = aujourd'hui mais aucun bloc → "Aujourd'hui"
+// 2. Tâches du current user sans date_cible et non liées à un bloc → "Sans date"
+//    (rattrapage : tâches legacy ou créées sans date manuellement)
+// Chaque tâche : titre cliquable + pastilles + 3 boutons Matin/Aprem/Soir.
 function renderFloatingToday(myBlocsToday) {
   const node = document.getElementById('floating');
   $clear(node);
@@ -894,22 +909,33 @@ function renderFloatingToday(myBlocsToday) {
   myBlocsToday.forEach(b => {
     WuboGrist.refListIds(b.taches_liees).forEach(id => taskIdsInMyBlocs.add(id));
   });
-  const floating = Object.values(tachesById).filter(t =>
-    t.date_cible &&
-    WuboGrist.gristDateToISO(t.date_cible) === today &&
+
+  const baseFilter = t =>
     t.statut !== 'Fait' && t.statut !== 'Archive' && t.statut !== 'Abandonne' &&
     !t.parent_tache &&
-    !taskIdsInMyBlocs.has(t.id)
+    !taskIdsInMyBlocs.has(t.id);
+
+  const floatingToday = Object.values(tachesById).filter(t =>
+    t.date_cible && WuboGrist.gristDateToISO(t.date_cible) === today && baseFilter(t)
   );
-  if (!floating.length) return;
-  node.appendChild($el('div', { class: 'floating-head' }, `À planifier aujourd'hui (${floating.length})`));
-  floating.forEach(t => {
+  const floatingNoDate = Object.values(tachesById).filter(t =>
+    !t.date_cible && baseFilter(t)
+  );
+
+  if (!floatingToday.length && !floatingNoDate.length) return;
+
+  function renderTask(t, dateBadge) {
     const row = $el('div', { class: 'floating-task' });
     const main = $el('div', { class: 'floating-task-main' });
-    main.appendChild($el('span', {
+    const titleWrap = $el('span', {
       class: 'floating-task-title',
       onclick: () => openTaskEdit(t.id)
-    }, t.titre || '(sans titre)'));
+    });
+    if (dateBadge) {
+      titleWrap.appendChild($el('span', { class: 'floating-task-badge' }, dateBadge));
+    }
+    titleWrap.appendChild(document.createTextNode(t.titre || '(sans titre)'));
+    main.appendChild(titleWrap);
     const pastilles = WuboUI.renderAssignees(t, { size: 'sm' });
     if (pastilles) main.appendChild(pastilles);
     row.appendChild(main);
@@ -921,14 +947,28 @@ function renderFloatingToday(myBlocsToday) {
       }, tranche));
     });
     row.appendChild(actions);
-    node.appendChild(row);
-  });
+    return row;
+  }
+
+  if (floatingToday.length) {
+    node.appendChild($el('div', { class: 'floating-head' }, `À planifier aujourd'hui (${floatingToday.length})`));
+    floatingToday.forEach(t => node.appendChild(renderTask(t, null)));
+  }
+  if (floatingNoDate.length) {
+    node.appendChild($el('div', { class: 'floating-head' }, `Sans date (${floatingNoDate.length})`));
+    floatingNoDate.forEach(t => node.appendChild(renderTask(t, 'Pas de date')));
+  }
 }
 
 async function planFloatingTask(taskId, tranche) {
   const user = WuboGrist.getUser() || 'Taki';
   const todayUnix = WuboGrist.daysFromToday(0);
   try {
+    // Si la tâche n'avait pas de date, on la pose à aujourd'hui (sinon elle reste flottante)
+    const task = tachesById[taskId];
+    if (task && !task.date_cible) {
+      await WuboGrist.updateRecord('Taches', taskId, { date_cible: todayUnix });
+    }
     await WuboGrist.planTaskInTranche(taskId, todayUnix, user, tranche);
     WuboGrist.toast(`Planifié en ${tranche}`, 'success');
     await render();

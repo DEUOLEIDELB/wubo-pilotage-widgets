@@ -1210,9 +1210,10 @@ function renderList(daysISO, byDay, todayISO) {
   });
 }
 
-// Zone "À planifier cette semaine" : tâches du current user dont la date_cible
-// tombe dans la fenêtre visible mais qui ne sont liées à AUCUN bloc du current user.
-// Clic sur le titre → ouvre la task modal en édition (l'user peut choisir tranche+date).
+// Zone "À planifier" : 2 sous-sections.
+// 1. Tâches avec date_cible dans la fenêtre visible mais sans bloc → "Cette semaine"
+// 2. Tâches sans date_cible et sans bloc → "Sans date" (toujours visible, pas filtrée par fenêtre)
+// Clic sur ligne → modal édition (user peut choisir tranche + date).
 function renderFloatingWeek(visibleDaysISO, blocs) {
   const node = document.getElementById('floating-week');
   $clear(node);
@@ -1221,34 +1222,39 @@ function renderFloatingWeek(visibleDaysISO, blocs) {
   const visibleSet = new Set(visibleDaysISO);
 
   // Collecte les task IDs dejà liés à un bloc du current user dans la fenêtre
-  const taskIdsBound = new Set();
+  const taskIdsBoundInWindow = new Set();
+  // Et aussi tous blocs (pour "Sans date" : la tâche peut être liée à un bloc passé/futur)
+  const taskIdsBoundAnywhere = new Set();
   blocs.forEach(b => {
     if (b.proprietaire !== currentUser) return;
+    WuboGrist.refListIds(b.taches_liees).forEach(id => taskIdsBoundAnywhere.add(id));
     const iso = WuboGrist.gristDateToISO(b.date);
-    if (!visibleSet.has(iso)) return;
-    WuboGrist.refListIds(b.taches_liees).forEach(id => taskIdsBound.add(id));
+    if (visibleSet.has(iso)) {
+      WuboGrist.refListIds(b.taches_liees).forEach(id => taskIdsBoundInWindow.add(id));
+    }
   });
 
-  // Tâches flottantes : current user assignee + date_cible dans fenêtre + statut actif + non liée
-  const floating = Object.values(tachesById).filter(t => {
+  const isMine = t => WuboGrist.getAssignees(t).includes(currentUser);
+  const isActive = t =>
+    t.statut !== 'Fait' && t.statut !== 'Archive' && t.statut !== 'Abandonne' &&
+    !t.parent_tache;
+
+  // Section 1 : flottantes dans la fenêtre
+  const floatingInWindow = Object.values(tachesById).filter(t => {
     if (!t.date_cible) return false;
-    const iso = WuboGrist.gristDateToISO(t.date_cible);
-    if (!visibleSet.has(iso)) return false;
-    if (t.statut === 'Fait' || t.statut === 'Archive' || t.statut === 'Abandonne') return false;
-    if (t.parent_tache) return false;
-    if (taskIdsBound.has(t.id)) return false;
-    // Current user doit être assignee (proprietaire ou collab)
-    const assignees = WuboGrist.getAssignees(t);
-    if (!assignees.includes(currentUser)) return false;
-    return true;
+    if (!visibleSet.has(WuboGrist.gristDateToISO(t.date_cible))) return false;
+    return isActive(t) && isMine(t) && !taskIdsBoundInWindow.has(t.id);
   });
 
-  if (!floating.length) return;
-  node.appendChild($el('div', { class: 'floating-week-head' }, `À planifier cette semaine (${floating.length})`));
-  // Tri par date croissante
-  floating.sort((a, b) => (a.date_cible || 0) - (b.date_cible || 0));
-  floating.forEach(t => {
-    const dateLabel = formatShortDate(t.date_cible);
+  // Section 2 : sans date_cible (rattrapage legacy)
+  const floatingNoDate = Object.values(tachesById).filter(t => {
+    if (t.date_cible) return false;
+    return isActive(t) && isMine(t) && !taskIdsBoundAnywhere.has(t.id);
+  });
+
+  if (!floatingInWindow.length && !floatingNoDate.length) return;
+
+  function renderRow(t, dateLabel) {
     const row = $el('div', {
       class: 'floating-week-task',
       onclick: () => openTaskEdit(t.id)
@@ -1259,8 +1265,18 @@ function renderFloatingWeek(visibleDaysISO, blocs) {
     row.appendChild(left);
     const pastilles = WuboUI.renderAssignees(t, { size: 'sm' });
     if (pastilles) row.appendChild(pastilles);
-    node.appendChild(row);
-  });
+    return row;
+  }
+
+  if (floatingInWindow.length) {
+    node.appendChild($el('div', { class: 'floating-week-head' }, `À planifier cette semaine (${floatingInWindow.length})`));
+    floatingInWindow.sort((a, b) => (a.date_cible || 0) - (b.date_cible || 0));
+    floatingInWindow.forEach(t => node.appendChild(renderRow(t, formatShortDate(t.date_cible))));
+  }
+  if (floatingNoDate.length) {
+    node.appendChild($el('div', { class: 'floating-week-head' }, `Sans date (${floatingNoDate.length})`));
+    floatingNoDate.forEach(t => node.appendChild(renderRow(t, '—')));
+  }
 }
 
 function formatShortDate(unixTs) {
