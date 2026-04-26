@@ -1581,20 +1581,74 @@ function setupSwipe() {
   });
 }
 
-// Crée un bloc Planifie pour date/tranche donnés et ouvre immédiatement la modal édition
+// Clic sur cellule (date, tranche) : si 2+ sous-blocs configures OU 2+ rows existent,
+// montre un picker. Sinon ouvre/cree directement.
 async function createBlocAt(iso, tranche) {
   if (!iso) { openCreateBlocModal(); return; }
-  // Vérifie s'il existe déjà pour éviter doublon
-  const existing = allBlocs.find(b => WuboGrist.gristDateToISO(b.date) === iso && b.tranche === tranche);
-  if (existing) { openBloc(existing.id); return; }
+  const user = WuboGrist.getUser() || 'Taki';
+  const profilBlocs = await WuboGrist.getProfilBlocsByTranche(user, tranche);
+  const existingsInCell = allBlocs.filter(b =>
+    WuboGrist.gristDateToISO(b.date) === iso && b.tranche === tranche
+  );
+
+  // Cas trivial : 0/1 sous-bloc configure ET 0/1 row existe → direct.
+  if (profilBlocs.length <= 1 && existingsInCell.length <= 1) {
+    if (existingsInCell.length === 1) return openBloc(existingsInCell[0].id);
+    const ordre = profilBlocs.length === 1 ? (profilBlocs[0].ordre || 1) : 1;
+    if (profilBlocs[0] && profilBlocs[0].bloque) {
+      WuboGrist.toast('Ce sous-bloc est bloqué — édition manuelle uniquement', 'warn');
+      return;
+    }
+    return createBlocFor(iso, tranche, ordre);
+  }
+
+  // Picker : un item par profil bloc (avec etat) + orphans existants sans profil match.
+  const options = profilBlocs.map(pb => {
+    const ordre = pb.ordre || 1;
+    const existing = existingsInCell.find(b => (b.tranche_ordre || 1) === ordre);
+    const time = WuboGrist.formatBlocTime(pb.debut_heure, pb.fin_heure) || '';
+    const status = existing ? `${existing.statut || 'Planifié'} · ${time}` : `à créer · ${time}`;
+    return {
+      id: 'p:' + ordre,
+      label: pb.label + (pb.bloque ? ' · bloqué' : ''),
+      sub: status,
+      danger: !!pb.bloque
+    };
+  });
+  existingsInCell.forEach(b => {
+    const ordre = b.tranche_ordre || 1;
+    if (profilBlocs.some(p => (p.ordre || 1) === ordre)) return;
+    options.push({
+      id: 'b:' + b.id,
+      label: `${tranche} #${ordre}`,
+      sub: (b.statut || 'Planifié') + ' · orphelin'
+    });
+  });
+
+  const picked = await WuboUI.choice({ title: `Quel sous-bloc ${tranche} ?`, options });
+  if (!picked) return;
+
+  if (picked.startsWith('b:')) {
+    return openBloc(parseInt(picked.slice(2), 10));
+  }
+  const ordre = parseInt(picked.slice(2), 10);
+  const profil = profilBlocs.find(p => (p.ordre || 1) === ordre);
+  if (profil && profil.bloque) {
+    WuboGrist.toast('Ce sous-bloc est bloqué — édition manuelle uniquement', 'warn');
+    return;
+  }
+  const existing = existingsInCell.find(b => (b.tranche_ordre || 1) === ordre);
+  if (existing) return openBloc(existing.id);
+  return createBlocFor(iso, tranche, ordre);
+}
+
+// Cree un Blocs_temps pour (date, tranche, ordre) et ouvre la modal.
+async function createBlocFor(iso, tranche, ordre) {
   try {
-    const dateUnix = WuboGrist.dateToISO ? null : null;
-    // Convert iso (YYYY-MM-DD) → unix timestamp UTC minuit
     const [y, m, d] = iso.split('-').map(Number);
     const ts = Math.floor(Date.UTC(y, m-1, d) / 1000);
     const { id } = await WuboGrist.addRecord('Blocs_temps', {
-      date: ts,
-      tranche,
+      date: ts, tranche, tranche_ordre: ordre,
       statut: 'Planifie',
       proprietaire: (WuboGrist.getUser() || 'Taki')
     });

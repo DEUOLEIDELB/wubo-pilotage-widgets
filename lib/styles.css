@@ -760,6 +760,44 @@ html { background: var(--bg); }
   text-transform: uppercase;
   padding: 0 2px 2px;
 }
+.profil-bloc-row-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.profil-bloc-row-wrap.bloque {
+  border-style: dashed;
+  background: repeating-linear-gradient(45deg, var(--surface), var(--surface) 6px, var(--surface-2) 6px, var(--surface-2) 8px);
+}
+.profil-bloc-row-wrap > .profil-bloc-row {
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+.profil-bloc-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 11px;
+  color: var(--text-dim);
+  padding-left: 2px;
+}
+.profil-bloc-checkbox-label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+.profil-bloc-checkbox-label input[type=checkbox] {
+  width: auto;
+  margin: 0;
+}
 
 .profile-footer {
   text-align: center;

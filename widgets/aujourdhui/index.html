@@ -267,6 +267,17 @@
     gap: 4px;
   }
   .floating-task-actions .tranche-btn { flex: 1 1 calc(33% - 4px); min-width: 64px; }
+  .floating-task-actions .tranche-btn.bloque {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-style: dashed;
+    background: var(--surface);
+  }
+  .bloc.bloque {
+    opacity: 0.7;
+    border-style: dashed;
+    background: repeating-linear-gradient(45deg, var(--surface), var(--surface) 6px, var(--surface-2) 6px, var(--surface-2) 8px);
+  }
   .tranche-btn {
     padding: 6px 8px;
     font-size: 12px;
@@ -715,12 +726,15 @@ function clearError() {
 function renderBloc(profilBloc, bloc) {
   const tranche = profilBloc ? profilBloc.tranche : (bloc ? bloc.tranche : 'Matin');
   const ordre = profilBloc ? (profilBloc.ordre || 1) : (bloc ? (bloc.tranche_ordre || 1) : 1);
-  const cur = currentTranche();
   const statut = bloc ? bloc.statut : null;
-  // "current" : status En cours OU (heure courante dans le creneau et Planifie).
-  // Tranche courante (cur) sert de fallback si pas d'horaire calculable.
-  const isCurrent = bloc && (statut === 'En cours' || (cur === bloc.tranche && statut === 'Planifie'));
+  // "current" : status En cours OU (Planifie ET heure actuelle dans [debut_heure, fin_heure)).
+  // Base sur les horaires reels du sous-bloc (override ou profil), pas sur la tranche.
+  // Plusieurs sous-blocs peuvent etre current simultanement si chevauchement.
+  const inTimeWindow = bloc && WuboGrist.isBlocCurrentNow(bloc, profilCurrent);
+  const isCurrent = bloc && (statut === 'En cours' || (inTimeWindow && statut === 'Planifie'));
+  const isBlocked = profilBloc && profilBloc.bloque;
   const classNames = ['bloc'];
+  if (isBlocked) classNames.push('bloque');
   if (isCurrent) classNames.push('current');
   else if (statut === 'Fait') classNames.push('done');
   else if (statut === 'Zappe') classNames.push('skip');
@@ -749,6 +763,13 @@ function renderBloc(profilBloc, bloc) {
   const el = $el('div', { class: classNames.join(' '), 'data-tranche': tranche, 'data-ordre': String(ordre) }, head);
   if (bloc) el.setAttribute('data-bloc-id', String(bloc.id));
   if (!bloc) {
+    if (isBlocked) {
+      // Bloc bloque sans instance : pas de CTA "+ Planifier" (par definition pas de tache auto).
+      el.appendChild($el('div', {
+        style: 'font-size:11px;color:var(--text-faint);font-style:italic;text-align:center;padding:4px'
+      }, 'Bloqué'));
+      return el;
+    }
     el.appendChild($el('button', {
       class: 'add-tache',
       style: 'margin-top:4px',
@@ -886,16 +907,14 @@ async function render() {
 
   const driftNode = document.getElementById('drift');
   $clear(driftNode);
-  const cur = currentTranche();
-  if (cur) {
-    // Drift : un bloc Planifie dans la tranche en cours = signal a demarrer.
-    // Si plusieurs blocs Planifie dans la tranche, prend le premier.
-    const bloc = blocs.find(b => b.tranche === cur && b.statut === 'Planifie');
-    if (bloc) {
-      const alert = $el('div', { class: 'drift-alert' }, `${cur} actif mais toujours "Planifié". `);
-      alert.appendChild($el('button', { class: 'small', onclick: () => blocAction(bloc.id, 'En cours') }, 'Démarrer'));
-      driftNode.appendChild(alert);
-    }
+  // Drift : un sous-bloc Planifie dont l'heure courante tombe dans son creneau reel.
+  // Base sur horaires (debut/fin), pas sur la tranche fixe.
+  const driftBloc = blocs.find(b => b.statut === 'Planifie' && WuboGrist.isBlocCurrentNow(b, profilCurrent));
+  if (driftBloc) {
+    const dis = WuboGrist.getBlocDisplay(driftBloc, profilCurrent);
+    const alert = $el('div', { class: 'drift-alert' }, `${dis.label} actif mais toujours "Planifié". `);
+    alert.appendChild($el('button', { class: 'small', onclick: () => blocAction(driftBloc.id, 'En cours') }, 'Démarrer'));
+    driftNode.appendChild(alert);
   }
 
   // Rend tous les blocs du user actif, groupes par tranche (Matin/Aprem/Soir).
@@ -940,19 +959,17 @@ async function render() {
   scrollToCurrentTranche();
 }
 
-// Scroll la tranche courante au centre du viewport apres le render.
-// Seulement si ce n'est pas la premiere tranche (Matin) : pas utile de scroller quand tout est deja visible en haut.
+// Scroll au premier sous-bloc current (basé horaires réels) une fois par session.
 let _didInitialScroll = false;
 function scrollToCurrentTranche() {
-  const cur = currentTranche();
-  if (!cur) return;
-  if (cur === 'Matin') return;
-  // On ne scroll qu'une seule fois par session (au premier render).
   if (_didInitialScroll) return;
   _didInitialScroll = true;
   requestAnimationFrame(() => {
-    const el = document.querySelector(`.bloc.current[data-tranche="${cur}"]`);
-    if (el && typeof el.scrollIntoView === 'function') {
+    const el = document.querySelector('.bloc.current');
+    if (!el) return;
+    const tranche = el.getAttribute('data-tranche');
+    if (tranche === 'Matin') return; // deja visible en haut
+    if (typeof el.scrollIntoView === 'function') {
       try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
       catch (_) { el.scrollIntoView(); }
     }
@@ -1031,10 +1048,17 @@ function renderFloatingToday(myBlocsToday) {
       });
     } else {
       profilCurrent.forEach(pb => {
+        const cls = ['tranche-btn'];
+        if (pb.bloque) cls.push('bloque');
         actions.appendChild($el('button', {
-          class: 'tranche-btn',
-          onclick: () => planFloatingTask(t.id, pb.tranche, pb.ordre || 1),
-          title: `${pb.tranche} · ${WuboGrist.formatBlocTime(pb.debut_heure, pb.fin_heure) || ''}`
+          class: cls.join(' '),
+          disabled: pb.bloque ? true : null,
+          onclick: pb.bloque
+            ? () => WuboGrist.toast(`${pb.label} est bloqué (config profil)`, 'warn')
+            : () => planFloatingTask(t.id, pb.tranche, pb.ordre || 1),
+          title: pb.bloque
+            ? `${pb.label} · bloqué`
+            : `${pb.tranche} · ${WuboGrist.formatBlocTime(pb.debut_heure, pb.fin_heure) || ''}`
         }, pb.label));
       });
     }
