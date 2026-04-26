@@ -740,9 +740,9 @@ function renderRattrapageTasks(tasks) {
     }, '✓'));
     row.appendChild($el('button', {
       class: 'ratt-act ratt-act-today',
-      title: 'Reporter à aujourd\'hui',
-      'aria-label': 'Reporter à aujourd\'hui',
-      onclick: (e) => { e.stopPropagation(); replanTaskTo(t, 0); }
+      title: 'Reporter (choisir quand)',
+      'aria-label': 'Reporter cette tâche',
+      onclick: (e) => { e.stopPropagation(); replanRattrapagePicker(t); }
     }, '→'));
     block.appendChild(row);
   });
@@ -774,30 +774,90 @@ function renderRattrapageTasks(tasks) {
   node.appendChild(block);
 }
 
+// Picker de date pour reporter une tache. 4 options + tap titre = autre date custom.
+// Ouvre WuboUI.choice et delegue a replanTaskTo() ou openTaskEdit().
+async function replanRattrapagePicker(task) {
+  const action = await WuboUI.choice({
+    title: task.titre || '(sans titre)',
+    message: 'Reporter à quand ?',
+    options: [
+      { id: 'today',    label: "Aujourd'hui",  sub: 'au jour courant' },
+      { id: 'tomorrow', label: '+1 jour',      sub: 'demain' },
+      { id: 'week',     label: '+1 semaine' },
+      { id: 'custom',   label: 'Autre date…',  sub: 'ouvre la modal d\'édition' }
+    ]
+  });
+  if (!action) return;
+  if (action === 'today') return replanTaskTo(task, 0);
+  if (action === 'tomorrow') return replanTaskTo(task, 1);
+  if (action === 'week') return replanTaskTo(task, 7);
+  if (action === 'custom') return openTaskEdit(task.id);
+}
+
 async function replanTaskTo(task, daysOffset) {
+  // Snapshot des valeurs actuelles pour permettre l'undo.
+  const prevDate = task.date_cible || null;
+  const prevPushCount = task.push_count || 0;
   try {
     const newDate = WuboGrist.daysFromToday(daysOffset);
     await WuboGrist.updateRecord('Taches', task.id, {
       date_cible: newDate,
-      push_count: (task.push_count || 0) + 1
+      push_count: prevPushCount + 1
     });
-    WuboGrist.toast(daysOffset === 0 ? 'Reportée à aujourd\'hui' : `Reportée +${daysOffset}j`, 'success');
     justUpdatedTaskId = task.id;
     await render();
+    // Cooldown undo 8s. Restore date + push_count aux valeurs avant click.
+    const label = daysOffset === 0 ? "à aujourd'hui"
+               : daysOffset === 1 ? '+1 jour'
+               : `+${daysOffset} jours`;
+    WuboUI.cooldownNotice({
+      message: `« ${task.titre || 'Tâche'} » reportée ${label}`,
+      durationMs: 8000,
+      onCancel: async () => {
+        try {
+          await WuboGrist.updateRecord('Taches', task.id, {
+            date_cible: prevDate,
+            push_count: prevPushCount
+          });
+          WuboGrist.toast('Report annulé', 'info');
+          await render();
+        } catch (e) {
+          WuboGrist.toast('Erreur restore : ' + e.message, 'error');
+        }
+      }
+    });
   } catch (e) {
     WuboGrist.toast('Erreur : ' + e.message, 'error');
   }
 }
 
 async function markTaskFait(task) {
+  // Snapshot pour undo : statut + date_fait avant le click.
+  const prevStatut = task.statut || 'Pas commence';
+  const prevDateFait = (task.date_fait != null && task.date_fait !== '') ? task.date_fait : null;
   try {
     await WuboGrist.updateRecord('Taches', task.id, {
       statut: 'Fait',
       date_fait: WuboGrist.nowUnix()
     });
-    WuboGrist.toast('Tâche faite', 'success');
     justUpdatedTaskId = task.id;
     await render();
+    WuboUI.cooldownNotice({
+      message: `« ${task.titre || 'Tâche'} » marquée Fait`,
+      durationMs: 8000,
+      onCancel: async () => {
+        try {
+          await WuboGrist.updateRecord('Taches', task.id, {
+            statut: prevStatut,
+            date_fait: prevDateFait
+          });
+          WuboGrist.toast('Restaurée', 'info');
+          await render();
+        } catch (e) {
+          WuboGrist.toast('Erreur restore : ' + e.message, 'error');
+        }
+      }
+    });
   } catch (e) {
     WuboGrist.toast('Erreur : ' + e.message, 'error');
   }
