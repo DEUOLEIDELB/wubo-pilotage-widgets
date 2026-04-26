@@ -545,7 +545,28 @@
 <script>
 const { $el, $clear } = Dom;
 const TRANCHES = ['Matin', 'Aprem', 'Soir'];
-const TRANCHE_TIMES = { Matin: '8-12h', Aprem: '13-17h', Soir: '18-22h' };
+// Profil blocs du current user, populé dans render() depuis Grist (table Profils_blocs).
+// Permet labels et heures personnalisés par user.
+let profilCurrent = [];
+
+function profilForTranche(tranche) {
+  const ordre = WuboGrist.TRANCHE_TO_ORDRE[tranche] || 0;
+  return profilCurrent.find(p => p.ordre === ordre);
+}
+function trancheLabel(tranche) {
+  const p = profilForTranche(tranche);
+  return p ? p.label : tranche;
+}
+function trancheTime(tranche, bloc) {
+  // Si bloc fourni : utilise getBlocDisplay (gère override). Sinon : juste profil.
+  if (bloc) {
+    const d = WuboGrist.getBlocDisplay(bloc, profilCurrent);
+    return WuboGrist.formatBlocTime(d.debut, d.fin) || '';
+  }
+  const p = profilForTranche(tranche);
+  if (!p) return '';
+  return WuboGrist.formatBlocTime(p.debut_heure, p.fin_heure);
+}
 let currentTaskEditId = null;
 let currentTaskNewBlocId = null;
 let currentTaskOriginalDate = null;
@@ -694,8 +715,8 @@ function renderBloc(tranche, bloc) {
     } : null
   },
     $el('div', {},
-      $el('span', { class: 'bloc-tranche' }, tranche),
-      $el('span', { class: 'bloc-time' }, ' · ' + TRANCHE_TIMES[tranche])
+      $el('span', { class: 'bloc-tranche' }, trancheLabel(tranche)),
+      $el('span', { class: 'bloc-time' }, ' · ' + trancheTime(tranche, bloc))
     ),
     $el('span', { class: 'tag ' + tagClass }, tagLabel)
   );
@@ -802,10 +823,14 @@ async function render() {
   tachesById = {};
   let fetchOk = true;
   try {
-    const [bRaw, tRaw] = await Promise.all([
+    const currentUser = WuboGrist.getUser() || 'Taki';
+    // Fetch profil + data en parallèle. Profil sert à afficher labels et heures custom.
+    const [bRaw, tRaw, profil] = await Promise.all([
       WuboGrist.fetchRows('Blocs_temps'),
-      WuboGrist.fetchRows('Taches')
+      WuboGrist.fetchRows('Taches'),
+      WuboGrist.getProfilBlocs(currentUser)
     ]);
+    profilCurrent = profil;
     // Jour = vue perso : uniquement les blocs et tâches du user courant (proprietaire ou collaborateur)
     const b = WuboGrist.filterMineOnly(bRaw);
     const t = WuboGrist.filterMineOnly(tRaw);
