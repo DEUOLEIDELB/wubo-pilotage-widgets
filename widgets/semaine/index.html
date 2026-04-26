@@ -2242,7 +2242,7 @@ async function saveTaskEdit() {
   const extDeadline = document.getElementById('task-ext-deadline').checked;
   const fields = {
     titre,
-    description: document.getElementById('task-desc').value,
+    note: document.getElementById('task-desc').value,
     livrable: document.getElementById('task-livrable').value,
     statut: document.getElementById('task-statut').value,
     estim_heures: heures,

@@ -987,7 +987,7 @@ async function pushActionConvert() {
   try {
     const fields = {
       titre: titre.trim(),
-      description: `Issu du sujet : ${sujet.titre || ''}`,
+      note: `Issu du sujet : ${sujet.titre || ''}`,
       statut: 'Pas commence',
       cash_impact: 1,
       urgency: 3,
@@ -1397,7 +1397,7 @@ function fillTaskEditFields(t) {
   pendingSubtasks = [];
   document.getElementById('task-modal-title').textContent = 'Modifier la tâche';
   document.getElementById('task-titre').value = t.titre || '';
-  document.getElementById('task-desc').value = t.description || '';
+  document.getElementById('task-desc').value = t.note || '';
   document.getElementById('task-livrable').value = t.livrable || '';
   document.getElementById('task-statut').value = t.statut || 'Pas commence';
   document.getElementById('task-heures').value = t.estim_heures || '';
@@ -1568,7 +1568,7 @@ async function saveTaskEdit() {
   const dateUnix = inputDateToUnix(dateStr);
   const fields = {
     titre,
-    description: document.getElementById('task-desc').value,
+    note: document.getElementById('task-desc').value,
     livrable: document.getElementById('task-livrable').value,
     statut: document.getElementById('task-statut').value,
     estim_heures: heures,

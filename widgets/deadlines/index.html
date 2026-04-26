@@ -720,7 +720,7 @@ async function saveTaskEdit() {
   const extCb = document.getElementById('task-ext-deadline');
   const fields = {
     titre,
-    description: document.getElementById('task-desc').value,
+    note: document.getElementById('task-desc').value,
     statut: document.getElementById('task-statut').value,
     est_deadline_externe: extCb ? !!extCb.checked : false
   };
