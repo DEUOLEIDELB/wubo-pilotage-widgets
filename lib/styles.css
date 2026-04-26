@@ -59,10 +59,15 @@
 
   /* ========== HAUTEURS DYNAMIQUES ==========
      --sticky-h est mesuré au load par le helper JS WuboUI.syncStickyHeight().
-     Fallback 168px pour le widget semaine (header + view-toggle). */
+     Fallback 168px pour le widget semaine (header + view-toggle).
+     --page-header-h est la hauteur reelle du .page-header (fixed top:0).
+     Pas de mesure JS : valeur deterministe basee sur le padding + contenu (h1+sub).
+     Tout sub-sticky DOIT utiliser top: calc(var(--page-header-h) + env(safe-area-inset-top))
+     pour ne pas chevaucher la barre du dessus. */
   --header-h: 68px;
   --footer-h: 112px;
   --sticky-h: 210px;
+  --page-header-h: 64px;      /* padding 10+10 + h1 line + sub line + 4px marge */
   --header-respire: 18px;     /* respiration garantie sous le dernier sticky */
 
   /* Radius : echelle compacte pour outil utilitaire */
