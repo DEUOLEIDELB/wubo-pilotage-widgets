@@ -647,9 +647,8 @@
         <option>Pas commence</option><option>En cours</option><option>Fait</option><option>Bloque</option><option>Abandonne</option>
       </select>
     </div>
-    <div class="field" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-      <div><label>Heures</label><input id="task-heures" type="number" step="0.5" min="0"></div>
-      <div><label>Échéance</label><input id="task-date" type="date"></div>
+    <div class="field">
+      <label>Échéance</label><input id="task-date" type="date">
     </div>
     <div class="field" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
       <div><label>Cash (0-5)</label><input id="task-cash" type="number" min="0" max="5" step="1"></div>
@@ -1099,7 +1098,7 @@ function renderTache(t, isSubtask) {
   const tachePastilles = WuboUI.renderAssignees(t, { size: 'sm' });
   if (tachePastilles) el.appendChild(tachePastilles);
   el.appendChild($el('span', { class: 'date' + (late ? ' late' : '') },
-    fmtDate(t.date_cible) + (t.estim_heures ? ` · ${t.estim_heures}h` : ''),
+    fmtDate(t.date_cible),
     t.push_count ? $el('span', { class: 'push-indicator' }, ` ↻${t.push_count}`) : null
   ));
   // Nettoyer le flag apres 2s (affichage)
@@ -1400,7 +1399,6 @@ function fillTaskEditFields(t) {
   document.getElementById('task-desc').value = t.note || '';
   document.getElementById('task-livrable').value = t.livrable || '';
   document.getElementById('task-statut').value = t.statut || 'Pas commence';
-  document.getElementById('task-heures').value = t.estim_heures || '';
   document.getElementById('task-cash').value = t.cash_impact || 0;
   document.getElementById('task-urgency').value = t.urgency || 0;
   document.getElementById('task-strat').value = t.strategic_value || 0;
@@ -1563,7 +1561,6 @@ function closeTaskEdit() {
 async function saveTaskEdit() {
   const titre = document.getElementById('task-titre').value.trim();
   if (!titre) { WuboGrist.toast('Titre obligatoire', 'warn'); return; }
-  const heures = parseFloat(document.getElementById('task-heures').value) || 0;
   const dateStr = document.getElementById('task-date').value;
   const dateUnix = inputDateToUnix(dateStr);
   const fields = {
@@ -1571,7 +1568,6 @@ async function saveTaskEdit() {
     note: document.getElementById('task-desc').value,
     livrable: document.getElementById('task-livrable').value,
     statut: document.getElementById('task-statut').value,
-    estim_heures: heures,
     cash_impact: parseInt(document.getElementById('task-cash').value) || 0,
     urgency: parseInt(document.getElementById('task-urgency').value) || 0,
     strategic_value: parseInt(document.getElementById('task-strat').value) || 0,
