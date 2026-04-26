@@ -309,6 +309,34 @@
   .cell .libre { font-size: 8px; color: var(--text-faint); font-style: italic; }
   .cell .note-dot { position: absolute; bottom: 3px; right: 4px; font-size: 9px; color: var(--warning); line-height: 1; }
   .cell .ext-dot { position: absolute; bottom: 3px; left: 4px; font-size: 8px; color: var(--danger); line-height: 1; }
+  /* Label custom du sous-bloc (Sport, Atelier, etc.) en haut de cellule */
+  .cell .cell-label {
+    font-size: 8px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-dim);
+    text-align: center;
+    line-height: 1;
+    padding: 1px 2px;
+  }
+  .cell .multi-bloc-badge {
+    position: absolute; top: 3px; left: 3px;
+    font-size: 8px; font-weight: 700;
+    background: var(--current-soft); color: var(--current);
+    padding: 1px 3px; border-radius: 3px; line-height: 1;
+  }
+  /* Cellule grisee : aucun sous-bloc actif (recurrence skip) */
+  .cell.empty.disabled {
+    background: repeating-linear-gradient(45deg, var(--surface), var(--surface) 4px, var(--surface-alt) 4px, var(--surface-alt) 6px);
+    cursor: default;
+    opacity: 0.5;
+  }
+  /* Cellule dont tous les blocs sont marques bloque dans le profil */
+  .cell.bloque {
+    border-style: dashed;
+    background: repeating-linear-gradient(45deg, var(--surface), var(--surface) 4px, var(--surface-alt) 4px, var(--surface-alt) 6px);
+  }
 
   /* ============ LIST MOBILE ============ */
   .list-days {
@@ -386,6 +414,23 @@
     color: var(--text-dim);
   }
   .slot.current .slot-tranche { color: var(--current); }
+  .slot .slot-tranche-time {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-faint);
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .slot.bloque {
+    border-style: dashed;
+    opacity: 0.7;
+    background: repeating-linear-gradient(45deg, var(--surface), var(--surface) 6px, var(--surface-alt) 6px, var(--surface-alt) 8px);
+  }
+  .slot.empty.disabled {
+    opacity: 0.5;
+    cursor: default;
+    background: repeating-linear-gradient(45deg, var(--surface), var(--surface) 6px, var(--surface-alt) 6px, var(--surface-alt) 8px);
+  }
   .slot .slot-body {
     min-width: 0;
     display: flex;
@@ -822,6 +867,9 @@ let allBlocs = [], tachesById = {}, currentBlocId = null;
 let currentTaskEditId = null, currentTaskNewBlocId = null, currentTaskParent = null;
 let currentTaskOriginalDate = null, currentPushCount = 0;
 let pendingFlashBlocId = null; // id du bloc a flasher au prochain render
+// Profil sous-blocs du current user, charge en parallele dans render(). Sert au label
+// custom (Sport, Atelier, etc.) et au filtrage par recurrence.
+let profilCurrent = [];
 
 // Fenêtre glissante (utilisée par la vue Liste)
 let dayOffset = 0;      // offset en jours depuis today
@@ -892,22 +940,39 @@ function windowDaysISO() {
   return days;
 }
 
-// Indexe les blocs par (date, tranche). En cas de N blocs dans la meme tranche
-// (multi-bloc/tranche du nouveau modele), on garde celui d'ordre intra-tranche le plus petit.
-// Le widget affiche encore 1 bloc par (jour, tranche). Multi-bloc visible dans Aujourd'hui.
+// Indexe les blocs par (date, tranche). Renvoie un ARRAY de blocs par cellule
+// pour supporter le multi-bloc dans une meme tranche (Sport + Matin par ex.).
+// Tri intra-tranche par tranche_ordre croissant.
 function blocsByDayISO(blocs) {
   const byDay = {};
   blocs.forEach(b => {
     const iso = WuboGrist.gristDateToISO(b.date);
     if (!iso) return;
     if (!byDay[iso]) byDay[iso] = {};
-    const existing = byDay[iso][b.tranche];
-    const ordre = b.tranche_ordre || 1;
-    if (!existing || ordre < (existing.tranche_ordre || 1)) {
-      byDay[iso][b.tranche] = b;
-    }
+    if (!byDay[iso][b.tranche]) byDay[iso][b.tranche] = [];
+    byDay[iso][b.tranche].push(b);
+  });
+  // Tri intra-tranche par tranche_ordre
+  Object.keys(byDay).forEach(iso => {
+    Object.keys(byDay[iso]).forEach(tr => {
+      byDay[iso][tr].sort((a, b) => (a.tranche_ordre || 1) - (b.tranche_ordre || 1));
+    });
   });
   return byDay;
+}
+
+// Renvoie les profil sous-blocs du current user actifs a la date donnee + dans la tranche.
+// Filtre par recurrence (jours_semaine, date_debut, date_fin) si helper dispo.
+function profilBlocsForCell(iso, tranche) {
+  if (!profilCurrent || !profilCurrent.length) return [];
+  const dateUnix = inputDateToUnix(iso);
+  return profilCurrent.filter(p => {
+    if (p.tranche !== tranche) return false;
+    if (dateUnix != null && WuboGrist.isProfilBlocActiveOnDate) {
+      return WuboGrist.isProfilBlocActiveOnDate(p, dateUnix);
+    }
+    return true;
+  });
 }
 
 function showError(msg) {
@@ -961,53 +1026,106 @@ function blocHasExtDeadline(bloc) {
   return tIds.some(id => tachesById[id] && tachesById[id].est_deadline_externe);
 }
 
-function isBlocCurrent(bloc, isToday, tranche) {
-  const h = new Date().getHours();
-  const curT = h >= 8 && h < 13 ? 'Matin' : h >= 13 && h < 18 ? 'Aprem' : h >= 18 && h < 22 ? 'Soir' : null;
-  const blocStatut = (bloc && bloc.statut || '').toLowerCase();
-  return isToday && curT === tranche && bloc && !blocStatut.includes('fait') && !blocStatut.includes('zapp');
+// "Current" base sur les vrais horaires du sous-bloc (override ou profil).
+// Plus de heuristique heure-tranche : on lit l'horaire reel.
+function isBlocCurrent(bloc, isToday) {
+  if (!isToday || !bloc) return false;
+  const blocStatut = (bloc.statut || '').toLowerCase();
+  if (blocStatut.includes('fait') || blocStatut.includes('zapp')) return false;
+  if (WuboGrist.isBlocCurrentNow) return WuboGrist.isBlocCurrentNow(bloc, profilCurrent);
+  return false;
 }
 
-function renderCell(bloc, isToday, tranche, iso) {
-  const isCurrent = isBlocCurrent(bloc, isToday, tranche);
-  let cls = cellClass(bloc);
-  if (isCurrent) cls = 'cell current';
-  if (bloc && pendingFlashBlocId === bloc.id) cls += ' just-updated';
+// Cellule grille : recoit un array de blocs (multi-bloc/cellule). Affiche le label
+// custom du sous-bloc (Sport, Atelier...) + le 1er titre de tache + "+N" si plusieurs.
+// Si array vide : montre les sous-blocs configures actifs ce jour OU placeholder vide.
+function renderCell(blocsInCell, isToday, tranche, iso) {
+  blocsInCell = Array.isArray(blocsInCell) ? blocsInCell : (blocsInCell ? [blocsInCell] : []);
+  const profilForCell = profilBlocsForCell(iso, tranche);
 
-  const cell = $el('div', { class: cls });
-  if (bloc) cell.onclick = () => openBloc(bloc.id);
-  else if (iso) {
+  // Cellule sans bloc instancie
+  if (blocsInCell.length === 0) {
+    // Aucun sous-bloc configure (ou recurrence skip ce jour) → cellule grisee
+    if (profilForCell.length === 0) {
+      const cell = $el('div', { class: 'cell empty disabled' });
+      cell.appendChild($el('div', { style: 'font-size:8px;color:var(--text-faint);text-align:center' }, '—'));
+      return cell;
+    }
+    // Sous-bloc configure mais pas instancie : placeholder cliquable
+    const cell = $el('div', { class: 'cell empty' });
     cell.style.cursor = 'pointer';
     cell.onclick = () => createBlocAt(iso, tranche);
-  }
-  cell.appendChild($el('span', { class: dotClass(bloc, isCurrent) }));
-
-  if (!bloc) {
-    cell.appendChild($el('div', { style: { fontSize: '8px', color: 'var(--current)', textAlign: 'center' } }, '+'));
+    cell.appendChild($el('span', { class: 'status-dot' }));
+    const firstLabel = profilForCell[0].label || tranche;
+    cell.appendChild($el('div', { class: 'cell-label' }, firstLabel));
+    cell.appendChild($el('div', { style: 'font-size:8px;color:var(--current);text-align:center' },
+      profilForCell.length > 1 ? `+ (${profilForCell.length})` : '+'
+    ));
     return cell;
   }
 
-  const tIds = WuboGrist.refListIds(bloc.taches_liees);
-  const titles = tIds.map(id => (tachesById[id] && tachesById[id].titre) || '').filter(Boolean);
-  if (titles.length === 0) {
+  // Cellule avec 1+ blocs instancies : affiche le 1er, badge "+N" si plusieurs
+  const primary = blocsInCell[0];
+  const isCurrent = blocsInCell.some(b => isBlocCurrent(b, isToday));
+  let cls = cellClass(primary);
+  if (isCurrent) cls = 'cell current';
+  if (blocsInCell.some(b => pendingFlashBlocId === b.id)) cls += ' just-updated';
+
+  // Si TOUS les blocs sont bloques (profil) → marquer cellule
+  const profilByOrdre = new Map(profilForCell.map(p => [p.ordre || 1, p]));
+  const allBlocked = blocsInCell.every(b => {
+    const p = profilByOrdre.get(b.tranche_ordre || 1);
+    return p && p.bloque;
+  });
+  if (allBlocked) cls += ' bloque';
+
+  const cell = $el('div', { class: cls });
+  cell.onclick = () => {
+    // Si un seul bloc, ouvrir directement. Sinon picker.
+    if (blocsInCell.length === 1) openBloc(primary.id);
+    else createBlocAt(iso, tranche);
+  };
+  cell.appendChild($el('span', { class: dotClass(primary, isCurrent) }));
+
+  // Label custom du sous-bloc (override ou profil)
+  const display = WuboGrist.getBlocDisplay(primary, profilCurrent);
+  cell.appendChild($el('div', { class: 'cell-label' }, display.label || tranche));
+
+  // Aggregation titres + compteur multi-bloc
+  const allTitles = [];
+  blocsInCell.forEach(b => {
+    WuboGrist.refListIds(b.taches_liees).forEach(id => {
+      const t = tachesById[id];
+      if (t && t.titre) allTitles.push(t.titre);
+    });
+  });
+  if (allTitles.length === 0) {
     cell.appendChild($el('div', { class: 'libre' }, 'Libre'));
   } else {
-    cell.appendChild($el('div', { class: 'task-main', title: titles.join(' · ') }, titles[0]));
-    if (titles.length > 1) {
-      cell.appendChild($el('div', { class: 'task-extra' }, `+${titles.length - 1}`));
+    cell.appendChild($el('div', { class: 'task-main', title: allTitles.join(' · ') }, allTitles[0]));
+    if (allTitles.length > 1) {
+      cell.appendChild($el('div', { class: 'task-extra' }, `+${allTitles.length - 1}`));
     }
   }
+  if (blocsInCell.length > 1) {
+    cell.appendChild($el('span', { class: 'multi-bloc-badge', title: `${blocsInCell.length} sous-blocs` }, `${blocsInCell.length}×`));
+  }
 
-  if (bloc.note_fin_bloc) cell.appendChild($el('span', { class: 'note-dot', title: bloc.note_fin_bloc }, '●'));
-  if (blocHasExtDeadline(bloc)) cell.appendChild($el('span', { class: 'ext-dot', title: 'Deadline externe' }, '⏰'));
-  // Pastilles assignees centrées en bas de la cellule
-  const cellAssignees = blocAssignees(bloc);
-  if (cellAssignees.length) {
+  if (blocsInCell.some(b => b.note_fin_bloc)) {
+    cell.appendChild($el('span', { class: 'note-dot', title: 'Note de fin' }, '●'));
+  }
+  if (blocsInCell.some(b => blocHasExtDeadline(b))) {
+    cell.appendChild($el('span', { class: 'ext-dot', title: 'Deadline externe' }, '⏰'));
+  }
+  // Pastilles assignees agregees sur tous les blocs
+  const allAssignees = new Set();
+  blocsInCell.forEach(b => blocAssignees(b).forEach(u => allAssignees.add(u)));
+  if (allAssignees.size) {
     const stack = $el('span', {
       class: 'assignee-stack sm',
       style: 'position:absolute;bottom:3px;left:50%;transform:translateX(-50%)'
     });
-    cellAssignees.forEach(u => {
+    Array.from(allAssignees).forEach(u => {
       stack.appendChild($el('span', { class: 'assignee-pill ' + u.toLowerCase(), title: u }, u.charAt(0)));
     });
     cell.appendChild(stack);
@@ -1030,58 +1148,100 @@ function blocAssignees(bloc) {
   return Array.from(set);
 }
 
-function renderSlot(bloc, isToday, tranche, iso) {
-  const isCurrent = isBlocCurrent(bloc, isToday, tranche);
-  let cls = slotClass(bloc);
-  if (isCurrent) cls = 'slot current';
-  if (bloc && pendingFlashBlocId === bloc.id) cls += ' just-updated';
+// Slot vue Liste : recoit array de blocs. Affiche le label custom + horaires
+// + multi-bloc badge si plusieurs sous-blocs dans la tranche ce jour.
+function renderSlot(blocsInCell, isToday, tranche, iso) {
+  blocsInCell = Array.isArray(blocsInCell) ? blocsInCell : (blocsInCell ? [blocsInCell] : []);
+  const profilForCell = profilBlocsForCell(iso, tranche);
 
-  const slot = $el('div', { class: cls });
-  if (bloc) slot.onclick = () => openBloc(bloc.id);
-  else if (iso) slot.onclick = () => createBlocAt(iso, tranche);
-
-  slot.appendChild($el('div', { class: 'slot-tranche' }, tranche));
-
-  const body = $el('div', { class: 'slot-body' });
-  if (!bloc) {
-    body.appendChild($el('div', { class: 'slot-plan' }, '+ Planifier ce bloc'));
+  if (blocsInCell.length === 0) {
+    if (profilForCell.length === 0) {
+      const slot = $el('div', { class: 'slot empty disabled' });
+      slot.appendChild($el('div', { class: 'slot-tranche' }, tranche));
+      slot.appendChild($el('div', { class: 'slot-body' },
+        $el('div', { class: 'slot-libre', style: 'color:var(--text-faint);font-style:italic' }, 'Pas de sous-bloc')
+      ));
+      slot.appendChild($el('span', {}));
+      return slot;
+    }
+    const slot = $el('div', { class: 'slot empty' });
+    slot.onclick = () => createBlocAt(iso, tranche);
+    slot.appendChild($el('div', { class: 'slot-tranche' }, profilForCell[0].label || tranche));
+    const body = $el('div', { class: 'slot-body' });
+    const time = WuboGrist.formatBlocTime(profilForCell[0].debut_heure, profilForCell[0].fin_heure) || '';
+    const planTxt = profilForCell.length > 1
+      ? `+ Planifier (${profilForCell.length} sous-blocs)`
+      : (time ? `+ Planifier ${time}` : '+ Planifier ce bloc');
+    body.appendChild($el('div', { class: 'slot-plan' }, planTxt));
     slot.appendChild(body);
     slot.appendChild($el('span', {}));
     return slot;
   }
 
-  const tIds = WuboGrist.refListIds(bloc.taches_liees);
-  const titles = tIds.map(id => (tachesById[id] && tachesById[id].titre) || '').filter(Boolean);
-  if (titles.length === 0) {
+  const primary = blocsInCell[0];
+  const isCurrent = blocsInCell.some(b => isBlocCurrent(b, isToday));
+  let cls = slotClass(primary);
+  if (isCurrent) cls = 'slot current';
+  if (blocsInCell.some(b => pendingFlashBlocId === b.id)) cls += ' just-updated';
+  const profilByOrdre = new Map(profilForCell.map(p => [p.ordre || 1, p]));
+  const allBlocked = blocsInCell.every(b => {
+    const p = profilByOrdre.get(b.tranche_ordre || 1);
+    return p && p.bloque;
+  });
+  if (allBlocked) cls += ' bloque';
+
+  const slot = $el('div', { class: cls });
+  slot.onclick = () => {
+    if (blocsInCell.length === 1) openBloc(primary.id);
+    else createBlocAt(iso, tranche);
+  };
+
+  // Label custom + heure + multi-bloc badge
+  const display = WuboGrist.getBlocDisplay(primary, profilCurrent);
+  const trancheLabel = display.label || tranche;
+  const time = WuboGrist.formatBlocTime(display.debut, display.fin) || '';
+  const headTxt = blocsInCell.length > 1
+    ? `${trancheLabel} (+${blocsInCell.length - 1})`
+    : trancheLabel;
+  const trancheEl = $el('div', { class: 'slot-tranche' }, headTxt);
+  if (time) trancheEl.appendChild($el('span', { class: 'slot-tranche-time' }, ' · ' + time));
+  slot.appendChild(trancheEl);
+
+  const body = $el('div', { class: 'slot-body' });
+  const allTitles = [];
+  blocsInCell.forEach(b => {
+    WuboGrist.refListIds(b.taches_liees).forEach(id => {
+      const t = tachesById[id];
+      if (t && t.titre) allTitles.push(t.titre);
+    });
+  });
+  if (allTitles.length === 0) {
     body.appendChild($el('div', { class: 'slot-libre' }, 'Libre'));
   } else {
-    body.appendChild($el('div', { class: 'slot-title', title: titles.join(' · ') }, titles[0]));
+    body.appendChild($el('div', { class: 'slot-title', title: allTitles.join(' · ') }, allTitles[0]));
     const extraBits = [];
-    if (titles.length > 1) extraBits.push(`+${titles.length - 1}`);
+    if (allTitles.length > 1) extraBits.push(`+${allTitles.length - 1}`);
     const extra = $el('div', { class: 'slot-extra' });
     if (extraBits.length) extra.appendChild($el('span', {}, extraBits.join(' · ')));
-    if (bloc.note_fin_bloc) {
-      extra.appendChild($el('span', { class: 'slot-note', title: bloc.note_fin_bloc }, '● note'));
+    if (blocsInCell.some(b => b.note_fin_bloc)) {
+      extra.appendChild($el('span', { class: 'slot-note', title: 'Note' }, '● note'));
     }
-    if (blocHasExtDeadline(bloc)) {
+    if (blocsInCell.some(b => blocHasExtDeadline(b))) {
       extra.appendChild($el('span', { class: 'slot-ext-badge' }, '⏰ deadline'));
     }
     if (extra.children.length) body.appendChild(extra);
   }
   slot.appendChild(body);
-  // Pastilles assignees agrégées (bloc + tâches)
-  const assignees = blocAssignees(bloc);
-  if (assignees.length) {
+  const allAssignees = new Set();
+  blocsInCell.forEach(b => blocAssignees(b).forEach(u => allAssignees.add(u)));
+  if (allAssignees.size) {
     const pastilles = $el('span', { class: 'assignee-stack sm' });
-    assignees.forEach(u => {
-      pastilles.appendChild($el('span', {
-        class: 'assignee-pill ' + u.toLowerCase(),
-        title: u
-      }, u.charAt(0)));
+    Array.from(allAssignees).forEach(u => {
+      pastilles.appendChild($el('span', { class: 'assignee-pill ' + u.toLowerCase(), title: u }, u.charAt(0)));
     });
     slot.appendChild(pastilles);
   } else {
-    slot.appendChild($el('span', { class: slotDotClass(bloc, isCurrent) }));
+    slot.appendChild($el('span', { class: slotDotClass(primary, isCurrent) }));
   }
   return slot;
 }
@@ -1192,11 +1352,13 @@ function renderList(daysISO, byDay, todayISO) {
     const isToday = iso === todayISO;
     const blocsOfDay = byDay[iso] || {};
 
-    // Compte blocs faits / total du jour
+    // Compte blocs faits / total du jour (multi-bloc compatible)
     let dayFait = 0, dayTotal = 0;
-    Object.values(blocsOfDay).forEach(b => {
-      dayTotal++;
-      if ((b.statut || '').toLowerCase().includes('fait')) dayFait++;
+    Object.values(blocsOfDay).forEach(blocsArr => {
+      (Array.isArray(blocsArr) ? blocsArr : [blocsArr]).forEach(b => {
+        dayTotal++;
+        if ((b.statut || '').toLowerCase().includes('fait')) dayFait++;
+      });
     });
 
     const dayCard = $el('div', { class: 'day-card' + (isToday ? ' today' : '') });
@@ -1297,11 +1459,16 @@ async function render() {
   document.getElementById('error').style.display = 'none';
   windowSize = computeWindowSize();
 
-  allBlocs = []; tachesById = {};
+  allBlocs = []; tachesById = {}; profilCurrent = [];
   try {
-    const [bRaw, tRaw] = await Promise.all([WuboGrist.fetchRows('Blocs_temps'), WuboGrist.fetchRows('Taches')]);
+    const currentUser = WuboGrist.getUser() || 'Taki';
+    const [bRaw, tRaw, prof] = await Promise.all([
+      WuboGrist.fetchRows('Blocs_temps'),
+      WuboGrist.fetchRows('Taches'),
+      WuboGrist.getProfilBlocs(currentUser)
+    ]);
+    profilCurrent = prof;
     // Vue mono-user : on n'affiche que les blocs/taches du user actif.
-    // Switch de profil pour voir Numa/Lyes.
     allBlocs = WuboGrist.filterMineOnly(bRaw);
     const t = WuboGrist.filterMineOnly(tRaw);
     t.forEach(x => { tachesById[x.id] = x; });
@@ -1332,9 +1499,11 @@ async function render() {
     let fait = 0, total = 0;
     daysISO.forEach(iso => {
       if (!byDay[iso]) return;
-      Object.values(byDay[iso]).forEach(bloc => {
-        total++;
-        if ((bloc.statut || '').toLowerCase().includes('fait')) fait++;
+      Object.values(byDay[iso]).forEach(blocsArr => {
+        (Array.isArray(blocsArr) ? blocsArr : [blocsArr]).forEach(bloc => {
+          total++;
+          if ((bloc.statut || '').toLowerCase().includes('fait')) fait++;
+        });
       });
     });
     const range = formatRange(firstISO, lastISO);
@@ -1350,9 +1519,11 @@ async function render() {
     let fait = 0, total = 0;
     daysISO.forEach(iso => {
       if (!byDay[iso]) return;
-      Object.values(byDay[iso]).forEach(bloc => {
-        total++;
-        if ((bloc.statut || '').toLowerCase().includes('fait')) fait++;
+      Object.values(byDay[iso]).forEach(blocsArr => {
+        (Array.isArray(blocsArr) ? blocsArr : [blocsArr]).forEach(bloc => {
+          total++;
+          if ((bloc.statut || '').toLowerCase().includes('fait')) fait++;
+        });
       });
     });
     document.getElementById('sub').textContent = total === 0
@@ -1451,14 +1622,16 @@ function renderAgenda(byDay, todayISO) {
     if (dd.getMonth() !== refMonth) cls.push('other-month');
     if (isWeekend) cls.push('weekend');
 
-    // ⏰ si au moins une tâche du jour a est_deadline_externe
+    // ⏰ si au moins une tâche du jour a est_deadline_externe (multi-bloc compatible)
     let hasExt = false;
     ['Matin', 'Aprem', 'Soir'].forEach(tr => {
-      const b = blocs[tr];
-      if (!b) return;
-      const tIds = WuboGrist.refListIds(b.taches_liees);
-      tIds.forEach(id => {
-        if (tachesById[id] && tachesById[id].est_deadline_externe) hasExt = true;
+      const blocsArr = blocs[tr];
+      if (!blocsArr) return;
+      (Array.isArray(blocsArr) ? blocsArr : [blocsArr]).forEach(b => {
+        const tIds = WuboGrist.refListIds(b.taches_liees);
+        tIds.forEach(id => {
+          if (tachesById[id] && tachesById[id].est_deadline_externe) hasExt = true;
+        });
       });
     });
     if (hasExt) cls.push('has-ext');
@@ -1471,8 +1644,10 @@ function renderAgenda(byDay, todayISO) {
 
     const dots = $el('div', { class: 'agenda-day-dots' });
     ['Matin', 'Aprem', 'Soir'].forEach(tr => {
-      const b = blocs[tr];
-      const isCurrent = isBlocCurrent(b, isToday, tr);
+      const blocsArr = blocs[tr];
+      const arr = blocsArr ? (Array.isArray(blocsArr) ? blocsArr : [blocsArr]) : [];
+      const b = arr[0];
+      const isCurrent = arr.some(x => isBlocCurrent(x, isToday));
       let dotCls = 'agenda-dot empty';
       if (b) {
         const s = (b.statut || '').toLowerCase();
