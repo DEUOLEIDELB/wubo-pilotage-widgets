@@ -995,6 +995,14 @@ html { background: var(--bg); }
   z-index: 1;
 }
 
+/* Icone Google Calendar pour les taches importees */
+.gcal-icon {
+  font-size: 12px;
+  line-height: 1;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
 .profile-footer {
   text-align: center;
   font-size: 10px;

@@ -25,6 +25,7 @@
 <script src="../../lib/grist-api.js"></script>
 <script src="../../lib/modal-swipe.js"></script>
 <script src="../../lib/wubo-ui.js"></script>
+<script src="../../lib/wubo-gcal.js"></script>
 <script src="../../lib/wubo-task-modal.js"></script>
 <style>
   #app {
@@ -490,6 +491,34 @@ function weekNumber(d) {
   return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
 }
 
+// Bandeau reauth gCal : token expire detecte au sync. Click pour reconnecter.
+function showGCalReauthBanner() {
+  const existing = document.getElementById('gcal-reauth-banner');
+  if (existing) return; // deja affiche
+  const banner = $el('div', {
+    id: 'gcal-reauth-banner',
+    style: 'background:var(--warning-soft);border:1px solid var(--warning);border-radius:6px;padding:8px 10px;margin-bottom:6px;display:flex;align-items:center;gap:8px;cursor:pointer',
+    onclick: async () => {
+      const user = WuboGrist.getUser() || 'Taki';
+      try {
+        await WuboGCal.connect(user);
+        WuboGrist.toast('Google Calendar reconnecté', 'success');
+        banner.remove();
+        await render();
+      } catch (e) {
+        WuboGrist.toast('Reconnexion refusée', 'error');
+      }
+    }
+  },
+    $el('span', { style: 'font-size:14px' }, '⚠️'),
+    $el('span', { style: 'flex:1;font-size:12px;color:var(--warning)' }, 'Google Calendar : session expirée. Tap pour reconnecter.')
+  );
+  const rattrapage = document.getElementById('rattrapage');
+  if (rattrapage && rattrapage.parentNode) {
+    rattrapage.parentNode.insertBefore(banner, rattrapage);
+  }
+}
+
 function showError(msg) {
   const e = document.getElementById('error');
   $clear(e);
@@ -513,6 +542,22 @@ async function render() {
   const now = new Date();
   document.getElementById('date').textContent =
     now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+
+  // Sync Google Calendar (silencieux). Best-effort : si erreur, on continue.
+  // Fenetre = aujourd'hui uniquement (00:00 → 23:59:59).
+  const _currentUser = WuboGrist.getUser() || 'Taki';
+  if (window.WuboGCal && WuboGCal.isConnected(_currentUser)) {
+    const startISO = new Date().toISOString().slice(0, 10) + 'T00:00:00Z';
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+    const endISO = tomorrow.toISOString().slice(0, 10) + 'T00:00:00Z';
+    try {
+      const res = await WuboGCal.syncWindow(_currentUser, startISO, endISO);
+      if (res && res.tokenExpired) {
+        // Bandeau reauth (caller affiche, non-bloquant)
+        showGCalReauthBanner();
+      }
+    } catch (_) { /* silencieux */ }
+  }
 
   tachesById = {};
   let fetchOk = true;
@@ -658,6 +703,7 @@ function renderTaskRow(t) {
   const main = $el('div', { class: 'tache-main' },
     $el('span', { class: 'status-pill ' + statutClass(t.statut) }),
     t.est_deadline_externe ? $el('span', { class: 'ext-deadline-icon', title: 'Deadline externe' }, '⏰') : null,
+    t.gcal_event_id ? $el('span', { class: 'gcal-icon', title: 'Importé de Google Calendar' }, '📅') : null,
     $el('span', { class: 'titre-tache' }, t.titre || '(sans titre)'),
     t.times_missed && t.times_missed > 0
       ? $el('span', { class: 'missed-indicator', title: `Ratée ${t.times_missed}x` }, `× ${t.times_missed}`)

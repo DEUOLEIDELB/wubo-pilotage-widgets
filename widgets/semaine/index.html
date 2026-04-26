@@ -23,6 +23,7 @@
 <script src="../../lib/grist-api.js"></script>
 <script src="../../lib/modal-swipe.js"></script>
 <script src="../../lib/wubo-ui.js"></script>
+<script src="../../lib/wubo-gcal.js"></script>
 <script src="../../lib/wubo-task-modal.js"></script>
 <style>
   #app {
@@ -1129,6 +1130,32 @@ function profilBlocsForCell(iso, tranche) {
   });
 }
 
+// Bandeau reauth gCal : token expire detecte au sync. Click pour reconnecter.
+function showGCalReauthBanner() {
+  const existing = document.getElementById('gcal-reauth-banner');
+  if (existing) return;
+  const banner = $el('div', {
+    id: 'gcal-reauth-banner',
+    style: 'background:var(--warning-soft);border:1px solid var(--warning);border-radius:6px;padding:8px 10px;margin-bottom:6px;display:flex;align-items:center;gap:8px;cursor:pointer',
+    onclick: async () => {
+      const user = WuboGrist.getUser() || 'Taki';
+      try {
+        await WuboGCal.connect(user);
+        WuboGrist.toast('Google Calendar reconnecté', 'success');
+        banner.remove();
+        await render();
+      } catch (e) {
+        WuboGrist.toast('Reconnexion refusée', 'error');
+      }
+    }
+  },
+    $el('span', { style: 'font-size:14px' }, '⚠️'),
+    $el('span', { style: 'flex:1;font-size:12px;color:var(--warning)' }, 'Google Calendar : session expirée. Tap pour reconnecter.')
+  );
+  const app = document.getElementById('app');
+  if (app) app.insertBefore(banner, app.firstChild);
+}
+
 function showError(msg) {
   const e = document.getElementById('error');
   $clear(e);
@@ -1481,6 +1508,9 @@ function renderWeekTaskRow(t) {
     class: 'week-task-time' + (t.heure_debut ? '' : ' no-time')
   }, heureTxt));
   row.appendChild($el('span', { class: 'status-pill ' + statutClass(t.statut) }));
+  if (t.gcal_event_id) {
+    row.appendChild($el('span', { class: 'gcal-icon', title: 'Importé de Google Calendar' }, '📅'));
+  }
   if (t.est_deadline_externe) {
     row.appendChild($el('span', { class: 'ext-deadline-icon', title: 'Deadline externe' }, '⏰'));
   }
@@ -1647,6 +1677,23 @@ function formatShortDate(unixTs) {
 async function render() {
   document.getElementById('error').style.display = 'none';
   windowSize = computeWindowSize();
+
+  // Sync Google Calendar pour la fenetre visible (silencieux, best-effort).
+  const _currentUser = WuboGrist.getUser() || 'Taki';
+  if (window.WuboGCal && WuboGCal.isConnected(_currentUser)) {
+    const _visibleDays = currentView === 'agenda' ? agendaDaysISO() : windowDaysISO();
+    if (_visibleDays && _visibleDays.length > 0) {
+      const startISO = _visibleDays[0] + 'T00:00:00Z';
+      const lastDay = _visibleDays[_visibleDays.length - 1];
+      const [_y, _m, _d] = lastDay.split('-').map(Number);
+      const dEnd = new Date(Date.UTC(_y, _m - 1, _d + 1)); // jour suivant 00:00 UTC
+      const endISO = dEnd.toISOString();
+      try {
+        const res = await WuboGCal.syncWindow(_currentUser, startISO, endISO);
+        if (res && res.tokenExpired) showGCalReauthBanner();
+      } catch (_) { /* silencieux */ }
+    }
+  }
 
   allBlocs = []; tachesById = {}; profilCurrent = [];
   try {
