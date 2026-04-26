@@ -64,6 +64,9 @@
   .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 5px; padding: 6px 8px; }
   .stat .label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); }
   .stat .value { font-size: 18px; font-weight: 700; color: var(--text); line-height: 1.1; margin-top: 2px; }
+  /* Stat critique non-zero : chiffre en rouge pour remonter visuellement */
+  .stat.stat-danger .value { color: var(--danger); }
+  .stat.stat-danger { border-color: var(--danger); }
 
   /* ============ SUJETS À POUSSER (zone de conscientisation) ============ */
   /* Design utilitaire, sans emoji décoratif. Swipe pour archiver / supprimer.
@@ -165,6 +168,28 @@
   }
   .sujet-card.long .sujet-age { color: var(--danger); font-weight: 600; }
   .sujet-card.moyen .sujet-age { color: var(--warning); font-weight: 600; }
+  /* Kebab actions sur sujet : ouvre un menu (Pousser/Archiver/Supprimer).
+     Indispensable sur desktop ou le swipe est impossible, et discoverable
+     pour le clavier/lecteur d'ecran. */
+  .sujet-kebab {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    color: var(--text-faint);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .sujet-kebab:hover { background: var(--surface-2, var(--surface-alt)); color: var(--text); border-color: var(--border); }
+  .sujet-kebab:focus-visible { outline: 2px solid var(--current); outline-offset: 1px; }
   @keyframes sujetFlash {
     0% { background: var(--accent-soft); }
     100% { background: var(--surface); }
@@ -699,8 +724,13 @@ function inputDateToUnix(s) { if (!s) return null; const [y, m, d] = s.split('-'
 function openModal(id) { document.getElementById(id).classList.remove('hidden'); WuboGrist.lockBody(); }
 function closeModal(id) { document.getElementById(id).classList.add('hidden'); WuboGrist.unlockBody(); }
 
-function stat(label, value) {
-  return $el('div', { class: 'stat' },
+function stat(label, value, variant) {
+  // variant optionnel : 'danger' colore le chiffre en rouge si > 0.
+  // Permet aux stats critiques (ex: En retard) de remonter visuellement
+  // sans crier quand tout va bien.
+  const classes = ['stat'];
+  if (variant === 'danger' && Number(value) > 0) classes.push('stat-danger');
+  return $el('div', { class: classes.join(' ') },
     $el('div', { class: 'label' }, label),
     $el('div', { class: 'value' }, String(value))
   );
@@ -743,6 +773,28 @@ function renderSujetCard(s) {
   card.appendChild(body);
 
   card.appendChild($el('span', { class: 'sujet-age' }, sujetAgeLabel(j)));
+
+  // Kebab : actions accessibles partout (desktop sans swipe, clavier, lecteur d'ecran)
+  const kebab = $el('button', {
+    class: 'sujet-kebab',
+    'aria-label': `Actions pour ${s.titre || 'sujet'}`,
+    title: 'Actions',
+    onclick: async (e) => {
+      e.stopPropagation();
+      const action = await WuboUI.choice({
+        title: s.titre || '(sans titre)',
+        options: [
+          { id: 'pousser', label: 'Pousser', sub: 'Choisir une action concrete' },
+          { id: 'archiver', label: 'Archiver', sub: 'Retire de la liste, garde la trace' },
+          { id: 'supprimer', label: 'Supprimer', sub: 'Definitif', danger: true }
+        ]
+      });
+      if (action === 'pousser') openPushModal(s);
+      else if (action === 'archiver') archiveSujet(s);
+      else if (action === 'supprimer') deleteSujet(s);
+    }
+  }, '⋮');
+  card.appendChild(kebab);
 
   row.appendChild(card);
 
@@ -800,8 +852,23 @@ function attachSujetSwipe(card, sujet) {
 async function archiveSujet(sujet) {
   try {
     await WuboGrist.updateRecord('Sujets_a_pousser', sujet.id, { statut: 'Archive' });
-    WuboGrist.toast('Sujet archivé', 'info');
     await render();
+    // Cooldown undo : barre flottante 8s avec "Annuler" qui restore Actif.
+    // L'archivage est non-destructif (juste un statut), l'undo est sain.
+    const titre = sujet.titre || 'Sujet';
+    WuboUI.cooldownNotice({
+      message: `« ${titre} » archivé`,
+      durationMs: 8000,
+      onCancel: async () => {
+        try {
+          await WuboGrist.updateRecord('Sujets_a_pousser', sujet.id, { statut: 'Actif' });
+          WuboGrist.toast('Restauré', 'info');
+          await render();
+        } catch (e) {
+          WuboGrist.toast('Erreur restore : ' + e.message, 'error');
+        }
+      }
+    });
   } catch (e) {
     WuboGrist.toast('Erreur : ' + e.message, 'error');
   }
@@ -836,7 +903,7 @@ function renderSujetsTop(sujets) {
   const head = $el('div', { class: 'sujets-head' });
   head.appendChild($el('span', { class: 'titre' }, `Sujets à pousser${sujets.length ? ' · ' + sujets.length : ''}`));
   if (sujets.length) {
-    head.appendChild($el('span', { class: 'hint' }, 'Glisse pour archiver/supprimer'));
+    head.appendChild($el('span', { class: 'hint' }, 'Clic ou ⋮ pour agir'));
   }
   block.appendChild(head);
 
@@ -1227,11 +1294,13 @@ function renderObjectif(o) {
   const body = $el('div', { class: 'obj-body' });
   if (o.description) body.appendChild($el('div', { style: { fontSize: '12px', color: 'var(--text-dim)' } }, o.description));
 
+  // Progress bar pleine largeur. Le pourcentage chiffre est deja affiche dans
+  // le tag sticky du header (visible en permanence quand on scrolle), donc inutile
+  // de le repeter ici - la barre suffit comme signal visuel.
   body.appendChild($el('div', { class: 'obj-prog-row' },
     $el('div', { class: 'progress-bar ' + (prog >= 50 ? 'high' : 'low') },
       $el('div', { class: 'fill', style: { width: prog + '%' } })
-    ),
-    $el('span', { class: 'val' }, `${prog}%`)
+    )
   ));
 
   if (o.kpi_vise || o.kpi_actuel) {
@@ -1281,13 +1350,20 @@ async function render() {
   const fait = tachesActives.filter(x => x.statut === 'Fait').length;
   const enCours = tachesActives.filter(x => x.statut === 'En cours').length;
   const bloque = tachesActives.filter(x => x.statut === 'Bloque').length;
+  // "En retard" : tache avec date_cible passee, pas Fait/Abandonne. Plus actionnable
+  // que "Avancement %" (qui dupliquait Faites X/Y).
+  const _todayU = todayUnix();
+  const enRetard = tachesActives.filter(x =>
+    x.date_cible && x.date_cible < _todayU
+    && x.statut !== 'Fait' && x.statut !== 'Abandonne'
+  ).length;
 
   const statsNode = document.getElementById('stats');
   $clear(statsNode);
   statsNode.appendChild(stat('Faites', `${fait}/${total}`));
   statsNode.appendChild(stat('En cours', enCours));
   statsNode.appendChild(stat('Bloquées', bloque));
-  statsNode.appendChild(stat('Avancement', `${total ? Math.round(fait/total*100) : 0}%`));
+  statsNode.appendChild(stat('En retard', enRetard, 'danger'));
 
   document.getElementById('sub').textContent = `${objectifs.length} obj · ${projets.length} projets · ${total} tâches`;
 
