@@ -180,10 +180,13 @@
   }
   /* "À rattraper" ULTRA COMPACT : 1 tache = 1 ligne flex (32px haute).
      [date 52px] [titre flex ellipsis] [✓ 30x30] [→ 30x30].
-     Pour autre chose que ✓Fait ou →Aujourd'hui : tap sur le titre ouvre la modal. */
+     Pour autre chose que ✓Fait ou →Aujourd'hui : tap sur le titre ouvre la modal.
+     Refonte couleur : fond blanc neutre + filet gauche accent (jaune Wubo) pour
+     signaler l'attention sans le cote "alarme orange". Plus DA, moins criard. */
   .rattrapage {
-    background: var(--warning-soft);
-    border: 1px solid var(--warning);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
     border-radius: var(--radius-md);
     padding: 4px 6px 6px;
     display: flex;
@@ -196,7 +199,7 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--warning);
+    color: var(--accent-strong);
     padding: 2px 4px 4px;
   }
   .ratt-task-row {
@@ -205,14 +208,14 @@
     gap: 6px;
     padding: 2px 4px;
     min-height: 36px;
-    border-top: 1px dashed var(--warning);
+    border-top: 1px dashed var(--border);
   }
   .ratt-task-row:first-of-type { border-top: none; }
   .ratt-when {
     font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
-    color: var(--warning);
+    color: var(--accent-strong);
     flex-shrink: 0;
     min-width: 48px;
     line-height: 1.1;
@@ -254,7 +257,7 @@
   .ratt-act-fait:hover { background: var(--success-soft); }
   .ratt-act-today { color: var(--current); border-color: var(--current); }
   .ratt-act-today:hover { background: var(--current-soft); }
-  /* Bouton "+ voir N autres" : pleine largeur, dashed warning, discret mais cliquable.
+  /* Bouton "+ voir N autres" : pleine largeur, dashed accent foncé, discret.
      Apparait sous la liste rattrapage quand le backlog depasse rattrapageVisibleCount.
      Variante .ratt-show-less : meme style mais avec icone reduce. */
   .ratt-show-more {
@@ -262,8 +265,8 @@
     margin-top: 6px;
     padding: 6px 10px;
     background: transparent;
-    border: 1px dashed var(--warning);
-    color: var(--warning);
+    border: 1px dashed var(--border-strong);
+    color: var(--accent-strong);
     border-radius: var(--radius-sm);
     font-size: 11px;
     font-weight: 600;
@@ -273,7 +276,7 @@
     min-height: 30px;
     line-height: 1.2;
   }
-  .ratt-show-more:hover { background: var(--warning-soft); border-style: solid; }
+  .ratt-show-more:hover { background: var(--accent-soft); border-style: solid; border-color: var(--accent); }
   .ratt-show-more:active { transform: translate(1px, 1px); }
   .ratt-show-less { color: var(--text-faint); border-color: var(--border-strong); }
   .ratt-show-less:hover { background: var(--surface-2); color: var(--text); border-color: var(--border-strong); }
