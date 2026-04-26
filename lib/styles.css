@@ -11,6 +11,7 @@
   /* Surfaces : neutre moderne avec teinte violet imperceptible (Wubo DNA sans beige) */
   --bg: #F4F3F7;              /* neutre clair, tech/pro, hint de violet subtile */
   --surface: #FFFFFF;
+  --surface-2: #F7F5FA;       /* niveau intermediaire entre surface et surface-alt */
   --surface-alt: #ECEAF1;     /* surface secondaire douce, teinte violet plus marquee */
   --done-bg: #E9E7EF;         /* compat : surface-alt legerement plus foncee */
 
@@ -100,6 +101,7 @@
   :root[data-theme="auto"] {
     --bg: #15151B;
     --surface: #1F1F26;
+    --surface-2: #25252E;
     --surface-alt: #2A2A33;
     --done-bg: #25252E;
 
@@ -139,6 +141,7 @@
 :root[data-theme="dark"] {
   --bg: #15151B;
   --surface: #1F1F26;
+  --surface-2: #25252E;
   --surface-alt: #2A2A33;
   --done-bg: #25252E;
 
@@ -235,7 +238,10 @@ button.small { padding: 7px 11px; font-size: 13px; border-width: 1px; min-height
 button:disabled { opacity: 0.55; cursor: not-allowed; }
 button:focus-visible { outline: 2px solid var(--current); outline-offset: 2px; }
 
-input, select, textarea {
+/* Inputs textuels et select : exclut explicitement checkbox/radio sinon la regle
+   globale tue leur apparence native (appearance: none + width: 100% + padding 10px
+   transformaient les checkboxes en grands carres vides non cliquables). */
+input:not([type=checkbox]):not([type=radio]), select, textarea {
   font-family: inherit;
   font-size: 15px;
   color: var(--text);
@@ -247,14 +253,30 @@ input, select, textarea {
   -webkit-appearance: none;
   appearance: none;
 }
-input:focus, select:focus, textarea:focus {
+input:not([type=checkbox]):not([type=radio]):focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--current);
   box-shadow: 0 0 0 2px var(--current-soft);
 }
-input:focus-visible, select:focus-visible, textarea:focus-visible {
+input:not([type=checkbox]):not([type=radio]):focus-visible, select:focus-visible, textarea:focus-visible {
   outline: 2px solid var(--current);
   outline-offset: 1px;
+}
+
+/* Checkboxes / radios : apparence native preservee, taillees pour touch (20px),
+   accent-color violet Wubo en light, plus clair en dark. */
+input[type=checkbox], input[type=radio] {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  flex-shrink: 0;
+  cursor: pointer;
+  accent-color: var(--current);
+}
+input[type=checkbox]:focus-visible, input[type=radio]:focus-visible {
+  outline: 2px solid var(--current);
+  outline-offset: 2px;
+  border-radius: 3px;
 }
 a:focus-visible, [role="button"]:focus-visible, [tabindex]:focus-visible {
   outline: 2px solid var(--current);
@@ -781,26 +803,63 @@ html { background: var(--bg); }
 }
 .profil-bloc-controls {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
   flex-wrap: wrap;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-dim);
-  padding-left: 2px;
+  padding: 4px 0 0;
 }
 .profil-bloc-checkbox-label {
-  display: flex;
-  gap: 6px;
+  display: inline-flex;
+  gap: 8px;
   align-items: center;
   cursor: pointer;
   user-select: none;
+  min-height: 36px;
+  padding: 4px 8px 4px 4px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  transition: background 0.12s, border-color 0.12s;
+  font-weight: 600;
 }
-.profil-bloc-checkbox-label input[type=checkbox] {
-  width: auto;
-  margin: 0;
+.profil-bloc-checkbox-label:hover {
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+.profil-bloc-checkbox-label:has(input:checked) {
+  background: var(--current-soft);
+  border-color: var(--current);
+  color: var(--text);
+}
+/* Indicateur "privé" : row avec cross_user_visible=false */
+.profil-bloc-row-wrap.private {
+  border-left: 3px solid var(--text-faint);
+}
+.profil-bloc-private-badge {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+  padding: 2px 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  align-self: flex-start;
 }
 
 /* ============ Recurrence sous-blocs : badge, toggle, panneau ============ */
+/* Wrapper qui groupe les badges (recurrence + privé) sur une meme ligne. */
+.profil-bloc-badges-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
 .profil-bloc-recur-badge {
   display: inline-flex;
   gap: 4px;
@@ -808,7 +867,7 @@ html { background: var(--bg); }
   font-size: 11px;
   color: var(--text-dim);
   padding: 2px 6px;
-  background: var(--surface-2, var(--surface));
+  background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 999px;
   align-self: flex-start;
