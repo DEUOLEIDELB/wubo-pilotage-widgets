@@ -869,11 +869,12 @@ async function render() {
   let fetchOk = true;
   try {
     const currentUser = WuboGrist.getUser() || 'Taki';
-    // Fetch profil + data en parallèle. Profil sert à afficher labels et heures custom.
+    // Fetch profil + data en parallèle. Profil filtre par recurrence (jour de semaine + plage dates).
+    const todayUnix = WuboGrist.daysFromToday(0);
     const [bRaw, tRaw, profil] = await Promise.all([
       WuboGrist.fetchRows('Blocs_temps'),
       WuboGrist.fetchRows('Taches'),
-      WuboGrist.getProfilBlocs(currentUser)
+      WuboGrist.getProfilBlocsForDate(currentUser, todayUnix)
     ]);
     profilCurrent = profil;
     // Jour = vue perso : uniquement les blocs et tâches du user courant (proprietaire ou collaborateur)

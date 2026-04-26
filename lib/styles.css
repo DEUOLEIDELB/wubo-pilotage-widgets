@@ -783,6 +783,7 @@ html { background: var(--bg); }
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
   font-size: 11px;
   color: var(--text-dim);
   padding-left: 2px;
@@ -797,6 +798,137 @@ html { background: var(--bg); }
 .profil-bloc-checkbox-label input[type=checkbox] {
   width: auto;
   margin: 0;
+}
+
+/* ============ Recurrence sous-blocs : badge, toggle, panneau ============ */
+.profil-bloc-recur-badge {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  font-size: 11px;
+  color: var(--text-dim);
+  padding: 2px 6px;
+  background: var(--surface-2, var(--surface));
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  align-self: flex-start;
+  font-weight: 600;
+}
+.profil-bloc-recur-icon {
+  font-size: 10px;
+  opacity: 0.75;
+}
+.profil-bloc-recur-toggle {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+.profil-bloc-recur-toggle.open {
+  background: var(--surface-2, var(--surface));
+  color: var(--text);
+}
+.profil-bloc-recur-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  margin-top: 4px;
+  background: var(--surface-2, var(--surface));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.profil-bloc-jours-row {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.profil-bloc-jour-chip {
+  flex: 1 1 0;
+  min-width: 36px;
+  padding: 6px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: center;
+}
+.profil-bloc-jour-chip:active { transform: translate(1px, 1px); }
+.profil-bloc-jour-chip.picked {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+}
+.profil-bloc-presets-row {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.profil-bloc-presets-row > button {
+  flex: 1 1 auto;
+  font-size: 11px;
+  padding: 4px 8px;
+}
+.profil-bloc-dates-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.profil-bloc-date-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 120px;
+  min-width: 110px;
+}
+.profil-bloc-date-caption {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+.profil-bloc-date-input {
+  font-size: 12px;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  font-family: inherit;
+}
+.profil-bloc-recur-hint {
+  font-size: 11px;
+  color: var(--text-faint, var(--text-dim));
+  font-style: italic;
+  line-height: 1.3;
+}
+
+/* ============ Claude check : pastille modifs non-vues par Claude ============ */
+/* Petit dot orange dans le coin haut-droit pour signaler une row modifiee
+   par un user et pas encore assimilee par Claude. Visuel discret, n'interrompt
+   pas le flux. Utilisable via [data-claude-check="false"] sur n'importe quelle row. */
+[data-claude-check="false"] {
+  position: relative;
+}
+[data-claude-check="false"]::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #E87722;
+  box-shadow: 0 0 0 2px var(--surface);
+  pointer-events: none;
+  z-index: 1;
 }
 
 .profile-footer {

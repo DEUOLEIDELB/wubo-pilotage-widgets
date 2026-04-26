@@ -1586,7 +1586,12 @@ function setupSwipe() {
 async function createBlocAt(iso, tranche) {
   if (!iso) { openCreateBlocModal(); return; }
   const user = WuboGrist.getUser() || 'Taki';
-  const profilBlocs = await WuboGrist.getProfilBlocsByTranche(user, tranche);
+  // Filtre par recurrence : ne garde que les sous-blocs actifs ce jour-la.
+  const dateUnix = inputDateToUnix(iso);
+  const allByTranche = await WuboGrist.getProfilBlocsByTranche(user, tranche);
+  const profilBlocs = (dateUnix != null && WuboGrist.isProfilBlocActiveOnDate)
+    ? allByTranche.filter(p => WuboGrist.isProfilBlocActiveOnDate(p, dateUnix))
+    : allByTranche;
   const existingsInCell = allBlocs.filter(b =>
     WuboGrist.gristDateToISO(b.date) === iso && b.tranche === tranche
   );
