@@ -1761,15 +1761,22 @@ function setupSwipe() {
 async function createBlocAt(iso, tranche) {
   if (!iso) { openCreateBlocModal(); return; }
   const user = WuboGrist.getUser() || 'Taki';
-  // Filtre par recurrence : ne garde que les sous-blocs actifs ce jour-la.
   const dateUnix = inputDateToUnix(iso);
   const allByTranche = await WuboGrist.getProfilBlocsByTranche(user, tranche);
-  const profilBlocs = (dateUnix != null && WuboGrist.isProfilBlocActiveOnDate)
-    ? allByTranche.filter(p => WuboGrist.isProfilBlocActiveOnDate(p, dateUnix))
-    : allByTranche;
   const existingsInCell = allBlocs.filter(b =>
     WuboGrist.gristDateToISO(b.date) === iso && b.tranche === tranche
   );
+  // Profils a afficher dans le picker : actifs ce jour (recurrence) OU avec une row
+  // existante. Ainsi un bloc Sport hors recurrence garde son identite (pas marque orphelin).
+  const ordresWithExisting = new Set(existingsInCell.map(b => b.tranche_ordre || 1));
+  const profilBlocs = allByTranche.filter(p => {
+    const ordre = p.ordre || 1;
+    if (ordresWithExisting.has(ordre)) return true;
+    if (dateUnix != null && WuboGrist.isProfilBlocActiveOnDate) {
+      return WuboGrist.isProfilBlocActiveOnDate(p, dateUnix);
+    }
+    return true;
+  });
 
   // Cas trivial : 0/1 sous-bloc configure ET 0/1 row existe → direct.
   if (profilBlocs.length <= 1 && existingsInCell.length <= 1) {
