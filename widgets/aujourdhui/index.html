@@ -466,6 +466,19 @@
       <label>Note de fin de bloc</label>
       <textarea id="bloc-note" placeholder="Ce que tu as fait, la raison du zap, etc." style="min-height:80px"></textarea>
     </div>
+    <div class="field" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div>
+        <label>Début override (HH:MM)</label>
+        <input id="bloc-debut-override" type="time" placeholder="(profil)">
+      </div>
+      <div>
+        <label>Fin override (HH:MM)</label>
+        <input id="bloc-fin-override" type="time" placeholder="(profil)">
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--text-dim);font-style:italic;padding:0 2px">
+      Override = horaires spécifiques pour ce bloc. Vide = utilise les heures de ton profil.
+    </div>
     <div class="sticky-save">
       <button class="ghost small" onclick="closeBlocEdit()">Annuler</button>
       <button class="primary" onclick="saveBlocEdit()">Enregistrer</button>
@@ -1340,6 +1353,8 @@ function openBlocEdit(blocId) {
   document.getElementById('bloc-modal-meta').textContent = metaBits.join(' · ');
   document.getElementById('bloc-statut').value = bloc.statut || 'Planifie';
   document.getElementById('bloc-note').value = bloc.note_fin_bloc || '';
+  document.getElementById('bloc-debut-override').value = bloc.debut_heure_override || '';
+  document.getElementById('bloc-fin-override').value = bloc.fin_heure_override || '';
   openModal('bloc-modal');
 }
 function closeBlocEdit() {
@@ -1351,7 +1366,9 @@ async function saveBlocEdit() {
   try {
     await WuboGrist.updateRecord('Blocs_temps', currentBlocEditId, {
       statut: document.getElementById('bloc-statut').value,
-      note_fin_bloc: document.getElementById('bloc-note').value
+      note_fin_bloc: document.getElementById('bloc-note').value,
+      debut_heure_override: document.getElementById('bloc-debut-override').value || '',
+      fin_heure_override: document.getElementById('bloc-fin-override').value || ''
     });
     closeBlocEdit();
     WuboGrist.toast('Bloc mis à jour', 'success');
