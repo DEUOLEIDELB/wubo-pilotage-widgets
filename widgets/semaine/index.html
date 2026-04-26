@@ -1295,6 +1295,52 @@ function renderEmptyWindow(grid, daysISO) {
   grid.appendChild(empty);
 }
 
+// Compute heure de fin a partir de heure_debut + duree_minutes (HH:MM)
+function computeFin(h, mins) {
+  if (!h || !mins) return '';
+  const [hh, mm] = h.split(':').map(Number);
+  const total = hh * 60 + mm + mins;
+  const fh = Math.floor(total / 60) % 24;
+  const fm = total % 60;
+  return `${String(fh).padStart(2,'0')}:${String(fm).padStart(2,'0')}`;
+}
+
+function renderWeekTaskRow(t) {
+  const cls = ['week-task'];
+  if (t.statut === 'Fait') cls.push('done');
+  if (t.statut === 'En cours') cls.push('wip');
+  if (t.statut === 'Bloque') cls.push('blocked');
+
+  const row = $el('div', {
+    class: cls.join(' '),
+    'data-claude-check': t.claude_check === false ? 'false' : 'true',
+    onclick: () => openTaskEdit(t.id)
+  });
+  // Heure ou "—" si sans creneau
+  const heureTxt = t.heure_debut
+    ? (t.duree_minutes
+        ? `${t.heure_debut} → ${computeFin(t.heure_debut, t.duree_minutes)}`
+        : t.heure_debut)
+    : '—';
+  row.appendChild($el('span', { class: 'week-task-time' }, heureTxt));
+  row.appendChild($el('span', { class: 'status-pill ' + statutClass(t.statut) }));
+  if (t.est_deadline_externe) {
+    row.appendChild($el('span', { class: 'ext-deadline-icon', title: 'Deadline externe' }, '⏰'));
+  }
+  row.appendChild($el('span', { class: 'week-task-title' }, t.titre || '(sans titre)'));
+  const pastilles = WuboUI.renderAssignees(t, { size: 'sm' });
+  if (pastilles) row.appendChild(pastilles);
+  return row;
+}
+
+async function openTaskNewForDate(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  const dateUnix = Math.floor(Date.UTC(y, m-1, d) / 1000);
+  // Prefill via une task minimale
+  const r = await WuboTaskModal.open({ mode: 'new', task: { date_cible: dateUnix } });
+  if (r && r.action === 'saved') await render();
+}
+
 function renderEmptyWindowList(list, daysISO) {
   const empty = $el('div', { class: 'empty-window-mobile' },
     $el('div', {}, 'Aucun bloc planifié pour cette période.'),
@@ -1306,75 +1352,87 @@ function renderEmptyWindowList(list, daysISO) {
   list.appendChild(empty);
 }
 
+// Grille desktop : desactivee dans le nouveau modele (liste partout).
+// Garde signature pour compat ; vide juste le container.
 function renderGrid(daysISO, byDay, todayISO) {
   const grid = document.getElementById('grid');
   $clear(grid);
-  grid.style.setProperty('--days', daysISO.length);
-
-  let countInWindow = 0;
-  daysISO.forEach(iso => { if (byDay[iso]) countInWindow += Object.keys(byDay[iso]).length; });
-  if (countInWindow === 0) {
-    renderEmptyWindow(grid, daysISO);
-    return;
-  }
-
-  grid.appendChild($el('div', {}));
-  daysISO.forEach(iso => {
-    const [y, m, d] = iso.split('-').map(Number);
-    const dd = new Date(y, m-1, d);
-    grid.appendChild($el('div', { class: 'col-head' + (iso === todayISO ? ' today' : '') },
-      DAY_NAMES[dd.getDay()], $el('span', { class: 'd-num' }, String(dd.getDate()))));
-  });
-
-  TRANCHES.forEach(tranche => {
-    grid.appendChild($el('div', { class: 'row-head' }, tranche));
-    daysISO.forEach(iso => {
-      const blocsOfDay = byDay[iso] || {};
-      grid.appendChild(renderCell(blocsOfDay[tranche], iso === todayISO, tranche, iso));
-    });
-  });
 }
 
-function renderList(daysISO, byDay, todayISO) {
+// Nouveau modele : 7 cartes par jour, chaque carte = liste taches triees par heure_debut.
+// "byDay" et "blocsOfDay" deviennent des paramettres ignores (legacy).
+function renderList(daysISO, _byDayIgnored, todayISO) {
   const list = document.getElementById('list');
   $clear(list);
 
-  let countInWindow = 0;
-  daysISO.forEach(iso => { if (byDay[iso]) countInWindow += Object.keys(byDay[iso]).length; });
-  if (countInWindow === 0) {
-    renderEmptyWindowList(list, daysISO);
+  // Tasks du current user dans la fenetre (filtre date_cible)
+  const currentUser = WuboGrist.getUser() || 'Taki';
+  const visibleSet = new Set(daysISO);
+  const myTasks = Object.values(tachesById).filter(t => {
+    if (t.statut === 'Archive' || t.parent_tache) return false;
+    const iso = t.date_cible ? WuboGrist.gristDateToISO(t.date_cible) : null;
+    if (!iso || !visibleSet.has(iso)) return false;
+    const assignees = WuboGrist.getAssignees ? WuboGrist.getAssignees(t) : [];
+    return assignees.length === 0 || assignees.includes(currentUser);
+  });
+
+  if (myTasks.length === 0) {
+    list.appendChild($el('div', { class: 'empty-window-mobile' },
+      $el('div', {}, 'Aucune tâche planifiée sur cette période.'),
+      $el('div', { style: { display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'center' } },
+        $el('button', { class: 'primary small', onclick: () => openTaskNew(null) }, '+ Nouvelle tâche'),
+        $el('button', { class: 'ghost small', onclick: () => resetWindow() }, 'Aujourd\'hui')
+      )
+    ));
     return;
   }
+
+  // Groupe par jour
+  const byDayTasks = {};
+  daysISO.forEach(iso => { byDayTasks[iso] = []; });
+  myTasks.forEach(t => {
+    const iso = WuboGrist.gristDateToISO(t.date_cible);
+    if (byDayTasks[iso]) byDayTasks[iso].push(t);
+  });
 
   daysISO.forEach(iso => {
     const [y, m, d] = iso.split('-').map(Number);
     const dd = new Date(y, m-1, d);
     const isToday = iso === todayISO;
-    const blocsOfDay = byDay[iso] || {};
+    const dayTasks = byDayTasks[iso] || [];
 
-    // Compte blocs faits / total du jour (multi-bloc compatible)
-    let dayFait = 0, dayTotal = 0;
-    Object.values(blocsOfDay).forEach(blocsArr => {
-      (Array.isArray(blocsArr) ? blocsArr : [blocsArr]).forEach(b => {
-        dayTotal++;
-        if ((b.statut || '').toLowerCase().includes('fait')) dayFait++;
-      });
-    });
+    let dayFait = 0;
+    dayTasks.forEach(t => { if (t.statut === 'Fait') dayFait++; });
 
     const dayCard = $el('div', { class: 'day-card' + (isToday ? ' today' : '') });
     const label = `${DAY_NAMES[dd.getDay()]} ${dd.getDate()} ${MONTHS[dd.getMonth()]}${isToday ? ' · aujourd\'hui' : ''}`;
-    const stats = dayTotal > 0 ? `${dayFait}/${dayTotal} faits` : 'aucun bloc';
+    const stats = dayTasks.length > 0 ? `${dayFait}/${dayTasks.length} faites` : 'libre';
     const head = $el('div', { class: 'day-head' },
       $el('div', { class: 'day-label' }, label),
       $el('div', { class: 'day-stats' }, stats)
     );
     dayCard.appendChild(head);
 
-    const slots = $el('div', { class: 'slots' });
-    TRANCHES.forEach(tranche => {
-      slots.appendChild(renderSlot(blocsOfDay[tranche], isToday, tranche, iso));
-    });
-    dayCard.appendChild(slots);
+    if (dayTasks.length === 0) {
+      const empty = $el('div', { class: 'day-empty', onclick: () => openTaskNewForDate(iso) },
+        $el('span', {}, '+ Ajouter une tâche')
+      );
+      dayCard.appendChild(empty);
+    } else {
+      // Trier : sans heure d'abord, puis par heure_debut croissante
+      dayTasks.sort((a, b) => {
+        if (!a.heure_debut && b.heure_debut) return -1;
+        if (a.heure_debut && !b.heure_debut) return 1;
+        return (a.heure_debut || '').localeCompare(b.heure_debut || '');
+      });
+      const tasksWrap = $el('div', { class: 'day-tasks' });
+      dayTasks.forEach(t => tasksWrap.appendChild(renderWeekTaskRow(t)));
+      dayCard.appendChild(tasksWrap);
+      dayCard.appendChild($el('button', {
+        class: 'add-tache-day',
+        onclick: () => openTaskNewForDate(iso)
+      }, '+'));
+    }
     list.appendChild(dayCard);
   });
 }
@@ -1607,7 +1665,20 @@ function renderAgenda(byDay, todayISO) {
   const firstDate = new Date(daysISO[0]);
   const refMonth = firstDate.getMonth();
 
-  // Optionnel : étiquette du mois courant de chaque semaine
+  // Vue calendrier : 1 dot par tache du jour, max 3 dots visibles + compteur si plus.
+  // Filtree par current user (proprio + collaborateur).
+  const currentUser = WuboGrist.getUser() || 'Taki';
+  const tasksByDay = {};
+  Object.values(tachesById).forEach(t => {
+    if (t.statut === 'Archive' || t.parent_tache) return;
+    if (!t.date_cible) return;
+    const assignees = WuboGrist.getAssignees ? WuboGrist.getAssignees(t) : [];
+    if (assignees.length > 0 && !assignees.includes(currentUser)) return;
+    const iso = WuboGrist.gristDateToISO(t.date_cible);
+    if (!tasksByDay[iso]) tasksByDay[iso] = [];
+    tasksByDay[iso].push(t);
+  });
+
   const grid = $el('div', { class: 'agenda-grid' });
   daysISO.forEach(iso => {
     const [y, m, d] = iso.split('-').map(Number);
@@ -1615,26 +1686,13 @@ function renderAgenda(byDay, todayISO) {
     const isToday = iso === todayISO;
     const dow = (dd.getDay() + 6) % 7;
     const isWeekend = dow >= 5;
-    const blocs = byDay[iso] || {};
+    const dayTasks = tasksByDay[iso] || [];
 
     const cls = ['agenda-day'];
     if (isToday) cls.push('today');
     if (dd.getMonth() !== refMonth) cls.push('other-month');
     if (isWeekend) cls.push('weekend');
-
-    // ⏰ si au moins une tâche du jour a est_deadline_externe (multi-bloc compatible)
-    let hasExt = false;
-    ['Matin', 'Aprem', 'Soir'].forEach(tr => {
-      const blocsArr = blocs[tr];
-      if (!blocsArr) return;
-      (Array.isArray(blocsArr) ? blocsArr : [blocsArr]).forEach(b => {
-        const tIds = WuboGrist.refListIds(b.taches_liees);
-        tIds.forEach(id => {
-          if (tachesById[id] && tachesById[id].est_deadline_externe) hasExt = true;
-        });
-      });
-    });
-    if (hasExt) cls.push('has-ext');
+    if (dayTasks.some(t => t.est_deadline_externe)) cls.push('has-ext');
 
     const cell = $el('div', {
       class: cls.join(' '),
@@ -1643,31 +1701,26 @@ function renderAgenda(byDay, todayISO) {
     cell.appendChild($el('div', { class: 'agenda-day-num' }, String(dd.getDate())));
 
     const dots = $el('div', { class: 'agenda-day-dots' });
-    ['Matin', 'Aprem', 'Soir'].forEach(tr => {
-      const blocsArr = blocs[tr];
-      const arr = blocsArr ? (Array.isArray(blocsArr) ? blocsArr : [blocsArr]) : [];
-      const b = arr[0];
-      const isCurrent = arr.some(x => isBlocCurrent(x, isToday));
-      let dotCls = 'agenda-dot empty';
-      if (b) {
-        const s = (b.statut || '').toLowerCase();
-        if (isCurrent) dotCls = 'agenda-dot current';
-        else if (s.includes('fait')) dotCls = 'agenda-dot done';
-        else if (s.includes('en cours')) dotCls = 'agenda-dot wip';
-        else if (s.includes('zapp')) dotCls = 'agenda-dot skip';
-        else dotCls = 'agenda-dot';
-      }
-      dots.appendChild($el('span', { class: dotCls, title: tr + (b ? ' · ' + (b.statut || '') : ' · pas de bloc') }));
+    const toShow = dayTasks.slice(0, 3);
+    toShow.forEach(t => {
+      const s = (t.statut || '').toLowerCase();
+      let dotCls = 'agenda-dot';
+      if (s.includes('fait')) dotCls = 'agenda-dot done';
+      else if (s.includes('en cours')) dotCls = 'agenda-dot wip';
+      else if (s.includes('bloqu')) dotCls = 'agenda-dot blocked';
+      dots.appendChild($el('span', { class: dotCls, title: t.titre || '' }));
     });
+    if (dayTasks.length > 3) {
+      dots.appendChild($el('span', { class: 'agenda-dot-more', title: `+${dayTasks.length - 3}` }, `+${dayTasks.length - 3}`));
+    }
     cell.appendChild(dots);
 
     grid.appendChild(cell);
   });
   node.appendChild(grid);
 
-  // Note de bas pour context
   node.appendChild($el('div', { style: 'font-size:10px;color:var(--text-faint);font-style:italic;padding:4px 2px;text-align:center' },
-    '3 points/jour = Matin · Aprem · Soir. Tap un jour pour voir les détails.'));
+    'Tap un jour pour voir les détails.'));
 }
 
 function onAgendaDayClick(iso) {

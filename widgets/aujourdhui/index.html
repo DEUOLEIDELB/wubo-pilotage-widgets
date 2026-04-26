@@ -121,6 +121,147 @@
   .bloc-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
   .bloc-actions button { flex: 1; min-width: 88px; }
 
+  /* ============ NOUVEAU MODELE : tache rows en liste chronologique ============ */
+  .section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 4px 4px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+  }
+  .section-head .section-count {
+    background: var(--surface-alt);
+    color: var(--text-dim);
+    padding: 1px 6px;
+    border-radius: 9px;
+    font-size: 10px;
+  }
+  .tache-row {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    cursor: pointer;
+    position: relative;
+  }
+  .tache-row:active { background: var(--surface-alt); }
+  .tache-row.done { background: var(--done-bg); }
+  .tache-row.done .titre-tache { text-decoration: line-through; color: var(--text-faint); }
+  .tache-row.wip { border-left: 3px solid var(--current); }
+  .tache-row.blocked { border-left: 3px solid var(--warning); background: var(--warning-soft); }
+  .tache-row.just-updated { animation: rowFlash 1.6s ease-out; }
+  @keyframes rowFlash {
+    0% { background: var(--accent-soft); }
+    100% { background: var(--surface); }
+  }
+  .tache-time {
+    font-size: 11px;
+    color: var(--text-faint);
+    line-height: 1;
+  }
+  .tache-time .tache-heure {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .tache-time .tache-fin {
+    font-size: 12px;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+  }
+  .tache-time .tache-duree {
+    font-size: 11px;
+    color: var(--text-faint);
+  }
+  .tache-main {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .tache-main .titre-tache {
+    flex: 1;
+    font-size: 14px;
+    line-height: 1.3;
+  }
+  .tache-row .toggle-subs {
+    background: transparent;
+    border: none;
+    padding: 2px 6px;
+    font-size: 11px;
+    color: var(--text-faint);
+    cursor: pointer;
+    align-self: flex-start;
+    font-variant-numeric: tabular-nums;
+  }
+  .tache-row .toggle-subs:hover { color: var(--current); }
+
+  /* Section À rattraper : sticky-top avec bordure attention */
+  #rattrapage:has(.rattrapage) {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+  }
+  .rattrapage {
+    background: var(--warning-soft);
+    border: 1px solid var(--warning);
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+  .rattrapage-head {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--warning);
+  }
+  .ratt-task-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px 0;
+    border-top: 1px dashed var(--warning);
+  }
+  .ratt-task-row:first-of-type { border-top: none; padding-top: 0; }
+  .ratt-task-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+  }
+  .ratt-task-head .when {
+    font-size: 10px;
+    text-transform: uppercase;
+    color: var(--warning);
+    font-weight: 700;
+    min-width: 56px;
+  }
+  .ratt-task-head .titre {
+    flex: 1;
+    cursor: pointer;
+  }
+  .ratt-task-head .titre:hover { text-decoration: underline; }
+  .ratt-task-actions {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .ratt-task-actions button {
+    flex: 1;
+    min-width: 60px;
+    padding: 4px 6px;
+    font-size: 11px;
+  }
+
   .modal {
     position: fixed; inset: 0;
     background: rgba(0, 0, 0, 0.4);
@@ -857,107 +998,273 @@ function renderBloc(profilBloc, bloc) {
   return el;
 }
 
+// Modele simplifie : tout est tache. Plus de blocs.
+// 3 sections : "A rattraper" (sticky), "Sans creneau" (taches du jour sans heure),
+// "Aujourd'hui" (taches du jour triees par heure_debut).
 async function render() {
   clearError();
   const now = new Date();
   document.getElementById('date').textContent =
     now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
 
-  let blocs = [];
-  let allBlocsFetched = [];
   tachesById = {};
   let fetchOk = true;
+  let myTasks = [];
   try {
-    const currentUser = WuboGrist.getUser() || 'Taki';
-    // Fetch profil + data en parallèle. Profil filtre par recurrence (jour de semaine + plage dates).
-    const todayUnix = WuboGrist.daysFromToday(0);
-    const [bRaw, tRaw, profil] = await Promise.all([
-      WuboGrist.fetchRows('Blocs_temps'),
-      WuboGrist.fetchRows('Taches'),
-      WuboGrist.getProfilBlocsForDate(currentUser, todayUnix)
-    ]);
-    profilCurrent = profil;
-    // Jour = vue perso : uniquement les blocs et tâches du user courant (proprietaire ou collaborateur)
-    const b = WuboGrist.filterMineOnly(bRaw);
+    const tRaw = await WuboGrist.fetchRows('Taches');
     const t = WuboGrist.filterMineOnly(tRaw);
-    allBlocsFetched = b;
-    const today = WuboGrist.todayISO();
-    blocs = b.filter(x => WuboGrist.gristDateToISO(x.date) === today);
-    blocsByIdCache = {};
-    b.forEach(x => { blocsByIdCache[x.id] = x; });
     t.forEach(x => { tachesById[x.id] = x; });
+    myTasks = t;
   } catch (e) {
     showError(e.message);
     fetchOk = false;
   }
 
-  const fait = blocs.filter(b => b.statut === 'Fait').length;
-  const total = blocs.length;
+  const todayISO = WuboGrist.todayISO();
+  const todayUnix = WuboGrist.daysFromToday(0);
+
+  // Filtre tâches du jour (date_cible = aujourd'hui)
+  // Exclut Archive et sous-tâches (parent_tache != null)
+  const isActive = t => t.statut !== 'Archive' && !t.parent_tache;
+  const todayTasks = myTasks.filter(t =>
+    isActive(t) && t.date_cible && WuboGrist.gristDateToISO(t.date_cible) === todayISO
+  );
+  // À rattraper : tâches passées non-faites
+  const rattrapageTasks = myTasks.filter(t =>
+    isActive(t) && t.statut !== 'Fait' && t.date_cible &&
+    WuboGrist.gristDateToISO(t.date_cible) < todayISO
+  ).sort((a, b) => (a.date_cible || 0) - (b.date_cible || 0));
+
+  const fait = todayTasks.filter(t => t.statut === 'Fait').length;
+  const total = todayTasks.length;
   document.getElementById('meta').textContent = fetchOk
-    ? `Sprint S${weekNumber(now)} · ${fait}/${total} blocs faits`
+    ? `Sprint S${weekNumber(now)} · ${fait}/${total} tâches faites${rattrapageTasks.length > 0 ? ` · ${rattrapageTasks.length} en retard` : ''}`
     : `Sprint S${weekNumber(now)} · hors ligne`;
 
   if (!fetchOk) return;
 
-  // Panneau rattrapage : blocs passés sans "Fait"
-  renderRattrapage(allBlocsFetched);
+  renderRattrapageTasks(rattrapageTasks);
 
-  // Zone "À planifier aujourd'hui" : tâches avec date_cible = today mais
-  // aucun bloc du current user ne les contient (= flottantes)
-  renderFloatingToday(blocs);
+  // On reset les zones inutilisees (legacy)
+  $clear(document.getElementById('drift'));
+  $clear(document.getElementById('floating'));
 
-  const driftNode = document.getElementById('drift');
-  $clear(driftNode);
-  // Drift : un sous-bloc Planifie dont l'heure courante tombe dans son creneau reel.
-  // Base sur horaires (debut/fin), pas sur la tranche fixe.
-  const driftBloc = blocs.find(b => b.statut === 'Planifie' && WuboGrist.isBlocCurrentNow(b, profilCurrent));
-  if (driftBloc) {
-    const dis = WuboGrist.getBlocDisplay(driftBloc, profilCurrent);
-    const alert = $el('div', { class: 'drift-alert' }, `${dis.label} actif mais toujours "Planifié". `);
-    alert.appendChild($el('button', { class: 'small', onclick: () => blocAction(driftBloc.id, 'En cours') }, 'Démarrer'));
-    driftNode.appendChild(alert);
-  }
+  renderTodayTasks(todayTasks);
 
-  // Rend tous les blocs du user actif, groupes par tranche (Matin/Aprem/Soir).
-  // Dans chaque tranche, N blocs possibles (selon le profil). Pour chaque profil bloc,
-  // on cherche le Blocs_temps correspondant (matche par tranche + tranche_ordre).
-  // Si pas de row → placeholder "+ Planifier {label}".
-  const container = document.getElementById('blocs');
-  $clear(container);
-  TRANCHES.forEach(tranche => {
-    const profilForTranche = profilCurrent.filter(p => p.tranche === tranche);
-    const blocsInTranche = blocs.filter(b => b.tranche === tranche);
-    const renderedOrdres = new Set();
-    if (profilForTranche.length === 0) {
-      const fakeProfil = { tranche, ordre: 1, label: tranche };
-      const bloc = blocsInTranche.find(b => (b.tranche_ordre || 1) === 1);
-      container.appendChild(renderBloc(fakeProfil, bloc));
-      if (bloc) renderedOrdres.add(1);
-    } else {
-      profilForTranche.forEach(pb => {
-        const ordre = pb.ordre || 1;
-        const bloc = blocsInTranche.find(b => (b.tranche_ordre || 1) === ordre);
-        container.appendChild(renderBloc(pb, bloc));
-        renderedOrdres.add(ordre);
-      });
-    }
-    // Orphans : Blocs_temps rows dont l'ordre n'est pas dans le profil (profil bloc supprime).
-    // On les rend quand meme pour ne pas perdre les taches qui y sont liees.
-    blocsInTranche.forEach(bloc => {
-      const ordre = bloc.tranche_ordre || 1;
-      if (renderedOrdres.has(ordre)) return;
-      const orphanProfil = { tranche, ordre, label: `${tranche} ${ordre}` };
-      container.appendChild(renderBloc(orphanProfil, bloc));
-    });
-  });
-
-  // Nettoie le flag après que l'animation ait été appliquée (elle dure 2s)
   if (justUpdatedTaskId !== null) {
     const id = justUpdatedTaskId;
     setTimeout(() => { if (justUpdatedTaskId === id) justUpdatedTaskId = null; }, 2100);
   }
+}
 
-  scrollToCurrentTranche();
+// Rend la liste chronologique du jour : "Sans creneau" en haut, puis taches avec
+// heure_debut triees par heure croissante.
+function renderTodayTasks(tasks) {
+  const container = document.getElementById('blocs');
+  $clear(container);
+
+  if (!tasks.length) {
+    container.appendChild($el('div', {
+      class: 'empty-day',
+      style: 'padding:24px 16px;text-align:center;color:var(--text-faint);font-size:13px'
+    }, 'Aucune tâche aujourd\'hui. Ajoute-en une.'));
+    container.appendChild($el('button', {
+      class: 'add-tache',
+      style: 'margin:8px auto;display:block',
+      onclick: () => openTaskNew(null)
+    }, '+ Nouvelle tâche'));
+    return;
+  }
+
+  const sansCreneau = tasks.filter(t => !t.heure_debut).sort((a, b) => (a.titre || '').localeCompare(b.titre || ''));
+  const planifiees = tasks.filter(t => t.heure_debut).sort((a, b) => (a.heure_debut || '').localeCompare(b.heure_debut || ''));
+
+  if (sansCreneau.length) {
+    container.appendChild($el('div', { class: 'section-head' },
+      $el('span', {}, 'Sans créneau'),
+      $el('span', { class: 'section-count' }, String(sansCreneau.length))
+    ));
+    sansCreneau.forEach(t => container.appendChild(renderTaskRow(t)));
+  }
+
+  if (planifiees.length) {
+    container.appendChild($el('div', { class: 'section-head' },
+      $el('span', {}, 'Aujourd\'hui'),
+      $el('span', { class: 'section-count' }, String(planifiees.length))
+    ));
+    planifiees.forEach(t => container.appendChild(renderTaskRow(t)));
+  }
+
+  // Bouton ajout en bas
+  container.appendChild($el('button', {
+    class: 'add-tache',
+    style: 'margin:12px auto;display:block',
+    onclick: () => openTaskNew(null)
+  }, '+ Nouvelle tâche'));
+}
+
+// Calcule heure de fin a partir de heure_debut + duree_minutes
+function computeHeureFin(heureDebut, dureeMinutes) {
+  if (!heureDebut || !dureeMinutes) return '';
+  const [h, m] = heureDebut.split(':').map(Number);
+  const totalMin = h * 60 + m + dureeMinutes;
+  const fh = Math.floor(totalMin / 60) % 24;
+  const fm = totalMin % 60;
+  return `${String(fh).padStart(2, '0')}:${String(fm).padStart(2, '0')}`;
+}
+
+function formatDuree(min) {
+  if (!min) return '';
+  if (min < 60) return `${min}min`;
+  const h = Math.floor(min / 60);
+  const r = min % 60;
+  return r === 0 ? `${h}h` : `${h}h${String(r).padStart(2, '0')}`;
+}
+
+// Rendu d'une tache en row : heure(s) + titre + statut + assignees + sous-taches.
+function renderTaskRow(t) {
+  const liClass = ['tache-row'];
+  if (t.statut === 'Fait') liClass.push('done');
+  if (t.statut === 'En cours') liClass.push('wip');
+  if (t.statut === 'Bloque') liClass.push('blocked');
+  if (justUpdatedTaskId === t.id) liClass.push('just-updated');
+
+  const row = $el('div', {
+    class: liClass.join(' '),
+    'data-claude-check': t.claude_check === false ? 'false' : 'true',
+    onclick: (e) => {
+      if (e.target.closest('.toggle-subs') || e.target.closest('button')) return;
+      openTaskEdit(t.id);
+    }
+  });
+
+  // Bandeau temps (heure + duree)
+  if (t.heure_debut) {
+    const fin = computeHeureFin(t.heure_debut, t.duree_minutes);
+    const dureeTxt = formatDuree(t.duree_minutes);
+    const timeLine = $el('div', { class: 'tache-time' },
+      $el('span', { class: 'tache-heure' }, t.heure_debut),
+      fin ? $el('span', { class: 'tache-fin' }, ` → ${fin}`) : null,
+      dureeTxt ? $el('span', { class: 'tache-duree' }, ` · ${dureeTxt}`) : null
+    );
+    row.appendChild(timeLine);
+  }
+
+  // Ligne principale : statut + titre + pastilles
+  const main = $el('div', { class: 'tache-main' },
+    $el('span', { class: 'status-pill ' + statutClass(t.statut) }),
+    t.est_deadline_externe ? $el('span', { class: 'ext-deadline-icon', title: 'Deadline externe' }, '⏰') : null,
+    $el('span', { class: 'titre-tache' }, t.titre || '(sans titre)'),
+    t.times_missed && t.times_missed > 0
+      ? $el('span', { class: 'missed-indicator', title: `Ratée ${t.times_missed}x` }, `× ${t.times_missed}`)
+      : null
+  );
+  row.appendChild(main);
+
+  const pastilles = WuboUI.renderAssignees(t, { size: 'sm' });
+  if (pastilles) row.appendChild(pastilles);
+
+  // Sous-tâches inline
+  const subs = Object.values(tachesById).filter(x => x.parent_tache === t.id && x.statut !== 'Archive');
+  if (subs.length > 0) {
+    const isOpen = expandedTaskIds.has(t.id);
+    row.appendChild($el('button', {
+      class: 'toggle-subs',
+      onclick: (e) => { e.stopPropagation(); toggleSubsInline(t.id); }
+    }, isOpen ? `▾ ${subs.length}` : `▸ ${subs.length}`));
+    if (isOpen) {
+      const subsContainer = $el('div', { class: 'subtasks-inline' });
+      subs.forEach(s => {
+        const subRow = $el('div', {
+          class: 'subtask-inline' + (s.statut === 'Fait' ? ' done' : ''),
+          onclick: async (e) => { e.stopPropagation(); await toggleSubtaskDone(s); }
+        },
+          $el('span', { class: 'status-pill ' + statutClass(s.statut) }),
+          $el('span', { class: 'subtask-titre', title: s.titre }, s.titre || '(sans titre)')
+        );
+        subsContainer.appendChild(subRow);
+      });
+      row.appendChild(subsContainer);
+    }
+  }
+
+  return row;
+}
+
+// Rend la zone "A rattraper" en haut (sticky CSS).
+function renderRattrapageTasks(tasks) {
+  const node = document.getElementById('rattrapage');
+  $clear(node);
+  if (!tasks.length) return;
+
+  const block = $el('div', { class: 'rattrapage' });
+  block.appendChild($el('div', { class: 'rattrapage-head' },
+    $el('span', { class: 'titre' }, `À rattraper · ${tasks.length}`)
+  ));
+
+  const toShow = tasks.slice(0, 5);
+  toShow.forEach(t => {
+    const wrap = $el('div', { class: 'ratt-task-row' });
+    wrap.appendChild($el('div', { class: 'ratt-task-head' },
+      $el('span', { class: 'when' }, fmtPastDate(t.date_cible)),
+      $el('span', { class: 'status-pill ' + statutClass(t.statut) }),
+      $el('span', { class: 'titre', onclick: () => openTaskEdit(t.id) }, t.titre || '(sans titre)')
+    ));
+    const actions = $el('div', { class: 'ratt-task-actions' });
+    actions.appendChild($el('button', {
+      class: 'primary small',
+      onclick: () => replanTaskTo(t, 0)
+    }, "Aujourd'hui"));
+    actions.appendChild($el('button', {
+      class: 'ghost small',
+      onclick: () => replanTaskTo(t, 1)
+    }, '+1j'));
+    actions.appendChild($el('button', {
+      class: 'ghost small',
+      onclick: () => replanTaskTo(t, 7)
+    }, '+1sem'));
+    actions.appendChild($el('button', {
+      class: 'success small',
+      onclick: () => markTaskFait(t)
+    }, '✓ Fait'));
+    wrap.appendChild(actions);
+    block.appendChild(wrap);
+  });
+  if (tasks.length > toShow.length) {
+    block.appendChild($el('div', { style: 'font-size:11px;color:var(--text-dim);text-align:center;padding:4px' },
+      `+ ${tasks.length - toShow.length} autre(s)`
+    ));
+  }
+  node.appendChild(block);
+}
+
+async function replanTaskTo(task, daysOffset) {
+  try {
+    const newDate = WuboGrist.daysFromToday(daysOffset);
+    await WuboGrist.updateRecord('Taches', task.id, {
+      date_cible: newDate,
+      push_count: (task.push_count || 0) + 1
+    });
+    WuboGrist.toast(daysOffset === 0 ? 'Reportée à aujourd\'hui' : `Reportée +${daysOffset}j`, 'success');
+    justUpdatedTaskId = task.id;
+    await render();
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
+  }
+}
+
+async function markTaskFait(task) {
+  try {
+    await WuboGrist.updateRecord('Taches', task.id, {
+      statut: 'Fait',
+      date_fait: WuboGrist.nowUnix()
+    });
+    WuboGrist.toast('Tâche faite', 'success');
+    justUpdatedTaskId = task.id;
+    await render();
+  } catch (e) {
+    WuboGrist.toast('Erreur : ' + e.message, 'error');
+  }
 }
 
 // Scroll au premier sous-bloc current (basé horaires réels) une fois par session.
