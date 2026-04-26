@@ -262,10 +262,11 @@
     vertical-align: middle;
   }
   .floating-task-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    display: flex;
+    flex-wrap: wrap;
     gap: 4px;
   }
+  .floating-task-actions .tranche-btn { flex: 1 1 calc(33% - 4px); min-width: 64px; }
   .tranche-btn {
     padding: 6px 8px;
     font-size: 12px;
@@ -562,23 +563,26 @@ const TRANCHES = ['Matin', 'Aprem', 'Soir'];
 // Permet labels et heures personnalisés par user.
 let profilCurrent = [];
 
-function profilForTranche(tranche) {
-  const ordre = WuboGrist.TRANCHE_TO_ORDRE[tranche] || 0;
-  return profilCurrent.find(p => p.ordre === ordre);
+// profilCurrent contient les blocs du user courant (peut etre N par tranche).
+// Pour le label/time : on s'appuie sur le bloc Blocs_temps (avec override).
+// trancheLabel : pour un bloc precis, retourne son label depuis le profil matche.
+function blocLabel(bloc) {
+  if (!bloc) return '';
+  const d = WuboGrist.getBlocDisplay(bloc, profilCurrent);
+  return d.label;
 }
-function trancheLabel(tranche) {
-  const p = profilForTranche(tranche);
-  return p ? p.label : tranche;
+function blocTime(bloc) {
+  if (!bloc) return '';
+  const d = WuboGrist.getBlocDisplay(bloc, profilCurrent);
+  return WuboGrist.formatBlocTime(d.debut, d.fin) || '';
 }
-function trancheTime(tranche, bloc) {
-  // Si bloc fourni : utilise getBlocDisplay (gère override). Sinon : juste profil.
-  if (bloc) {
-    const d = WuboGrist.getBlocDisplay(bloc, profilCurrent);
-    return WuboGrist.formatBlocTime(d.debut, d.fin) || '';
-  }
-  const p = profilForTranche(tranche);
-  if (!p) return '';
-  return WuboGrist.formatBlocTime(p.debut_heure, p.fin_heure);
+// Pour rendre un placeholder "vide" : on a besoin du label profil seul (sans bloc instancie).
+function profilBlocLabel(profilBloc) {
+  return profilBloc ? profilBloc.label : '';
+}
+function profilBlocTime(profilBloc) {
+  if (!profilBloc) return '';
+  return WuboGrist.formatBlocTime(profilBloc.debut_heure, profilBloc.fin_heure);
 }
 let currentTaskEditId = null;
 let currentTaskNewBlocId = null;
@@ -706,10 +710,16 @@ function clearError() {
   e.style.display = 'none';
 }
 
-function renderBloc(tranche, bloc) {
+// renderBloc : prend un profilBloc (config) + bloc (instance Blocs_temps optionnelle).
+// Si bloc absent, affiche un placeholder "+ Planifier {label}" qui creera la row au clic.
+function renderBloc(profilBloc, bloc) {
+  const tranche = profilBloc ? profilBloc.tranche : (bloc ? bloc.tranche : 'Matin');
+  const ordre = profilBloc ? (profilBloc.ordre || 1) : (bloc ? (bloc.tranche_ordre || 1) : 1);
   const cur = currentTranche();
   const statut = bloc ? bloc.statut : null;
-  const isCurrent = bloc && (statut === 'En cours' || (cur === tranche && statut === 'Planifie'));
+  // "current" : status En cours OU (heure courante dans le creneau et Planifie).
+  // Tranche courante (cur) sert de fallback si pas d'horaire calculable.
+  const isCurrent = bloc && (statut === 'En cours' || (cur === bloc.tranche && statut === 'Planifie'));
   const classNames = ['bloc'];
   if (isCurrent) classNames.push('current');
   else if (statut === 'Fait') classNames.push('done');
@@ -718,31 +728,32 @@ function renderBloc(tranche, bloc) {
   const tagClass = statut === 'Fait' ? 'done' : statut === 'Zappe' ? 'skip' : isCurrent ? 'current' : '';
   const tagLabel = statut === 'Fait' ? 'Fait' : statut === 'Zappe' ? 'Zappé' : isCurrent ? 'En cours' : 'Planifié';
 
+  const labelText = bloc ? blocLabel(bloc) : profilBlocLabel(profilBloc);
+  const timeText = bloc ? blocTime(bloc) : profilBlocTime(profilBloc);
+
   const head = $el('div', {
     class: 'bloc-head',
     style: bloc ? 'cursor:pointer' : '',
     onclick: bloc ? (e) => {
-      // Ne pas ouvrir la modal si on clique sur le tag ou un bouton d'action
       if (e.target.closest('.tag') || e.target.closest('button')) return;
       openBlocEdit(bloc.id);
     } : null
   },
     $el('div', {},
-      $el('span', { class: 'bloc-tranche' }, trancheLabel(tranche)),
-      $el('span', { class: 'bloc-time' }, ' · ' + trancheTime(tranche, bloc))
+      $el('span', { class: 'bloc-tranche' }, labelText),
+      $el('span', { class: 'bloc-time' }, timeText ? ' · ' + timeText : '')
     ),
     $el('span', { class: 'tag ' + tagClass }, tagLabel)
   );
 
-  const el = $el('div', { class: classNames.join(' '), 'data-tranche': tranche }, head);
+  const el = $el('div', { class: classNames.join(' '), 'data-tranche': tranche, 'data-ordre': String(ordre) }, head);
   if (bloc) el.setAttribute('data-bloc-id', String(bloc.id));
   if (!bloc) {
-    // Bloc vide : CTA pour planifier immédiatement cette tranche aujourd'hui
     el.appendChild($el('button', {
       class: 'add-tache',
       style: 'margin-top:4px',
-      onclick: () => createBlocToday(tranche)
-    }, '+ Planifier ' + tranche));
+      onclick: () => createBlocToday(tranche, ordre)
+    }, '+ Planifier ' + labelText));
     return el;
   }
 
@@ -877,17 +888,48 @@ async function render() {
   $clear(driftNode);
   const cur = currentTranche();
   if (cur) {
-    const bloc = blocs.find(b => b.tranche === cur);
-    if (bloc && bloc.statut === 'Planifie') {
+    // Drift : un bloc Planifie dans la tranche en cours = signal a demarrer.
+    // Si plusieurs blocs Planifie dans la tranche, prend le premier.
+    const bloc = blocs.find(b => b.tranche === cur && b.statut === 'Planifie');
+    if (bloc) {
       const alert = $el('div', { class: 'drift-alert' }, `${cur} actif mais toujours "Planifié". `);
       alert.appendChild($el('button', { class: 'small', onclick: () => blocAction(bloc.id, 'En cours') }, 'Démarrer'));
       driftNode.appendChild(alert);
     }
   }
 
+  // Rend tous les blocs du user actif, groupes par tranche (Matin/Aprem/Soir).
+  // Dans chaque tranche, N blocs possibles (selon le profil). Pour chaque profil bloc,
+  // on cherche le Blocs_temps correspondant (matche par tranche + tranche_ordre).
+  // Si pas de row → placeholder "+ Planifier {label}".
   const container = document.getElementById('blocs');
   $clear(container);
-  TRANCHES.forEach(tranche => container.appendChild(renderBloc(tranche, blocs.find(b => b.tranche === tranche))));
+  TRANCHES.forEach(tranche => {
+    const profilForTranche = profilCurrent.filter(p => p.tranche === tranche);
+    const blocsInTranche = blocs.filter(b => b.tranche === tranche);
+    const renderedOrdres = new Set();
+    if (profilForTranche.length === 0) {
+      const fakeProfil = { tranche, ordre: 1, label: tranche };
+      const bloc = blocsInTranche.find(b => (b.tranche_ordre || 1) === 1);
+      container.appendChild(renderBloc(fakeProfil, bloc));
+      if (bloc) renderedOrdres.add(1);
+    } else {
+      profilForTranche.forEach(pb => {
+        const ordre = pb.ordre || 1;
+        const bloc = blocsInTranche.find(b => (b.tranche_ordre || 1) === ordre);
+        container.appendChild(renderBloc(pb, bloc));
+        renderedOrdres.add(ordre);
+      });
+    }
+    // Orphans : Blocs_temps rows dont l'ordre n'est pas dans le profil (profil bloc supprime).
+    // On les rend quand meme pour ne pas perdre les taches qui y sont liees.
+    blocsInTranche.forEach(bloc => {
+      const ordre = bloc.tranche_ordre || 1;
+      if (renderedOrdres.has(ordre)) return;
+      const orphanProfil = { tranche, ordre, label: `${tranche} ${ordre}` };
+      container.appendChild(renderBloc(orphanProfil, bloc));
+    });
+  });
 
   // Nettoie le flag après que l'animation ait été appliquée (elle dure 2s)
   if (justUpdatedTaskId !== null) {
@@ -978,12 +1020,24 @@ function renderFloatingToday(myBlocsToday) {
     if (pastilles) main.appendChild(pastilles);
     row.appendChild(main);
     const actions = $el('div', { class: 'floating-task-actions' });
-    ['Matin', 'Aprem', 'Soir'].forEach(tranche => {
-      actions.appendChild($el('button', {
-        class: 'tranche-btn',
-        onclick: () => planFloatingTask(t.id, tranche)
-      }, tranche));
-    });
+    // Un bouton par profil bloc du user (gere N blocs par tranche).
+    // Si user n'a pas configure de blocs, fallback sur 3 boutons generiques.
+    if (profilCurrent.length === 0) {
+      ['Matin', 'Aprem', 'Soir'].forEach(tranche => {
+        actions.appendChild($el('button', {
+          class: 'tranche-btn',
+          onclick: () => planFloatingTask(t.id, tranche, 1)
+        }, tranche));
+      });
+    } else {
+      profilCurrent.forEach(pb => {
+        actions.appendChild($el('button', {
+          class: 'tranche-btn',
+          onclick: () => planFloatingTask(t.id, pb.tranche, pb.ordre || 1),
+          title: `${pb.tranche} · ${WuboGrist.formatBlocTime(pb.debut_heure, pb.fin_heure) || ''}`
+        }, pb.label));
+      });
+    }
     row.appendChild(actions);
     return row;
   }
@@ -998,16 +1052,16 @@ function renderFloatingToday(myBlocsToday) {
   }
 }
 
-async function planFloatingTask(taskId, tranche) {
+async function planFloatingTask(taskId, tranche, ordre = 1) {
   const user = WuboGrist.getUser() || 'Taki';
   const todayUnix = WuboGrist.daysFromToday(0);
   try {
-    // Si la tâche n'avait pas de date, on la pose à aujourd'hui (sinon elle reste flottante)
     const task = tachesById[taskId];
     if (task && !task.date_cible) {
       await WuboGrist.updateRecord('Taches', taskId, { date_cible: todayUnix });
     }
-    await WuboGrist.planTaskInTranche(taskId, todayUnix, user, tranche);
+    // planTaskInBloc : rattachement deterministe sur le bloc (tranche, ordre).
+    await WuboGrist.planTaskInBloc(taskId, todayUnix, user, tranche, ordre);
     WuboGrist.toast(`Planifié en ${tranche}`, 'success');
     await render();
   } catch (e) {
@@ -1345,7 +1399,9 @@ function openBlocEdit(blocId) {
   currentBlocEditId = blocId;
   const d = new Date(bloc.date * 1000);
   const dayName = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' });
-  document.getElementById('bloc-modal-title').textContent = `${dayName.charAt(0).toUpperCase() + dayName.slice(1)} · ${bloc.tranche}`;
+  const display = WuboGrist.getBlocDisplay(bloc, profilCurrent);
+  const titleSuffix = (display.label && display.label !== bloc.tranche) ? `${bloc.tranche} · ${display.label}` : bloc.tranche;
+  document.getElementById('bloc-modal-title').textContent = `${dayName.charAt(0).toUpperCase() + dayName.slice(1)} · ${titleSuffix}`;
   const metaBits = [];
   if (bloc.proprietaire) metaBits.push(bloc.proprietaire);
   const tIds = WuboGrist.refListIds(bloc.taches_liees);
@@ -1378,8 +1434,8 @@ async function saveBlocEdit() {
   }
 }
 
-// Crée un bloc Planifie aujourd'hui pour la tranche donnée, puis ouvre la création de tâche sur ce bloc.
-async function createBlocToday(tranche) {
+// Cree un bloc Planifie aujourd'hui pour (tranche, ordre intra-tranche), puis ouvre la creation de tache.
+async function createBlocToday(tranche, ordre = 1) {
   const todayISO = WuboGrist.todayISO();
   const [y, m, d] = todayISO.split('-').map(Number);
   const dateUnix = Math.floor(Date.UTC(y, m-1, d) / 1000);
@@ -1387,6 +1443,7 @@ async function createBlocToday(tranche) {
     const { id } = await WuboGrist.addRecord('Blocs_temps', {
       date: dateUnix,
       tranche,
+      tranche_ordre: ordre,
       statut: 'Planifie',
       proprietaire: WuboGrist.getUser() || 'Taki'
     });

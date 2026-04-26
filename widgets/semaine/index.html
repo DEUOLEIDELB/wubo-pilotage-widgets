@@ -892,13 +892,20 @@ function windowDaysISO() {
   return days;
 }
 
+// Indexe les blocs par (date, tranche). En cas de N blocs dans la meme tranche
+// (multi-bloc/tranche du nouveau modele), on garde celui d'ordre intra-tranche le plus petit.
+// Le widget affiche encore 1 bloc par (jour, tranche). Multi-bloc visible dans Aujourd'hui.
 function blocsByDayISO(blocs) {
   const byDay = {};
   blocs.forEach(b => {
     const iso = WuboGrist.gristDateToISO(b.date);
     if (!iso) return;
     if (!byDay[iso]) byDay[iso] = {};
-    byDay[iso][b.tranche] = b;
+    const existing = byDay[iso][b.tranche];
+    const ordre = b.tranche_ordre || 1;
+    if (!existing || ordre < (existing.tranche_ordre || 1)) {
+      byDay[iso][b.tranche] = b;
+    }
   });
   return byDay;
 }
@@ -1293,8 +1300,10 @@ async function render() {
   allBlocs = []; tachesById = {};
   try {
     const [bRaw, tRaw] = await Promise.all([WuboGrist.fetchRows('Blocs_temps'), WuboGrist.fetchRows('Taches')]);
-    allBlocs = WuboGrist.filterByOwner(bRaw);
-    const t = WuboGrist.filterByOwner(tRaw);
+    // Vue mono-user : on n'affiche que les blocs/taches du user actif.
+    // Switch de profil pour voir Numa/Lyes.
+    allBlocs = WuboGrist.filterMineOnly(bRaw);
+    const t = WuboGrist.filterMineOnly(tRaw);
     t.forEach(x => { tachesById[x.id] = x; });
   } catch (e) {
     showError(e.message);
