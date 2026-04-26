@@ -1336,8 +1336,8 @@ function renderWeekTaskRow(t) {
 async function openTaskNewForDate(iso) {
   const [y, m, d] = iso.split('-').map(Number);
   const dateUnix = Math.floor(Date.UTC(y, m-1, d) / 1000);
-  // Prefill via une task minimale
-  const r = await WuboTaskModal.open({ mode: 'new', task: { date_cible: dateUnix } });
+  // defaultDate : pre-fill du champ date avec le jour clique (pas aujourd'hui)
+  const r = await WuboTaskModal.open({ mode: 'new', defaultDate: dateUnix });
   if (r && r.action === 'saved') await render();
 }
 
@@ -1596,11 +1596,13 @@ async function render() {
   }
 }
 
+// Shift de la fenetre liste : 1 jour par swipe (avant : windowSize entier).
+// Permet de glisser jour-par-jour fluidement.
 function shiftWindow(direction) {
   if (currentView === 'agenda') {
     agendaWeekOffset += direction * AGENDA_WEEKS;
   } else {
-    dayOffset += direction * windowSize;
+    dayOffset += direction * 1;
   }
   render();
 }

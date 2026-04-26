@@ -2036,10 +2036,12 @@ async function deleteCurrentTask() {
 }
 
 async function openTaskNew(blocId, parentTaskId) {
+  // Aujourd'hui : la nouvelle tache est par defaut sur aujourd'hui.
   const r = await WuboTaskModal.open({
     mode: 'new',
     blocId: blocId || null,
-    parentTaskId: parentTaskId || null
+    parentTaskId: parentTaskId || null,
+    defaultDate: WuboGrist.daysFromToday(0)
   });
   if (r && r.action !== 'cancelled') {
     if (r.action === 'saved') justUpdatedTaskId = r.taskId;
