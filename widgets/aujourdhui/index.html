@@ -84,16 +84,6 @@
   }
   .add-tache:hover { border-color: var(--current); color: var(--current); }
 
-  .bloc-note {
-    font-size: 11px;
-    color: var(--warning);
-    padding-top: 6px;
-    border-top: 1px dashed var(--border);
-  }
-
-  .bloc-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
-  .bloc-actions button { flex: 1; min-width: 88px; }
-
   /* ============ NOUVEAU MODELE : tache rows en liste chronologique ============ */
   .section-head {
     display: flex;
@@ -279,44 +269,6 @@
   #error { background: var(--danger); color: var(--on-danger); padding: 10px; border-radius: 6px; font-size: 12px; display: none; }
   #error button { margin-top: 6px; background: white; color: var(--danger); border: 1px solid white; }
 
-  /* Undo toast flottant apres zap */
-  .undo-toast {
-    position: fixed;
-    left: 50%;
-    transform: translateX(-50%);
-    top: calc(12px + env(safe-area-inset-top));
-    background: var(--accent);
-    color: var(--on-accent);
-    border: 1px solid var(--accent-strong);
-    border-radius: 8px;
-    padding: 10px 14px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    box-shadow: 2px 2px 0 var(--border-strong);
-    z-index: 200;
-    font-size: 13px;
-    font-weight: 500;
-    max-width: 92vw;
-    animation: toastIn 0.2s ease-out;
-  }
-  .undo-toast button {
-    background: var(--on-accent);
-    color: var(--accent);
-    border: none;
-    border-radius: 4px;
-    padding: 6px 12px;
-    min-height: 32px;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-  }
-  .undo-toast button:hover { opacity: 0.85; }
-  @keyframes toastIn {
-    from { opacity: 0; transform: translate(-50%, -8px); }
-    to { opacity: 1; transform: translate(-50%, 0); }
-  }
-
   /* Icône deadline externe à côté du titre de tâche */
   .ext-deadline-icon {
     flex-shrink: 0;
@@ -332,184 +284,6 @@
   }
   .just-updated { animation: flashUpdate 2s ease-out; }
 
-  /* Zone "À planifier" : tâches du jour avec date_cible mais aucun bloc lié.
-     3 boutons Matin/Aprem/Soir pour les caser en un clic. */
-  #floating { display: flex; flex-direction: column; gap: 6px; }
-  #floating:empty { display: none; }
-  .floating-head {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--text-dim);
-    padding: 0 4px 2px;
-  }
-  .floating-task {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 10px 12px;
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    border-left: 4px solid var(--accent);
-    border-radius: 6px;
-  }
-  .floating-task-main {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 8px;
-  }
-  .floating-task-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text);
-    flex: 1;
-    word-break: break-word;
-    cursor: pointer;
-  }
-  .floating-task-badge {
-    display: inline-block;
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-dim);
-    background: var(--surface-2);
-    padding: 2px 6px;
-    border-radius: 3px;
-    margin-right: 6px;
-    vertical-align: middle;
-  }
-  .floating-task-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-  }
-  .floating-task-actions .tranche-btn { flex: 1 1 calc(33% - 4px); min-width: 64px; }
-  .floating-task-actions .tranche-btn.bloque {
-    opacity: 0.5;
-    cursor: not-allowed;
-    border-style: dashed;
-    background: var(--surface);
-  }
-  .bloc.bloque {
-    opacity: 0.7;
-    border-style: dashed;
-    background: repeating-linear-gradient(45deg, var(--surface), var(--surface) 6px, var(--surface-2) 6px, var(--surface-2) 8px);
-  }
-  .tranche-btn {
-    padding: 6px 8px;
-    font-size: 12px;
-    font-weight: 600;
-    background: var(--surface-2);
-    color: var(--text);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
-  }
-  .tranche-btn:active { background: var(--current-soft); border-color: var(--current); }
-
-  /* Panneau "À rattraper" : DA Wubo, sobre. Bordure jaune pour signaler l'attention
-     sans alarme. Chaque bloc = ligne minimaliste avec actions inline. */
-  .rattrapage {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-left: 4px solid var(--accent);
-    border-radius: 6px;
-    padding: 10px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .rattrapage-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 8px;
-  }
-  .rattrapage-head .titre {
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--text);
-  }
-  .rattrapage-head .hint {
-    font-size: 11px;
-    color: var(--text-dim);
-  }
-  .ratt-bulk {
-    align-self: flex-start;
-    font-size: 12px;
-    padding: 6px 10px;
-    background: transparent;
-    border: 1px solid var(--border-strong);
-    color: var(--text);
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: 600;
-  }
-  .ratt-bulk:active { background: var(--done-bg); }
-  .ratt-bloc {
-    background: var(--bg);
-    border-radius: 4px;
-    padding: 8px 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .ratt-bloc-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 6px;
-    font-size: 12px;
-  }
-  .ratt-bloc-head .when {
-    font-weight: 700;
-    color: var(--text);
-  }
-  .ratt-bloc-head .statut {
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    font-size: 10px;
-    color: var(--text-dim);
-    font-weight: 600;
-  }
-  .ratt-tasks {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    font-size: 13px;
-  }
-  .ratt-task {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    color: var(--text);
-  }
-  .ratt-missed-badge {
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--danger);
-    background: transparent;
-    border: 1px solid var(--danger);
-    padding: 0 4px;
-    border-radius: 2px;
-    line-height: 1.4;
-  }
-  .ratt-actions {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    margin-top: 2px;
-  }
-  .ratt-actions button {
-    flex: 1;
-    min-width: 80px;
-    padding: 8px 8px;
-    font-size: 13px;
-  }
   .missed-indicator {
     display: inline-flex;
     align-items: center;
@@ -611,7 +385,8 @@ async function toggleSubtaskDone(sub) {
     WuboGrist.toast('Erreur : ' + e.message, 'error');
   }
 }
-// Delete définitif d'une sous-tâche (croix dans la modal)
+// Delete définitif d'une sous-tâche (jamais appelé maintenant : la modal task gère
+// les sous-tâches via WuboTaskModal. Conservé pour usage interne potentiel.)
 async function deleteSubtaskHard(sub) {
   const ok = await WuboUI.confirm({
     title: 'Supprimer la sous-tâche ?',
@@ -621,15 +396,6 @@ async function deleteSubtaskHard(sub) {
   });
   if (!ok) return;
   try {
-    // Retire du bloc si présente
-    const blocs = await WuboGrist.fetchRows('Blocs_temps');
-    for (const b of blocs) {
-      const ids = WuboGrist.refListIds(b.taches_liees);
-      if (ids.includes(sub.id)) {
-        const next = ids.filter(x => x !== sub.id);
-        try { await WuboGrist.updateRecord('Blocs_temps', b.id, { taches_liees: ['L', ...next] }); } catch (_) {}
-      }
-    }
     await WuboGrist.deleteRecord('Taches', sub.id);
     WuboGrist.toast('Sous-tâche supprimée', 'info');
     await render();

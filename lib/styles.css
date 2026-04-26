@@ -1073,6 +1073,75 @@ html { background: var(--bg); }
 .collab-chip.picked .collab-chip-letter { background: rgba(0, 0, 0, 0.18); }
 .collab-chip-name { font-size: 13px; font-weight: 700; }
 
+/* ============ TASK STATUT CHIPS (modal task, mode edit) ============
+   Ligne de 5 chips colores promus en haut de modal pour donner un acces direct
+   a "passer la tache En cours / Fait / Bloquee" sans descendre dans le formulaire.
+   Visible uniquement en mode edit. Le chip actif est highlight par sa couleur de
+   statut (todo, wip, blocked, done, abandoned). */
+.task-statut-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 2px;
+  margin-bottom: -2px;
+}
+.task-statut-chips {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.task-statut-chip {
+  flex: 1 1 calc(33% - 4px);
+  min-width: 90px;
+  padding: 8px 10px;
+  min-height: 38px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s, transform 0.08s;
+  text-align: center;
+  font-family: inherit;
+  line-height: 1.1;
+}
+.task-statut-chip:hover { border-color: var(--border-strong); color: var(--text); }
+.task-statut-chip:active { transform: translate(1px, 1px); }
+.task-statut-chip.active.todo {
+  background: var(--surface-alt);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+.task-statut-chip.active.wip {
+  background: var(--accent);
+  border-color: var(--accent-strong);
+  color: var(--on-accent);
+}
+.task-statut-chip.active.blocked {
+  background: var(--warning-soft);
+  border-color: var(--warning);
+  color: var(--warning);
+}
+.task-statut-chip.active.done {
+  background: var(--success-soft);
+  border-color: var(--success);
+  color: var(--success);
+}
+.task-statut-chip.active.abandoned {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.task-statut-chip:focus-visible {
+  outline: 2px solid var(--current);
+  outline-offset: 1px;
+}
+
 /* ============ COOLDOWN NOTICE ============
    Barre flottante au-dessus de la bottom-nav, progress bar 10s
    pour Modifier ou Annuler une assignation cross-user fraiche. */
