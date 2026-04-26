@@ -1501,6 +1501,11 @@ async function blocAction(blocId, statut) {
   }
   try {
     await WuboGrist.updateRecord('Blocs_temps', blocId, fields);
+    // Fige le snapshot quand le bloc transitionne vers un statut final.
+    // Garantie : l'apparence du bloc passe ne change pas si le profil bouge.
+    if (statut === 'Fait' || statut === 'Zappe') {
+      try { await WuboGrist.freezeBlocSnapshot(blocId); } catch (_) {}
+    }
     if (statut === 'Zappe') {
       // Redistribue les taches liees vers demain meme tranche (FIFO simple)
       await redistributeZappedTasks(blocId, prevBloc).catch(err => {
