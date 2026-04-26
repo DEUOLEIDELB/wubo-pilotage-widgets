@@ -1073,6 +1073,90 @@ html { background: var(--bg); }
 .collab-chip.picked .collab-chip-letter { background: rgba(0, 0, 0, 0.18); }
 .collab-chip-name { font-size: 13px; font-weight: 700; }
 
+/* ============ TASK DUREE CHIPS (modal task) ============
+   Remplace l'ancien <select>. Chiffre grand + unite petite, scrollable horizontalement
+   sur mobile si pas la place. Le hint "→ fin HH:MM" a droite du label montre l'impact
+   du choix en live (calcule a partir de heure_debut + duree). */
+.task-duree-field { display: flex; flex-direction: column; gap: 4px; }
+.task-duree-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.task-duree-fin-hint {
+  font-size: 11px;
+  color: var(--current);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.task-duree-chips {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 2px 0 4px;
+  scrollbar-width: thin;
+  /* leger fade aux bords sur mobile : indique scroll horizontal */
+  mask-image: linear-gradient(to right, transparent 0, black 8px, black calc(100% - 8px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0, black 8px, black calc(100% - 8px), transparent 100%);
+}
+.task-duree-chips::-webkit-scrollbar { height: 4px; }
+.task-duree-chips::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
+.task-duree-chip {
+  flex: 0 0 auto;
+  min-width: 52px;
+  min-height: 48px;
+  padding: 6px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  font-family: inherit;
+  color: var(--text-dim);
+  line-height: 1;
+  transition: background 0.12s, border-color 0.12s, color 0.12s, transform 0.08s, box-shadow 0.12s;
+}
+.task-duree-chip:hover { border-color: var(--border-strong); color: var(--text); }
+.task-duree-chip:active { transform: translate(1px, 1px); }
+.task-duree-chip.active {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent-strong);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+.task-duree-chip.active.nil {
+  background: var(--surface-alt);
+  color: var(--text);
+  border-color: var(--border-strong);
+  transform: none;
+}
+.task-duree-chip-num {
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.task-duree-chip.nil .task-duree-chip-num { font-size: 18px; }
+.task-duree-chip-unit {
+  font-size: 9px;
+  opacity: 0.7;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+.task-duree-chip:focus-visible {
+  outline: 2px solid var(--current);
+  outline-offset: 1px;
+}
+
 /* ============ TASK STATUT CHIPS (modal task, mode edit) ============
    Ligne de 5 chips colores promus en haut de modal pour donner un acces direct
    a "passer la tache En cours / Fait / Bloquee" sans descendre dans le formulaire.
