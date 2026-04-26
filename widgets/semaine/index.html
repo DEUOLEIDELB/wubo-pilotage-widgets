@@ -1519,15 +1519,7 @@ async function render() {
 
   allBlocs = []; tachesById = {}; profilCurrent = [];
   try {
-    const currentUser = WuboGrist.getUser() || 'Taki';
-    const [bRaw, tRaw, prof] = await Promise.all([
-      WuboGrist.fetchRows('Blocs_temps'),
-      WuboGrist.fetchRows('Taches'),
-      WuboGrist.getProfilBlocs(currentUser)
-    ]);
-    profilCurrent = prof;
-    // Vue mono-user : on n'affiche que les blocs/taches du user actif.
-    allBlocs = WuboGrist.filterMineOnly(bRaw);
+    const tRaw = await WuboGrist.fetchRows('Taches');
     const t = WuboGrist.filterMineOnly(tRaw);
     t.forEach(x => { tachesById[x.id] = x; });
   } catch (e) {
@@ -1537,7 +1529,7 @@ async function render() {
   }
 
   const todayISO = WuboGrist.todayISO();
-  const byDay = blocsByDayISO(allBlocs);
+  const byDay = {}; // legacy : passe ignored par renderList/renderAgenda
 
   // Décide la fenêtre visible selon vue, puis rend zone "À planifier"
   const visibleDays = currentView === 'agenda' ? agendaDaysISO() : windowDaysISO();

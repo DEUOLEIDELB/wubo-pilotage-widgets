@@ -1522,14 +1522,6 @@ async function deleteCurrentTask() {
   if (!ok) return;
   try {
     const id = currentTaskEditId;
-    const blocs = await WuboGrist.fetchRows('Blocs_temps');
-    for (const b of blocs) {
-      const ids = WuboGrist.refListIds(b.taches_liees);
-      if (ids.includes(id)) {
-        const next = ids.filter(x => x !== id);
-        try { await WuboGrist.updateRecord('Blocs_temps', b.id, { taches_liees: ['L', ...next] }); } catch (_) {}
-      }
-    }
     await WuboGrist.deleteRecord('Taches', id);
     closeTaskEdit();
     WuboGrist.toast('Tâche supprimée', 'info');
