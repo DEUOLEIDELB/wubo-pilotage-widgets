@@ -423,13 +423,24 @@
   .day-card .week-task.done .week-task-title { text-decoration: line-through; }
   .day-card .week-task.wip { border-left: 3px solid var(--accent-strong); padding-left: 9px; }
   .day-card .week-task.blocked { border-left: 3px solid var(--warning); padding-left: 9px; background: var(--warning-soft); }
+  /* Largeur FIXE (pas min-width) pour que toutes les rows s'alignent identiquement,
+     que l'heure soit "—", "09:00" ou "09:00 → 10:30". Sinon les titres dansent
+     d'une row a l'autre selon le contenu de la zone time. 86px tient
+     "09:00 → 10:30" en tabular-nums 11px. */
   .week-task-time {
     font-size: 11px;
     color: var(--text-faint);
     font-variant-numeric: tabular-nums;
     flex-shrink: 0;
-    min-width: 56px;
+    width: 86px;
     font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .week-task-time.no-time {
+    color: var(--text-muted);
+    font-weight: 400;
   }
   .week-task-title {
     flex: 1;
@@ -1459,13 +1470,16 @@ function renderWeekTaskRow(t) {
     'data-claude-check': t.claude_check === false ? 'false' : 'true',
     onclick: () => openTaskEdit(t.id)
   });
-  // Heure ou "—" si sans creneau
+  // Heure ou "—" si sans creneau. Classe .no-time pour distinguer visuellement
+  // (italique pale) sans casser l'alignement (largeur fixee dans le CSS).
   const heureTxt = t.heure_debut
     ? (t.duree_minutes
         ? `${t.heure_debut} → ${computeFin(t.heure_debut, t.duree_minutes)}`
         : t.heure_debut)
     : '—';
-  row.appendChild($el('span', { class: 'week-task-time' }, heureTxt));
+  row.appendChild($el('span', {
+    class: 'week-task-time' + (t.heure_debut ? '' : ' no-time')
+  }, heureTxt));
   row.appendChild($el('span', { class: 'status-pill ' + statutClass(t.statut) }));
   if (t.est_deadline_externe) {
     row.appendChild($el('span', { class: 'ext-deadline-icon', title: 'Deadline externe' }, '⏰'));
