@@ -230,6 +230,29 @@
     padding: 4px 6px;
     font-size: 11px;
   }
+  /* Bouton "+ voir N autres" : pleine largeur, dashed warning, discret mais cliquable.
+     Apparait sous la liste rattrapage quand le backlog depasse rattrapageVisibleCount.
+     Variante .ratt-show-less : meme style mais avec icone reduce. */
+  .ratt-show-more {
+    width: 100%;
+    margin-top: 6px;
+    padding: 6px 10px;
+    background: transparent;
+    border: 1px dashed var(--warning);
+    color: var(--warning);
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
+    min-height: 30px;
+    line-height: 1.2;
+  }
+  .ratt-show-more:hover { background: var(--warning-soft); border-style: solid; }
+  .ratt-show-more:active { transform: translate(1px, 1px); }
+  .ratt-show-less { color: var(--text-faint); border-color: var(--border-strong); }
+  .ratt-show-less:hover { background: var(--surface-2); color: var(--text); border-color: var(--border-strong); }
 
   .modal {
     position: fixed; inset: 0;
@@ -645,17 +668,38 @@ function renderTaskRow(t) {
 }
 
 // Rend la zone "A rattraper" en haut (sticky CSS).
+// Affichage par salves : 2 taches visibles par defaut, un bouton "+ voir N autres"
+// expand par batch de RATT_BATCH_STEP. Le compteur visible est persiste au niveau
+// du widget pour que traiter une tache ne reset pas l'expand : si l'user voit 5
+// taches et en traite une, il continue a voir 5 (la suivante du backlog remplit
+// le slot libere). Si le backlog se vide ou que l'user a tout traite, le compteur
+// se reaccroche naturellement (clamp sur tasks.length).
+const RATT_DEFAULT_VISIBLE = 2;
+const RATT_BATCH_STEP = 3;
+let rattrapageVisibleCount = RATT_DEFAULT_VISIBLE;
+
 function renderRattrapageTasks(tasks) {
   const node = document.getElementById('rattrapage');
   $clear(node);
-  if (!tasks.length) return;
+  if (!tasks.length) {
+    // Reset au cas ou la liste se remplit a nouveau plus tard : on repart a 2.
+    rattrapageVisibleCount = RATT_DEFAULT_VISIBLE;
+    return;
+  }
+
+  // Clamp : si le backlog a retreci sous le compteur user, on resserre.
+  // Si jamais le compteur est tombe a 0 ou en dessous du minimum, on remonte.
+  if (rattrapageVisibleCount > tasks.length) rattrapageVisibleCount = tasks.length;
+  if (rattrapageVisibleCount < RATT_DEFAULT_VISIBLE) {
+    rattrapageVisibleCount = Math.min(RATT_DEFAULT_VISIBLE, tasks.length);
+  }
 
   const block = $el('div', { class: 'rattrapage' });
   block.appendChild($el('div', { class: 'rattrapage-head' },
     $el('span', { class: 'titre' }, `À rattraper · ${tasks.length}`)
   ));
 
-  const toShow = tasks.slice(0, 5);
+  const toShow = tasks.slice(0, rattrapageVisibleCount);
   toShow.forEach(t => {
     const wrap = $el('div', { class: 'ratt-task-row' });
     wrap.appendChild($el('div', { class: 'ratt-task-head' },
@@ -683,10 +727,30 @@ function renderRattrapageTasks(tasks) {
     wrap.appendChild(actions);
     block.appendChild(wrap);
   });
-  if (tasks.length > toShow.length) {
-    block.appendChild($el('div', { style: 'font-size:11px;color:var(--text-dim);text-align:center;padding:4px' },
-      `+ ${tasks.length - toShow.length} autre(s)`
-    ));
+
+  // Bouton "+ voir N autres" : annonce le nombre de la prochaine salve
+  // et le total restant entre parentheses.
+  const remaining = tasks.length - rattrapageVisibleCount;
+  if (remaining > 0) {
+    const nextBatch = Math.min(RATT_BATCH_STEP, remaining);
+    block.appendChild($el('button', {
+      type: 'button',
+      class: 'ratt-show-more',
+      onclick: () => {
+        rattrapageVisibleCount += RATT_BATCH_STEP;
+        renderRattrapageTasks(tasks);
+      }
+    }, `+ Voir ${nextBatch} autre${nextBatch > 1 ? 's' : ''} · ${remaining} restante${remaining > 1 ? 's' : ''}`));
+  } else if (rattrapageVisibleCount > RATT_DEFAULT_VISIBLE) {
+    // Tout est visible et l'user a expand : option pour rep replier au compact.
+    block.appendChild($el('button', {
+      type: 'button',
+      class: 'ratt-show-more ratt-show-less',
+      onclick: () => {
+        rattrapageVisibleCount = RATT_DEFAULT_VISIBLE;
+        renderRattrapageTasks(tasks);
+      }
+    }, '↑ Réduire'));
   }
   node.appendChild(block);
 }
