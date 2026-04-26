@@ -682,6 +682,70 @@ html { background: var(--bg); }
   padding: 2px 4px;
 }
 
+/* ============ MES BLOCS : éditeur dans menu profil ============ */
+.profil-blocs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+.profil-bloc-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.profil-bloc-label-input {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  min-width: 0;
+  width: 100%;
+}
+.profil-bloc-times {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  white-space: nowrap;
+}
+.profil-bloc-time-input {
+  font-size: 12px;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  width: 78px;
+  font-variant-numeric: tabular-nums;
+}
+.profil-bloc-arrow-sep {
+  color: var(--text-faint);
+  font-size: 11px;
+  padding: 0 2px;
+}
+.profil-bloc-actions {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+.profil-bloc-arrow {
+  min-width: 28px;
+  min-height: 28px;
+  padding: 4px 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.profil-bloc-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
+.profil-bloc-arrow.danger-text { color: var(--danger); border-color: var(--danger); }
+
 .profile-footer {
   text-align: center;
   font-size: 10px;
