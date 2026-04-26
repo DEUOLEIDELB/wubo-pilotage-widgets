@@ -1708,13 +1708,27 @@ function renderAgenda(byDay, todayISO) {
 }
 
 function onAgendaDayClick(iso) {
-  // Bascule vers la vue Liste centrée sur le jour cliqué
-  const today = new Date();
-  const target = new Date(iso);
-  today.setHours(0,0,0,0); target.setHours(0,0,0,0);
-  const diffDays = Math.round((target - today) / 86400000);
-  dayOffset = diffDays;
-  setView('liste');
+  // Si le jour clique a au moins une tache (du current user) : bascule vers Liste
+  // centree sur ce jour. Sinon : ouvre directement la modal de creation avec la date.
+  const currentUser = WuboGrist.getUser() || 'Taki';
+  const hasTasks = Object.values(tachesById).some(t => {
+    if (t.statut === 'Archive' || t.parent_tache) return false;
+    if (!t.date_cible) return false;
+    if (WuboGrist.gristDateToISO(t.date_cible) !== iso) return false;
+    const assignees = WuboGrist.getAssignees ? WuboGrist.getAssignees(t) : [];
+    return assignees.length === 0 || assignees.includes(currentUser);
+  });
+
+  if (hasTasks) {
+    const today = new Date();
+    const target = new Date(iso);
+    today.setHours(0,0,0,0); target.setHours(0,0,0,0);
+    const diffDays = Math.round((target - today) / 86400000);
+    dayOffset = diffDays;
+    setView('liste');
+  } else {
+    openTaskNewForDate(iso);
+  }
 }
 
 // Swipe horizontal avec animation visuelle (Liste + Agenda).
