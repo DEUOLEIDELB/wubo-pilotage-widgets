@@ -1726,6 +1726,12 @@ function onAgendaDayClick(iso) {
     const diffDays = Math.round((target - today) / 86400000);
     dayOffset = diffDays;
     setView('liste');
+    // Scroll en haut de la liste apres render (la fenetre commence a iso, donc
+    // le jour clique est la 1ere carte). Sans ca, l'utilisateur garde le scroll
+    // de la vue agenda et apparait au milieu/bas de la liste.
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    });
   } else {
     openTaskNewForDate(iso);
   }
