@@ -439,21 +439,25 @@
     transition: color 0.12s, background 0.12s;
   }
   .day-empty:hover, .day-empty:active { color: var(--current); background: var(--current-soft); }
+  /* Bouton "+ Ajouter une tache" en bas d'une day-card non-vide.
+     Meme style visuel que .day-empty (dashed border-top, hover violet) pour
+     que l'action "ajouter" soit identique entre jour vide et jour rempli. */
   .add-tache-day {
-    align-self: flex-start;
-    margin: 6px 10px 10px;
-    padding: 4px 14px;
-    font-size: 16px;
-    line-height: 1;
-    background: transparent;
-    border: 1px dashed var(--border-strong);
-    color: var(--text-dim);
-    border-radius: var(--radius-sm);
-    cursor: pointer;
+    display: block;
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 12px;
     font-weight: 600;
-    min-height: 28px;
+    background: transparent;
+    border: none;
+    border-top: 1px dashed var(--border);
+    color: var(--text-faint);
+    cursor: pointer;
+    text-align: center;
+    min-height: 36px;
+    transition: color 0.12s, background 0.12s;
   }
-  .add-tache-day:hover { border-color: var(--current); color: var(--current); }
+  .add-tache-day:hover, .add-tache-day:active { color: var(--current); background: var(--current-soft); }
   .slot {
     position: relative;
     display: grid;
@@ -1546,7 +1550,7 @@ function renderList(daysISO, _byDayIgnored, todayISO) {
       dayCard.appendChild($el('button', {
         class: 'add-tache-day',
         onclick: () => openTaskNewForDate(iso)
-      }, '+'));
+      }, '+ Ajouter une tâche'));
     }
     list.appendChild(dayCard);
   });
