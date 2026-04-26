@@ -193,6 +193,20 @@
     height: 2px;
     flex: 0 0 5px;
   }
+  /* Badge "+N" affiche dans la cell agenda quand la journee depasse 5 taches.
+     Remplace les dots (qui seraient illisibles a cette densite) par un compteur
+     total clair. Police compacte tabular-nums + mini fond pour ressortir. */
+  .agenda-dot-more {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--text);
+    background: var(--surface-alt);
+    padding: 1px 5px;
+    border-radius: 6px;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+    border: 1px solid var(--border);
+  }
   .agenda-day-extra {
     font-size: 8px;
     color: var(--text-faint);
@@ -1798,17 +1812,24 @@ function renderAgenda(byDay, todayISO) {
     cell.appendChild($el('div', { class: 'agenda-day-num' }, String(dd.getDate())));
 
     const dots = $el('div', { class: 'agenda-day-dots' });
-    const toShow = dayTasks.slice(0, 3);
-    toShow.forEach(t => {
-      const s = (t.statut || '').toLowerCase();
-      let dotCls = 'agenda-dot';
-      if (s.includes('fait')) dotCls = 'agenda-dot done';
-      else if (s.includes('en cours')) dotCls = 'agenda-dot wip';
-      else if (s.includes('bloqu')) dotCls = 'agenda-dot blocked';
-      dots.appendChild($el('span', { class: dotCls, title: t.titre || '' }));
-    });
-    if (dayTasks.length > 3) {
-      dots.appendChild($el('span', { class: 'agenda-dot-more', title: `+${dayTasks.length - 3}` }, `+${dayTasks.length - 3}`));
+    const MAX_DOTS = 5;
+    if (dayTasks.length > 0 && dayTasks.length <= MAX_DOTS) {
+      // <=5 taches : on a la place pour des dots colores qui montrent le statut.
+      dayTasks.forEach(t => {
+        const s = (t.statut || '').toLowerCase();
+        let dotCls = 'agenda-dot';
+        if (s.includes('fait')) dotCls = 'agenda-dot done';
+        else if (s.includes('en cours')) dotCls = 'agenda-dot wip';
+        else if (s.includes('bloqu')) dotCls = 'agenda-dot blocked';
+        dots.appendChild($el('span', { class: dotCls, title: t.titre || '' }));
+      });
+    } else if (dayTasks.length > MAX_DOTS) {
+      // >5 taches : plus la place pour des dots, on affiche juste le total
+      // sous forme de badge "+N". Plus lisible que des micro-dots ecrases.
+      dots.appendChild($el('span', {
+        class: 'agenda-dot-more',
+        title: `${dayTasks.length} tâches ce jour`
+      }, `+${dayTasks.length}`));
     }
     cell.appendChild(dots);
 
