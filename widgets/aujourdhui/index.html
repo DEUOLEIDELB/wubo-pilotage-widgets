@@ -602,7 +602,9 @@ function renderTaskRow(t) {
     row.appendChild(timeLine);
   }
 
-  // Ligne principale : statut + titre + pastilles
+  // Ligne principale : statut + titre + pastilles à droite (flex row).
+  // Pastilles intégrées dans .tache-main (au lieu d'être appendues à .tache-row qui
+  // est flex-column → tombaient en bas). Affichage cohérent avec Semaine.
   const main = $el('div', { class: 'tache-main' },
     $el('span', { class: 'status-pill ' + statutClass(t.statut) }),
     t.est_deadline_externe ? $el('span', { class: 'ext-deadline-icon', title: 'Deadline externe' }, '⏰') : null,
@@ -611,10 +613,9 @@ function renderTaskRow(t) {
       ? $el('span', { class: 'missed-indicator', title: `Ratée ${t.times_missed}x` }, `× ${t.times_missed}`)
       : null
   );
-  row.appendChild(main);
-
   const pastilles = WuboUI.renderAssignees(t, { size: 'sm' });
-  if (pastilles) row.appendChild(pastilles);
+  if (pastilles) main.appendChild(pastilles);
+  row.appendChild(main);
 
   // Sous-tâches inline
   const subs = Object.values(tachesById).filter(x => x.parent_tache === t.id && x.statut !== 'Archive');
