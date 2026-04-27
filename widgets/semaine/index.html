@@ -1693,18 +1693,9 @@ async function render() {
           showGCalReauthBanner();
         } else if (res && res.errors && res.errors.length > 0) {
           console.error('[gCal sync errors]', res.errors);
-          WuboGrist.toast('gCal : erreur sync (voir console)', 'error');
-        } else if (res && (res.added > 0 || res.updated > 0 || res.archived > 0)) {
-          const parts = [];
-          if (res.added) parts.push(`${res.added} ajoutée(s)`);
-          if (res.updated) parts.push(`${res.updated} maj`);
-          if (res.archived) parts.push(`${res.archived} archivée(s)`);
-          WuboGrist.toast('gCal : ' + parts.join(', '), 'info', 2000);
         }
-        console.log('[gCal sync semaine]', _currentUser, startISO, '→', endISO, res);
       } catch (e) {
         console.error('[gCal sync exception]', e);
-        WuboGrist.toast('gCal : ' + e.message, 'error');
       }
     }
   }
