@@ -1678,20 +1678,34 @@ async function render() {
   document.getElementById('error').style.display = 'none';
   windowSize = computeWindowSize();
 
-  // Sync Google Calendar pour la fenetre visible (silencieux, best-effort).
+  // Sync Google Calendar pour la fenetre visible (fenetre LOCALE, pas UTC).
   const _currentUser = WuboGrist.getUser() || 'Taki';
   if (window.WuboGCal && WuboGCal.isConnected(_currentUser)) {
     const _visibleDays = currentView === 'agenda' ? agendaDaysISO() : windowDaysISO();
     if (_visibleDays && _visibleDays.length > 0) {
-      const startISO = _visibleDays[0] + 'T00:00:00Z';
-      const lastDay = _visibleDays[_visibleDays.length - 1];
-      const [_y, _m, _d] = lastDay.split('-').map(Number);
-      const dEnd = new Date(Date.UTC(_y, _m - 1, _d + 1)); // jour suivant 00:00 UTC
-      const endISO = dEnd.toISOString();
+      const [sy, sm, sd] = _visibleDays[0].split('-').map(Number);
+      const startISO = new Date(sy, sm - 1, sd, 0, 0, 0).toISOString();
+      const [ey, em, ed] = _visibleDays[_visibleDays.length - 1].split('-').map(Number);
+      const endISO = new Date(ey, em - 1, ed + 1, 0, 0, 0).toISOString();
       try {
         const res = await WuboGCal.syncWindow(_currentUser, startISO, endISO);
-        if (res && res.tokenExpired) showGCalReauthBanner();
-      } catch (_) { /* silencieux */ }
+        if (res && res.tokenExpired) {
+          showGCalReauthBanner();
+        } else if (res && res.errors && res.errors.length > 0) {
+          console.error('[gCal sync errors]', res.errors);
+          WuboGrist.toast('gCal : erreur sync (voir console)', 'error');
+        } else if (res && (res.added > 0 || res.updated > 0 || res.archived > 0)) {
+          const parts = [];
+          if (res.added) parts.push(`${res.added} ajoutée(s)`);
+          if (res.updated) parts.push(`${res.updated} maj`);
+          if (res.archived) parts.push(`${res.archived} archivée(s)`);
+          WuboGrist.toast('gCal : ' + parts.join(', '), 'info', 2000);
+        }
+        console.log('[gCal sync semaine]', _currentUser, startISO, '→', endISO, res);
+      } catch (e) {
+        console.error('[gCal sync exception]', e);
+        WuboGrist.toast('gCal : ' + e.message, 'error');
+      }
     }
   }
 
